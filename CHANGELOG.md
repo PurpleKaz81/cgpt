@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added CI docs guard (`.github/workflows/docs-guard.yml`) to enforce:
   - minimal markdown set
   - markdown updates when code/config files change
+- `build-dossier` now supports `--config` and `--used-links-file` like alias `d`
+- `build-dossier` now honors global default mode resolution (`--default-mode` / `CGPT_DEFAULT_MODE`)
+- `build-dossier` no longer requires topics when running in `full` mode
+- `make-dossiers` now emits explicit warnings for output-write failures instead of silently swallowing errors
+
+### Fixed
+- Fixed `quick --ids-file` crash caused by selection parser scope (`UnboundLocalError`)
 
 ## [0.1.0] - 2026-02-10
 

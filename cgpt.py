@@ -2269,14 +2269,20 @@ def cmd_make_dossiers(args: argparse.Namespace) -> None:
             try:
                 md_path.write_text(md_content, encoding="utf-8")
                 created_paths.append(md_path)
-            except Exception:
-                pass
+            except Exception as e:
+                print(
+                    f"WARNING: Failed to write Markdown file {md_path}: {e}",
+                    file=sys.stderr,
+                )
         else:
             # still write the md as source for conversions
             try:
                 md_path.write_text(md_content, encoding="utf-8")
-            except Exception:
-                pass
+            except Exception as e:
+                print(
+                    f"WARNING: Failed to write intermediate Markdown file {md_path}: {e}",
+                    file=sys.stderr,
+                )
 
         if "txt" in req_formats:
             try:
@@ -2317,8 +2323,11 @@ def cmd_make_dossiers(args: argparse.Namespace) -> None:
                 txt_path = base.with_suffix(".txt")
                 txt_path.write_text("".join(clean_txt_lines), encoding="utf-8")
                 created_paths.append(txt_path)
-            except Exception:
-                pass
+            except Exception as e:
+                print(
+                    f"WARNING: Failed to write TXT file for conversation {cid}: {e}",
+                    file=sys.stderr,
+                )
 
         if "docx" in req_formats:
             try:
@@ -2331,8 +2340,11 @@ def cmd_make_dossiers(args: argparse.Namespace) -> None:
                     docx_doc.add_paragraph(para)
                 docx_doc.save(str(docx_path))
                 created_paths.append(docx_path)
-            except Exception:
-                pass
+            except Exception as e:
+                print(
+                    f"WARNING: Failed to write DOCX file for conversation {cid}: {e}",
+                    file=sys.stderr,
+                )
 
         # Print whichever primary file was created (prefer txt then md then docx)
         if created_paths:
@@ -2346,11 +2358,20 @@ def cmd_make_dossiers(args: argparse.Namespace) -> None:
                     continue
                 break
         else:
-            # fallback: print md path
-            print(md_path)
+            if md_path.exists():
+                # fallback: print md path if it exists
+                print(md_path)
+            else:
+                print(
+                    f"WARNING: No output files created for conversation {cid}",
+                    file=sys.stderr,
+                )
 
 
 def cmd_build_dossier(args: argparse.Namespace) -> None:
+    mode = getattr(args, "mode", None) or "full"
+    context = int(args.context)
+
     topics: List[str] = []
     if getattr(args, "topic", None):
         topics.append(args.topic)
@@ -2366,11 +2387,11 @@ def cmd_build_dossier(args: argparse.Namespace) -> None:
         except Exception:
             pass
     topics = [t.strip() for t in topics if t and t.strip()]
+    if not topics and mode == "excerpts":
+        die("Provide --topic and/or --topics when using --mode excerpts")
     if not topics:
-        die("Provide --topic and/or --topics")
-
-    mode = args.mode
-    context = int(args.context)
+        # In full mode, allow dossiers without topic filtering.
+        topics = ["selected-conversations"]
 
     home = home_dir(args.home)
     _, extracted_dir, dossiers_dir = ensure_layout(home)
@@ -2424,6 +2445,7 @@ def cmd_build_dossier(args: argparse.Namespace) -> None:
     split = bool(getattr(args, "split", False))
     dedup = bool(getattr(args, "dedup", True))
     used_links_file = getattr(args, "used_links_file", None)
+    config_file = getattr(args, "config", None)
     name = getattr(args, "name", None)
 
     out_path = build_combined_dossier(
@@ -2439,6 +2461,7 @@ def cmd_build_dossier(args: argparse.Namespace) -> None:
         patterns=patterns,
         dedup=dedup,
         used_links_file=used_links_file,
+        config_file=config_file,
         name=name,
     )
     print(out_path)
@@ -2768,6 +2791,71 @@ def cmd_quick(args: argparse.Namespace) -> None:
 
     print(f"\nSaved full match list to: {all_ids_path}")
 
+    def parse_selection_text(raw_text: str) -> Tuple[List[int], List[str]]:
+        tokens = [t for t in re.split(r"[,\s]+", raw_text) if t]
+        picked_local: List[int] = []
+        warnings: List[str] = []
+        id_to_index = {cid: idx for idx, (cid, _, _) in enumerate(matches, start=1)}
+
+        for tok in tokens:
+            if tok.startswith("@"):
+                # load IDs from file
+                path = Path(tok[1:]).expanduser()
+                if not path.exists():
+                    warnings.append(f"IDs file not found: {path}")
+                    continue
+                for ln in path.read_text(encoding="utf-8").splitlines():
+                    ln = ln.strip()
+                    if not ln:
+                        continue
+                    if ln in id_to_index:
+                        picked_local.append(id_to_index[ln])
+                    else:
+                        # allow raw numeric indices in file
+                        if ln.isdigit():
+                            n = int(ln)
+                            if 1 <= n <= len(matches):
+                                picked_local.append(n)
+                            else:
+                                warnings.append(
+                                    f"Selection number out of range in file: {n}"
+                                )
+                        else:
+                            warnings.append(f"Unknown ID in file: {ln}")
+                continue
+
+            if re.match(r"^\d+-\d+$", tok):
+                a, b = tok.split("-", 1)
+                a_i = int(a)
+                b_i = int(b)
+                if a_i > b_i:
+                    a_i, b_i = b_i, a_i
+                # clamp to valid range
+                a_i = max(1, a_i)
+                b_i = min(len(matches), b_i)
+                if a_i > len(matches) or b_i < 1:
+                    warnings.append(f"Range out of bounds: {tok}")
+                    continue
+                for n in range(a_i, b_i + 1):
+                    picked_local.append(n)
+                continue
+
+            if tok.isdigit():
+                n = int(tok)
+                if 1 <= n <= len(matches):
+                    picked_local.append(n)
+                else:
+                    warnings.append(f"Selection number out of range: {n}")
+                continue
+
+            # treat as raw ID
+            if tok in id_to_index:
+                picked_local.append(id_to_index[tok])
+            else:
+                warnings.append(f"Unknown ID in selection: {tok}")
+
+        return picked_local, warnings
+
     # Non-interactive selection via --ids-file: read file and parse selections.
     if getattr(args, "ids_file", None):
         p = Path(args.ids_file).expanduser().resolve()
@@ -2787,72 +2875,6 @@ def cmd_quick(args: argparse.Namespace) -> None:
     elif args.all:
         picked = list(range(1, len(matches) + 1))
     else:
-
-        def parse_selection_text(raw_text: str) -> Tuple[List[int], List[str]]:
-            tokens = [t for t in re.split(r"[,\s]+", raw_text) if t]
-            picked_local: List[int] = []
-            warnings: List[str] = []
-            id_to_index = {cid: idx for idx, (cid, _, _) in enumerate(matches, start=1)}
-
-            for tok in tokens:
-                if tok.startswith("@"):
-                    # load IDs from file
-                    path = Path(tok[1:]).expanduser()
-                    if not path.exists():
-                        warnings.append(f"IDs file not found: {path}")
-                        continue
-                    for ln in path.read_text(encoding="utf-8").splitlines():
-                        ln = ln.strip()
-                        if not ln:
-                            continue
-                        if ln in id_to_index:
-                            picked_local.append(id_to_index[ln])
-                        else:
-                            # allow raw numeric indices in file
-                            if ln.isdigit():
-                                n = int(ln)
-                                if 1 <= n <= len(matches):
-                                    picked_local.append(n)
-                                else:
-                                    warnings.append(
-                                        f"Selection number out of range in file: {n}"
-                                    )
-                            else:
-                                warnings.append(f"Unknown ID in file: {ln}")
-                    continue
-
-                if re.match(r"^\d+-\d+$", tok):
-                    a, b = tok.split("-", 1)
-                    a_i = int(a)
-                    b_i = int(b)
-                    if a_i > b_i:
-                        a_i, b_i = b_i, a_i
-                    # clamp to valid range
-                    a_i = max(1, a_i)
-                    b_i = min(len(matches), b_i)
-                    if a_i > len(matches) or b_i < 1:
-                        warnings.append(f"Range out of bounds: {tok}")
-                        continue
-                    for n in range(a_i, b_i + 1):
-                        picked_local.append(n)
-                    continue
-
-                if tok.isdigit():
-                    n = int(tok)
-                    if 1 <= n <= len(matches):
-                        picked_local.append(n)
-                    else:
-                        warnings.append(f"Selection number out of range: {n}")
-                    continue
-
-                # treat as raw ID
-                if tok in id_to_index:
-                    picked_local.append(id_to_index[tok])
-                else:
-                    warnings.append(f"Unknown ID in selection: {tok}")
-
-            return picked_local, warnings
-
         stdin_is_tty = sys.stdin.isatty()
         if not stdin_is_tty:
             # Non-interactive stdin: read once and proceed (warnings printed)
@@ -3188,7 +3210,7 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument(
         "--mode",
         choices=["full", "excerpts"],
-        default="full",
+        default=None,
         help="full = include everything; excerpts = topic-only + context",
     )
     a.add_argument(
@@ -3231,6 +3253,14 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument(
         "--patterns-file",
         help="Path to file with deliverable patterns (one per line). Default patterns: ##, Constraint, Draft, Decision, Output, Result",
+    )
+    a.add_argument(
+        "--used-links-file",
+        help="Path to file with URLs already used in drafts (one per line). These will be prioritized in source lists.",
+    )
+    a.add_argument(
+        "--config",
+        help="Path to column config file (JSON) for segment filtering and control layer generation",
     )
     a.add_argument(
         "--name",

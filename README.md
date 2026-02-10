@@ -125,18 +125,19 @@ Useful flags:
 
 ```bash
 cgpt build-dossier \
-  --topic "project-topic" \
   --ids 123abc 456def \
+  --topic "project-topic" \
   --split \
   --name "project"
 
-cgpt d --topic "project-topic" --ids 123abc 456def --split --name "project"  # alias
+cgpt d --ids 123abc 456def --mode full --split --name "project"  # alias
 ```
 
 Important for `build-dossier`:
-- You must provide `--topic` and/or `--topics`.
 - You must provide `--ids` and/or `--ids-file`.
 - IDs are space-separated, not comma-separated.
+- In `--mode excerpts`, you must provide `--topic` and/or `--topics`.
+- In `--mode full`, topic flags are optional.
 
 ### Generate one file per conversation ID
 
@@ -205,7 +206,7 @@ Important `--split` behavior:
 
 ## Advanced Filter Inputs
 
-These options are supported on `recent`/`r` and `quick`/`q`:
+These options are supported on `recent`/`r`, `quick`/`q`, and `build-dossier`/`d`:
 
 - `--patterns-file <file>`: one deliverable pattern per line.
 - `--used-links-file <file>`: one URL per line to prioritize in source output.
@@ -222,8 +223,7 @@ cgpt q --split \
 ```
 
 CLI quirk to know:
-- The short alias `d` exposes `--config` and `--used-links-file`.
-- The long form `build-dossier` currently does not expose those two flags in `--help`.
+- `--topic`/`--topics` are only required when `--mode excerpts` is used.
 
 ## Home Resolution and Environment Variables
 
@@ -265,7 +265,7 @@ Then retry your command.
 
 ### `ERROR: Provide --topic and/or --topics`
 
-`build-dossier` requires a topic label even in `full` mode.
+This only applies when using excerpts mode (`--mode excerpts`).
 
 ### `ERROR: Provide --ids and/or --ids-file`
 
