@@ -6,7 +6,7 @@ This repository has been audited for sensitive data and is safe for public acces
 
 ## Security Audit Summary
 
-**Last Audit Date:** February 2026  
+**Last Audit Date:** February 2026
 **Status:** ✅ Safe for public repository
 
 ### What Was Checked
@@ -45,6 +45,7 @@ The repository's `.gitignore` is configured to prevent accidental commits of:
 ### 2. Environment Variables
 
 The application uses environment variables for configuration:
+
 - `CGPT_HOME` - Path to working directory
 - `CGPT_FORCE_COLOR` - Color output control
 - `CGPT_DEFAULT_MODE` - Default operation mode
@@ -54,6 +55,7 @@ The application uses environment variables for configuration:
 ### 3. Local Data Storage
 
 All user data (ChatGPT exports, dossiers, databases) is stored in directories that are:
+
 - Explicitly excluded from version control
 - Kept in local directories only
 - Never pushed to the repository
@@ -69,12 +71,14 @@ All user data (ChatGPT exports, dossiers, databases) is stored in directories th
    - Private keys or certificates
 
 2. **Check your changes:**
+
    ```bash
    git diff
    git status
    ```
 
 3. **Verify .gitignore is working:**
+
    ```bash
    git add -A -n  # Dry-run to see what would be added
    ```
@@ -124,6 +128,7 @@ If you discover a security vulnerability in this repository:
 ## Compliance
 
 This repository follows security best practices:
+
 - No credentials in source code
 - Proper .gitignore configuration
 - Environment variable usage for configuration
