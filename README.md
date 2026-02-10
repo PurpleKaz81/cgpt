@@ -9,6 +9,24 @@ Turn messy ChatGPT conversation exports into clean, organized research dossiers.
 └─────────────────┘     └─────────────┘     └──────────────────────────────────┘
 ```
 
+## 🎯 What Does This Do?
+
+**cgpt** transforms ChatGPT conversation exports into research-grade dossiers by:
+
+1. **Extracting** ChatGPT ZIP files and indexing conversations in SQLite with FTS5 search
+2. **Searching & Selecting** conversations by date, keyword, or full-text content search
+3. **Cleaning & Organizing** by removing tool noise, fixing citations, deduplicating content
+4. **Categorizing Sources** into deliverables, used links, and supplementary references
+5. **Building Two Versions**: 
+   - Full raw transcript for your records
+   - Cleaned working file ready to upload back to ChatGPT
+
+**Perfect for:** Researchers, writers, developers, and anyone managing long-term ChatGPT projects who needs to:
+- Combine multiple conversations into a single reference document
+- Share clean context with ChatGPT without noise
+- Track sources and deliverables across conversations
+- Build searchable archives of your AI interactions
+
 ---
 
 ## ⚡ 30-Second Quick Start
@@ -119,6 +137,111 @@ cgpt ids | head -30         # Last 30 only
 cgpt i "keyword"            # Filter by keyword
 ```
 
+### Search (Advanced FTS5)
+
+```bash
+cgpt search "machine learning"           # Search in titles
+cgpt search --where messages "algorithm" # Search in message content
+cgpt search --where all "neural"         # Search everywhere
+```
+
+### Find (Simple Search)
+
+```bash
+cgpt find "thesis"          # Case-insensitive title search
+cgpt f "research"           # Short form
+```
+
+### Other Commands
+
+```bash
+cgpt make-dossiers --recent 10          # Generate individual files (not combined)
+cgpt index                              # Rebuild search index
+cgpt latest-zip                         # Show path to newest ZIP
+cgpt                                    # No command = auto-extract newest ZIP
+```
+
+---
+
+## 🚀 Advanced Features
+
+### Excerpts Mode (Topic Extraction)
+
+Instead of full conversations, extract only relevant portions:
+
+```bash
+# Extract only portions matching your search, with ±2 messages context
+cgpt q --mode excerpts --context 2 --split --name "ml" "machine learning"
+
+# Full conversation (default)
+cgpt q --mode full --split --name "ml" "machine learning"
+```
+
+**When to use excerpts:**
+- Long conversations where only some parts are relevant
+- Building focused dossiers from sprawling discussions
+- Reducing token count for ChatGPT uploads
+
+### Output Formats
+
+```bash
+# Plain text (default)
+cgpt r 30 --split --format txt
+
+# Markdown with headers and formatting
+cgpt r 30 --split --format md
+
+# Microsoft Word document (requires python-docx)
+cgpt r 30 --split --format docx
+```
+
+### Custom Configuration
+
+Create your own `my-config.json` based on `config.json` to customize:
+
+```json
+{
+  "segment_scoring": {
+    "mechanism_terms": ["analysis", "finding", "decision"],
+    "bridging_terms": ["next steps", "follow-up"],
+    "min_score": 0.5
+  },
+  "thread_filters": {
+    "include": {"research": ["study", "analysis"]},
+    "exclude": ["recipe", "weather"]
+  }
+}
+```
+
+Then use it:
+```bash
+cgpt r 30 --config my-config.json --split
+```
+
+### Deliverable Patterns
+
+Customize what gets highlighted as "deliverables":
+
+```bash
+# Create patterns.txt with one pattern per line
+echo "## " > patterns.txt
+echo "Decision:" >> patterns.txt
+echo "Draft:" >> patterns.txt
+
+cgpt r 30 --patterns-file patterns.txt --split
+```
+
+### Source Prioritization
+
+Mark URLs you've already used so they appear first in sources:
+
+```bash
+# Create used-links.txt with one URL per line
+echo "https://example.com/important-source" > used-links.txt
+
+cgpt r 30 --used-links-file used-links.txt --split
+```
+
 ---
 
 ## 🎮 Interactive Selection
@@ -195,11 +318,26 @@ cgpt q --split --name "project" "search term"
 # Search in content (not just titles)
 cgpt q --where all --split --name "project" "search term"
 
-# Extract a new ChatGPT export
+# Advanced FTS5 search
+cgpt search --where all "algorithm"
+
+# Extract only relevant excerpts with context
+cgpt r 30 --mode excerpts --context 3 --split --name "project"
+
+# Output as Markdown
+cgpt r 30 --split --format md --name "project"
+
+# Extract a new ChatGPT export (or just run 'cgpt' with no args)
 cgpt extract conversations.zip
 
 # List all conversations
 cgpt ids | head -50
+
+# Find by simple title search
+cgpt find "thesis"
+
+# Rebuild search index
+cgpt index
 ```
 
 ---
@@ -226,7 +364,8 @@ chatgpt_chat_exports/
 ### Requirements
 
 - Python 3.8+
-- No pip installs needed (standard library only)
+- Standard library (no dependencies for basic use)
+- **Optional:** `python-docx` (only needed if using `--format docx`)
 
 ### Setup
 
@@ -234,13 +373,27 @@ chatgpt_chat_exports/
 # 1. Put cgpt.py somewhere permanent
 mkdir -p ~/Documents/chatgpt_exports
 cp cgpt.py ~/Documents/chatgpt_exports/
+cd ~/Documents/chatgpt_exports
 
-# 2. Add alias to your shell
+# 2. Install optional dependencies (if needed)
+pip install python-docx  # Only if you want --format docx
+
+# 3. Add alias to your shell (bash or zsh)
 echo 'alias cgpt="python3 ~/Documents/chatgpt_exports/cgpt.py"' >> ~/.zshrc
 source ~/.zshrc
+# For bash: use ~/.bashrc instead of ~/.zshrc
 
-# 3. Test it
+# 4. Test it
 cgpt --help
+```
+
+### Environment Variables
+
+You can customize cgpt's behavior with these environment variables:
+
+```bash
+export CGPT_HOME="/path/to/your/chatgpt_exports"  # Override home directory
+export CGPT_DEFAULT_MODE="excerpts"               # Set default mode (full or excerpts)
 ```
 
 ---
@@ -251,14 +404,22 @@ cgpt --help
 |------|----------|--------------|
 | `--split` | r, q, d | **Creates both raw + working files** |
 | `--name "X"` | r, q, d | Organizes into `dossiers/X/` folder |
-| `--where all` | q | Search content, not just titles |
+| `--where all` | q, search | Search content, not just titles |
 | `--all` | r, q | ⚠️ Skip selection (use with caution) |
+| `--mode full` | r, q, d | Include full conversations (default) |
+| `--mode excerpts` | r, q, d | Only topic-matching snippets with context |
+| `--context N` | r, q, d | Include ±N messages around matches (excerpts mode) |
+| `--format txt` | r, q, d | Output as plain text (default) |
 | `--format md` | r, q, d | Output as Markdown |
 | `--format docx` | r, q, d | Output as Word (needs python-docx) |
-| `--no-dedup` | r, q, d | Keep duplicates (default: remove) |
+| `--dedup` | r, q, d | Remove duplicates (default: enabled) |
+| `--no-dedup` | r, q, d | Keep duplicates |
+| `--color` | all | Force colored output |
+| `--no-color` | all | Disable colored output |
 | `--config X.json` | r, q, d | Use custom filter config |
 | `--patterns-file X` | r, q, d | Custom deliverable patterns |
 | `--used-links-file X` | r, q, d | Prioritize these URLs in sources |
+| `--no-index` | extract | Skip auto-indexing after extraction |
 
 ---
 
@@ -287,6 +448,92 @@ A: Yes, order doesn't matter:
 ```bash
 cgpt r 30 --split --name "project"
 cgpt r 30 --name "project" --split    # Same result
+```
+
+**Q: What's the difference between `--mode full` and `--mode excerpts`?**
+A: `full` includes entire conversations. `excerpts` extracts only relevant portions based on topic matching, with `--context N` controlling how much surrounding context to include.
+
+**Q: Do I need to manually extract ZIPs?**
+A: No! Running `cgpt` with no command automatically extracts the newest ZIP from `zips/` folder.
+
+**Q: What's config.json for?**
+A: Advanced filtering configuration. It defines:
+- Segment scoring criteria (mechanism terms, bridging terms)
+- Thread filters (include/exclude patterns)
+- Deliverable extraction patterns
+- Control layer sections for research-grade output
+
+You can use a custom config with `--config your-config.json`.
+
+**Q: Where does cgpt look for files?**
+A: It searches for a folder with `zips/`, `extracted/`, and `dossiers/` subfolders, starting from:
+1. Current directory
+2. Parent directories (up to 8 levels)
+3. Directory containing cgpt.py
+
+You can override with `CGPT_HOME` environment variable.
+
+---
+
+## 🔍 Troubleshooting
+
+### "ERROR: No conversations.json found"
+
+You need to extract a ChatGPT export first:
+```bash
+cgpt extract path/to/conversations.zip
+# Or just put the ZIP in zips/ folder and run:
+cgpt
+```
+
+### "ERROR: Directory layout missing"
+
+cgpt expects this structure:
+```
+your-folder/
+├── zips/
+├── extracted/
+└── dossiers/
+```
+
+Create it manually or let cgpt create it in the current directory:
+```bash
+mkdir -p zips extracted dossiers
+```
+
+### "ModuleNotFoundError: No module named 'docx'"
+
+You're using `--format docx` without python-docx installed:
+```bash
+pip install python-docx
+```
+
+### "No matching conversations found"
+
+Your search returned nothing. Try:
+- Broader keywords
+- Using `--where all` to search content
+- Running `cgpt ids` to see all available conversations
+
+### Interactive selection isn't working
+
+Make sure you're entering valid formats:
+- Single: `3`
+- Multiple: `1 3 7`
+- Range: `2-5`
+- Mixed: `1-3 7 9-11`
+- All: `all`
+
+### Colors look weird in my terminal
+
+Disable them:
+```bash
+cgpt r 30 --no-color --split
+```
+
+Or set as default:
+```bash
+export CGPT_DEFAULT_COLOR=false
 ```
 
 ---

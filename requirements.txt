@@ -1,1 +1,3 @@
+# Optional dependencies
+# Only needed if you want to export to Word format (--format docx)
 python-docx>=0.8.11
