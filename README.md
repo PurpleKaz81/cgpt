@@ -291,6 +291,20 @@ Install optional DOCX dependency:
 pip install python-docx
 ```
 
+## Automated Tests
+
+Run the CLI critical-path suite:
+
+```bash
+python -m unittest discover -s tests -p "test_*.py" -v
+```
+
+This suite currently covers selection parsing and output generation for:
+
+- `quick`
+- `recent`
+- `make-dossiers`
+
 ## Safety Notes
 
 - This tool processes local files; it does not send your exports to external services.
