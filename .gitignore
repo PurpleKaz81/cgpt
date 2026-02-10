@@ -1,7 +1,11 @@
 # Personal data - never upload
-extracted/
-dossiers/
-zips/
+# Keep folders in repo, ignore all real contents
+extracted/*
+!extracted/.gitkeep
+dossiers/*
+!dossiers/.gitkeep
+zips/*
+!zips/.gitkeep
 
 # Sensitive data files
 .env
