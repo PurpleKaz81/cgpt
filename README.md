@@ -13,6 +13,7 @@ It works locally on your machine with this folder layout:
 ```
 
 Important:
+
 - `cgpt` requires `zips/`, `extracted/`, and `dossiers/` to already exist.
 - `cgpt` creates subfolders inside `extracted/` and `dossiers/` as needed.
 - In this repo, those folders are tracked with `.gitkeep`; real contents are git-ignored.
@@ -68,6 +69,7 @@ cgpt recent 30 --split --name "project-name"
 ```
 
 What happens:
+
 - If `extracted/` is empty, `cgpt` auto-extracts the newest ZIP from `zips/`.
 - You get an interactive selection list.
 - Output is written under `dossiers/project-name/`.
@@ -75,6 +77,7 @@ What happens:
 ### 3. Upload the working file to ChatGPT
 
 With `--split`, two TXT files are created:
+
 - `<name>.txt` (raw)
 - `<name>__working.txt` (cleaned)
 
@@ -92,6 +95,7 @@ cgpt latest-zip                     # print newest ZIP in zips/
 ```
 
 Notes:
+
 - `extract` without a path uses the newest ZIP in `zips/`.
 - Running just `cgpt` (no subcommand) is equivalent to `extract` with newest ZIP.
 
@@ -103,6 +107,7 @@ cgpt r 30 --split --name "thesis"  # alias
 ```
 
 Useful flags:
+
 - `--all`: skip prompt and include every shown conversation.
 - `--mode excerpts --context 2`: include only matching segments with context.
 - `--format txt md docx`: request multiple output formats.
@@ -117,6 +122,7 @@ cgpt q --and --split "term1" "term2"
 ```
 
 Useful flags:
+
 - `--where title|messages|all` controls where matching happens.
 - `--ids-file <file>` allows non-interactive selection input.
 - `--split` creates raw + working TXT (cleaned) variants.
@@ -134,6 +140,7 @@ cgpt d --ids 123abc 456def --mode full --split --name "project"  # alias
 ```
 
 Important for `build-dossier`:
+
 - You must provide `--ids` and/or `--ids-file`.
 - IDs are space-separated, not comma-separated.
 - In `--mode excerpts`, you must provide `--topic` and/or `--topics`.
@@ -163,6 +170,7 @@ cgpt search --terms alpha beta --and --where all
 ## Interactive Selection Input
 
 For `recent` and `quick`, you can select with:
+
 - Single numbers: `3`
 - Multiple numbers: `1 4 9`
 - Ranges: `2-6`
@@ -201,6 +209,7 @@ dossiers/
 - `--quiet`: suppress non-error output.
 
 Important `--split` behavior:
+
 - `--split` only produces a working file when TXT output is being generated.
 - If you use only `--format md` or only `--format docx`, no `__working.txt` is created.
 
@@ -223,16 +232,19 @@ cgpt q --split \
 ```
 
 CLI quirk to know:
+
 - `--topic`/`--topics` are only required when `--mode excerpts` is used.
 
 ## Home Resolution and Environment Variables
 
 Home folder resolution order:
+
 1. `--home`
 2. `CGPT_HOME`
 3. Auto-discovery from current directory and parents
 
 Supported environment variables:
+
 - `CGPT_HOME`: explicit home path.
 - `CGPT_DEFAULT_MODE`: `full` or `excerpts`.
 - `CGPT_FORCE_COLOR`: `1/true/yes/on` or `0/false/no/off`.
@@ -290,6 +302,7 @@ pip install python-docx
 
 Documentation maintenance rules are defined in `RELEASING.md`.
 The markdown set is intentionally limited to:
+
 - `README.md`
 - `SECURITY.md`
 - `CHANGELOG.md`
