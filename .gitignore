@@ -3,6 +3,29 @@ extracted/
 dossiers/
 zips/
 
+# Sensitive data files
+.env
+.env.*
+*.env
+secret.txt
+secrets.txt
+secret.json
+secrets.json
+credentials.txt
+credentials.json
+*_secret.*
+*_credential.*
+*_password.*
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Database files (may contain user data)
+*.db
+*.sqlite
+*.sqlite3
+
 # macOS
 .DS_Store
 
