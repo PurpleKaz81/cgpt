@@ -356,6 +356,7 @@ chatgpt_chat_exports/
     ├── research/
     └── recent/
 ```
+When cloned from this repo, these folders are included with `.gitkeep` placeholders; real contents remain ignored by `.gitignore`.
 
 ---
 
@@ -375,15 +376,18 @@ mkdir -p ~/Documents/chatgpt_exports
 cp cgpt.py ~/Documents/chatgpt_exports/
 cd ~/Documents/chatgpt_exports
 
-# 2. Install optional dependencies (if needed)
+# 2. Create required folders (must exist)
+mkdir -p zips extracted dossiers
+
+# 3. Install optional dependencies (if needed)
 pip install python-docx  # Only if you want --format docx
 
-# 3. Add alias to your shell (bash or zsh)
+# 4. Add alias to your shell (bash or zsh)
 echo 'alias cgpt="python3 ~/Documents/chatgpt_exports/cgpt.py"' >> ~/.zshrc
 source ~/.zshrc
 # For bash: use ~/.bashrc instead of ~/.zshrc
 
-# 4. Test it
+# 5. Test it
 cgpt --help
 ```
 
@@ -454,7 +458,7 @@ cgpt r 30 --name "project" --split    # Same result
 A: `full` includes entire conversations. `excerpts` extracts only relevant portions based on topic matching, with `--context N` controlling how much surrounding context to include.
 
 **Q: Do I need to manually extract ZIPs?**
-A: No! Running `cgpt` with no command automatically extracts the newest ZIP from `zips/` folder.
+A: No. Running `cgpt` with no command automatically extracts the newest ZIP from `zips/` (once `zips/`, `extracted/`, and `dossiers/` already exist).
 
 **Q: What's config.json for?**
 A: Advanced filtering configuration. It defines:
@@ -496,7 +500,7 @@ your-folder/
 └── dossiers/
 ```
 
-Create it manually or let cgpt create it in the current directory:
+Create it manually (cgpt does not auto-create these top-level folders):
 ```bash
 mkdir -p zips extracted dossiers
 ```
