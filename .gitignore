@@ -20,3 +20,7 @@ venv/
 # Temporary files
 *.tmp
 *.log
+
+# Sourcery (code review bot - not wanted)
+.sourcery.yaml
+sourcery.yaml
