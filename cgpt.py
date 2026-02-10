@@ -32,6 +32,8 @@ try:
 except Exception:
     pass
 
+__version__ = "0.1.0"
+
 SAO_PAULO_TZ = "America/Sao_Paulo"
 
 
@@ -2996,6 +2998,9 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="cgpt.py",
         description="ChatGPT export helper (zips → extracted → dossiers).",
+    )
+    p.add_argument(
+        "--version", action="version", version=f"%(prog)s {__version__}"
     )
     # CLI-level color control: --color / --no-color
     color_grp = p.add_mutually_exclusive_group()
