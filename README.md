@@ -531,11 +531,6 @@ Disable them:
 cgpt r 30 --no-color --split
 ```
 
-Or set as default:
-```bash
-export CGPT_DEFAULT_COLOR=false
-```
-
 ---
 
 ## 🆘 Help
