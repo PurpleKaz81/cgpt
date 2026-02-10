@@ -305,6 +305,27 @@ This suite currently covers selection parsing and output generation for:
 - `recent`
 - `make-dossiers`
 
+## Suggested Features (Roadmap)
+
+The items below track suggested improvements discussed for this project.
+
+Status labels:
+
+- `Implemented`: available in the current CLI.
+- `Planned`: documented intent only; not available yet.
+
+| Feature | Status | Notes |
+| --- | --- | --- |
+| Automated CLI critical-path tests | `Implemented` | Available via `python -m unittest discover -s tests -p "test_*.py" -v`; covers core selection parsing and output generation paths. |
+| `cgpt init` command | `Planned` | Would create/verify `zips/`, `extracted/`, and `dossiers/`, and optionally scaffold defaults. |
+| `--redact` mode | `Planned` | Would scrub sensitive patterns (for example emails/phones/tokens) from generated dossiers before sharing. |
+| `--json` output for discovery/search commands | `Planned` | Would add machine-readable output mode for `ids`, `find`, and `search` to improve scripting/automation workflows. |
+| Token-aware chunking (`--max-tokens`) | `Planned` | Would split large `__working` outputs into chunked files sized for upload constraints. |
+
+Important:
+
+- Planned items are not implemented yet and should not be relied on in production workflows.
+
 ## Safety Notes
 
 - This tool processes local files; it does not send your exports to external services.
