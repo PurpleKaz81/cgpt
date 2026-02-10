@@ -285,3 +285,12 @@ pip install python-docx
 - Your ChatGPT exports may include personal/sensitive data.
 - Review files before sharing.
 - See `SECURITY.md` for contributor and data-handling guidance.
+
+## Maintainer Note
+
+Documentation maintenance rules are defined in `RELEASING.md`.
+The markdown set is intentionally limited to:
+- `README.md`
+- `SECURITY.md`
+- `CHANGELOG.md`
+- `RELEASING.md`

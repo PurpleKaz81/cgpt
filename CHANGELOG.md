@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed redundant, version-specific release docs (`RELEASE_NOTES.md`, `RELEASE_INSTRUCTIONS.md`)
 - Rewrote `README.md` with corrected command examples, folder requirements, and step-by-step usage
 - Rewrote `SECURITY.md` to match current `.gitignore` behavior (`.gitkeep` tracked, real contents ignored)
+- Added CI docs guard (`.github/workflows/docs-guard.yml`) to enforce:
+  - minimal markdown set
+  - markdown updates when code/config files change
 
 ## [0.1.0] - 2026-02-10
 

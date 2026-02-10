@@ -1,0 +1,64 @@
+name: Docs Guard
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  docs-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Enforce markdown policy and code-doc sync
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          allowed_md='^(README\.md|SECURITY\.md|CHANGELOG\.md|RELEASING\.md)$'
+
+          # Keep markdown set minimal and explicit.
+          disallowed_md="$(git ls-files '*.md' | rg -v "$allowed_md" || true)"
+          if [[ -n "$disallowed_md" ]]; then
+            echo "Disallowed markdown files detected:"
+            echo "$disallowed_md"
+            echo "Allowed files: README.md, SECURITY.md, CHANGELOG.md, RELEASING.md"
+            exit 1
+          fi
+
+          # Compare against base for PRs and pushes.
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base_sha="${{ github.event.pull_request.base.sha }}"
+          else
+            base_sha="${{ github.event.before }}"
+          fi
+
+          # Fallback for edge cases (e.g., first push).
+          if [[ -z "${base_sha}" || "${base_sha}" == "0000000000000000000000000000000000000000" ]]; then
+            base_sha="$(git rev-list --max-parents=0 HEAD)"
+          fi
+
+          changed="$(git diff --name-only "$base_sha" "${{ github.sha }}" || true)"
+          echo "Changed files:"
+          echo "$changed"
+
+          # Define what counts as code/config behavior changes.
+          code_changed="$(echo "$changed" | rg '^(cgpt\.py|config\.json|requirements\.txt)$' || true)"
+          if [[ -z "$code_changed" ]]; then
+            echo "No code/config files changed; docs sync check skipped."
+            exit 0
+          fi
+
+          docs_changed="$(echo "$changed" | rg "$allowed_md" || true)"
+          if [[ -z "$docs_changed" ]]; then
+            echo "Code/config changed, but no markdown docs were updated."
+            echo "Update at least one of: README.md, SECURITY.md, CHANGELOG.md, RELEASING.md"
+            exit 1
+          fi
+
+          echo "Docs guard passed."

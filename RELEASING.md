@@ -2,6 +2,25 @@
 
 This file is the single source of truth for creating a release.
 
+## Documentation Contract (Every Code Change)
+
+This repository intentionally keeps the markdown set minimal.
+
+Allowed markdown files:
+- `README.md`
+- `SECURITY.md`
+- `CHANGELOG.md`
+- `RELEASING.md`
+
+Rules:
+- Do not add new `.md` files unless one of the four files cannot reasonably hold the content.
+- Every change to `cgpt.py`, `config.json`, or `requirements.txt` must update at least one allowed markdown file.
+- User-visible behavior changes should update `README.md` and `CHANGELOG.md`.
+- Security/data-handling changes should update `SECURITY.md`.
+
+Enforcement:
+- CI workflow `.github/workflows/docs-guard.yml` enforces this policy on PRs and pushes to `main`.
+
 ## Release Checklist
 
 - [ ] Working tree is clean (`git status`).
