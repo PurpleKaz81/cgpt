@@ -1,0 +1,82 @@
+{
+  "column_name": "Research Dossier",
+  "column_objective": "Organize research conversations into actionable dossiers with clear source categorization, deliverable extraction, and navigation aids.",
+
+  "thread_filters": {
+    "include": {
+      "primary_research": ["research", "analysis", "study", "report", "paper", "findings"],
+      "project_work": ["project", "draft", "deliverable", "output", "milestone", "deadline"],
+      "technical": ["implementation", "code", "architecture", "design", "system", "API"]
+    },
+    "exclude": ["recipe", "cooking", "weather", "small talk", "chitchat", "joke"]
+  },
+
+  "segment_scoring": {
+    "mechanism_terms": [
+      "analysis",
+      "finding",
+      "conclusion",
+      "recommendation",
+      "decision",
+      "constraint",
+      "requirement",
+      "specification",
+      "implementation",
+      "architecture",
+      "methodology",
+      "framework",
+      "model",
+      "hypothesis",
+      "evidence",
+      "result",
+      "outcome",
+      "metric",
+      "benchmark",
+      "evaluation"
+    ],
+    "bridging_terms": [
+      "handoff",
+      "continuation",
+      "follow-up",
+      "sequel",
+      "next steps",
+      "todo",
+      "action item",
+      "bridge",
+      "transition"
+    ],
+    "context_window": 2,
+    "min_score": 0.5
+  },
+
+  "op_v2_constraints": [
+    "Separate descriptive claims from normative ones",
+    "Never hide judgments in technical language",
+    "Always identify: who benefits, who pays, who decides, who executes",
+    "Never argue by outrage, slogans, or vibes",
+    "Translate values into operational tradeoffs",
+    "Treat failures as more informative than successes",
+    "Keep paragraphs short, one idea per paragraph",
+    "Use clear language, technical terms only when necessary"
+  ],
+
+  "dossier_contract": "Include only structural work segments (analysis, findings, decisions, deliverables). Context windows ±2 turns. Assume omissions are non-decisions. No moralizing.",
+
+  "control_layer_sections": {
+    "scope_router": "Focus on actionable research outputs: analyses, findings, decisions, recommendations, and deliverables. Prioritize mechanism over narrative.",
+    "do_not_repeat_rules": [
+      "No repeating content already covered in previous sections",
+      "No moral labels as substitutes for mechanisms",
+      "No jargon without explanation",
+      "No speculation without labeling it as such"
+    ],
+    "mechanism_focus": "Prioritize concrete mechanisms, processes, and outcomes over abstract descriptions.",
+    "evidence_vs_inference": "Cite sources for factual claims. Label structural inferences explicitly. Mark speculation as conditional.",
+    "stress_tests": [
+      "Does this claim have supporting evidence?",
+      "What would falsify this conclusion?",
+      "What mechanisms are actually at work here?",
+      "What are the tradeoffs involved?"
+    ]
+  }
+}

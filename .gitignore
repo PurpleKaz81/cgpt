@@ -1,0 +1,22 @@
+# Personal data - never upload
+extracted/
+dossiers/
+zips/
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.log
