@@ -1,139 +1,94 @@
 # Security Policy
 
-## Overview
+## Scope
 
-This repository has been audited for sensitive data and is safe for public access. This document outlines the security measures in place and best practices for contributors.
+`cgpt` is a local CLI tool that processes ChatGPT exports on your machine.
 
-## Security Audit Summary
+This repository does not require API keys, credentials, or cloud accounts.
 
-**Last Audit Date:** February 2026
-**Status:** ✅ Safe for public repository
+## Data Handling Model
 
-### What Was Checked
+`cgpt` reads and writes data in these folders:
 
-- ✅ No hardcoded API keys, tokens, or secrets
-- ✅ No passwords or credentials in source code
-- ✅ No private keys or certificates
-- ✅ No database connection strings with credentials
-- ✅ No email addresses in source files
-- ✅ Configuration files contain only non-sensitive settings
-- ✅ .gitignore properly configured to prevent sensitive data commits
+- `zips/`: original ChatGPT export ZIP files.
+- `extracted/`: extracted export data and search index (`cgpt_index.db`).
+- `dossiers/`: generated dossier outputs.
 
-## Data Protection Measures
+These directories can contain sensitive personal data from your conversations.
 
-### 1. .gitignore Configuration
+## Git Protection Rules
 
-The repository's `.gitignore` is configured to prevent accidental commits of:
+`.gitignore` is configured to:
 
-- **User Data Directories:**
-  - `extracted/` - ChatGPT conversation exports
-  - `dossiers/` - Generated research dossiers
-  - `zips/` - ChatGPT ZIP files
+- Keep folder placeholders tracked:
+  - `zips/.gitkeep`
+  - `extracted/.gitkeep`
+  - `dossiers/.gitkeep`
+- Ignore actual user content under those folders.
 
-- **Sensitive Files:**
-  - Environment files (`.env`, `.env.*`, `*.env`)
-  - Secret/credential files (`*secret*`, `*credential*`, `*password*`)
-  - Private keys (`*.key`, `*.pem`, `*.p12`, `*.pfx`)
-  - Database files (`*.db`, `*.sqlite`, `*.sqlite3`)
+Current pattern style:
 
-- **Development Files:**
-  - Python cache (`__pycache__/`, `*.pyc`, `*.pyo`)
-  - Virtual environments (`.venv/`, `venv/`)
-  - IDE files (`.vscode/`, `.idea/`)
-  - Temporary files (`*.tmp`, `*.log`)
+```gitignore
+zips/*
+!zips/.gitkeep
+extracted/*
+!extracted/.gitkeep
+dossiers/*
+!dossiers/.gitkeep
+```
 
-### 2. Environment Variables
+It also ignores common sensitive and local-only files (env files, key files, DB files, virtual envs, IDE folders, temp files).
 
-The application uses environment variables for configuration:
+## Contributor Checklist (Before Every Commit)
 
-- `CGPT_HOME` - Path to working directory
-- `CGPT_FORCE_COLOR` - Color output control
-- `CGPT_DEFAULT_MODE` - Default operation mode
+Run these commands before pushing:
 
-**No secrets or credentials are required** by this application.
+```bash
+git status
+git diff --cached
+git add -n -A
+```
 
-### 3. Local Data Storage
+What to verify:
 
-All user data (ChatGPT exports, dossiers, databases) is stored in directories that are:
+- No real user exports or dossier outputs are staged.
+- No credentials/secrets are staged.
+- Only intended source/docs/config changes are staged.
 
-- Explicitly excluded from version control
-- Kept in local directories only
-- Never pushed to the repository
+Recommended secret scan:
 
-## Best Practices for Contributors
+```bash
+rg -n "(api[_-]?key|token|secret|password|BEGIN (RSA|EC|OPENSSH) PRIVATE KEY)" .
+```
 
-### Before Committing
+## Safe Usage Guidance
 
-1. **Never commit sensitive data:**
-   - API keys or tokens
-   - Passwords or credentials
-   - Personal information
-   - Private keys or certificates
+- Treat all data in `zips/`, `extracted/`, and `dossiers/` as sensitive by default.
+- Review generated dossiers before sharing externally.
+- Remove personal identifiers if you plan to publish outputs.
 
-2. **Check your changes:**
+## Environment Variables
 
-   ```bash
-   git diff
-   git status
-   ```
+Used for configuration only:
 
-3. **Verify .gitignore is working:**
+- `CGPT_HOME`
+- `CGPT_DEFAULT_MODE`
+- `CGPT_FORCE_COLOR`
 
-   ```bash
-   git add -A -n  # Dry-run to see what would be added
-   ```
+No environment variable is used as an authentication secret.
 
-### Safe Configuration
+## Reporting a Security Issue
 
-- Use environment variables for any configuration
-- Never hardcode credentials in source code
-- Keep sample/template files generic (no real data)
+If you discover a vulnerability:
 
-## Reporting Security Issues
+1. Do not open a public issue with exploit details.
+2. Contact the repository owner privately on GitHub.
+3. Include reproduction steps and impact.
+4. Allow time for remediation before public disclosure.
 
-If you discover a security vulnerability in this repository:
+## Security Expectations for Changes
 
-1. **Do NOT** open a public issue
-2. Contact the repository owner directly via GitHub
-3. Provide details about the vulnerability
-4. Allow time for the issue to be addressed before public disclosure
+Any change that affects file I/O, path handling, or git-ignore behavior should include:
 
-## Security Features
-
-### What This Tool Does NOT Store
-
-- API keys or authentication tokens
-- User credentials
-- Personal information beyond what's in ChatGPT exports (which users provide)
-- Network credentials
-- Cloud service credentials
-
-### What Users Should Know
-
-1. **ChatGPT exports may contain:**
-   - Your conversation history
-   - Any personal information you shared with ChatGPT
-   - Links and references you discussed
-
-2. **Keep your exports secure:**
-   - Store exports in the designated directories (`zips/`, `extracted/`, `dossiers/`)
-   - These directories are automatically excluded from git
-   - Do not share your exports unless you've reviewed the content
-
-3. **Before sharing a dossier:**
-   - Review the generated files
-   - Ensure no sensitive information is included
-   - Remove any personal data if necessary
-
-## Compliance
-
-This repository follows security best practices:
-
-- No credentials in source code
-- Proper .gitignore configuration
-- Environment variable usage for configuration
-- Clear documentation of data handling
-
----
-
-**Note:** This is a local tool that processes your ChatGPT exports on your machine. No data is sent to external servers or services.
+- Updated documentation in `README.md` and/or `SECURITY.md`.
+- A manual verification note in the PR description showing that sensitive files remain ignored.

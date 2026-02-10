@@ -1,0 +1,88 @@
+# Releasing cgpt
+
+This file is the single source of truth for creating a release.
+
+## Release Checklist
+
+- [ ] Working tree is clean (`git status`).
+- [ ] `cgpt.py` version (`__version__`) is updated.
+- [ ] `CHANGELOG.md` has a new version section with date and changes.
+- [ ] Core smoke tests pass (see below).
+- [ ] Release commit is on `main`.
+- [ ] Annotated git tag is created and pushed.
+- [ ] GitHub release is created from that tag.
+
+## 1. Prepare the release commit
+
+```bash
+git checkout main
+git pull origin main
+```
+
+Update:
+- `cgpt.py` (`__version__`)
+- `CHANGELOG.md`
+- Any docs changed by the release
+
+Then commit:
+
+```bash
+git add cgpt.py CHANGELOG.md README.md SECURITY.md RELEASING.md
+git commit -m "Release vX.Y.Z"
+```
+
+## 2. Run smoke tests
+
+From repo root:
+
+```bash
+python3 cgpt.py --version
+python3 cgpt.py --help
+python3 cgpt.py extract --help
+python3 cgpt.py recent --help
+python3 cgpt.py quick --help
+python3 cgpt.py build-dossier --help
+python3 cgpt.py make-dossiers --help
+python3 cgpt.py search --help
+```
+
+If any command fails, fix before tagging.
+
+## 3. Tag and push
+
+Replace `X.Y.Z` with the release version:
+
+```bash
+git tag -a vX.Y.Z -m "Release vX.Y.Z"
+git push origin main
+git push origin vX.Y.Z
+```
+
+Verify tag exists remotely:
+
+```bash
+git ls-remote --tags origin | rg "vX.Y.Z"
+```
+
+## 4. Create GitHub release
+
+1. Open: `https://github.com/PurpleKaz81/cgpt/releases/new`
+2. Choose tag: `vX.Y.Z`
+3. Release title: `cgpt vX.Y.Z`
+4. Release notes body:
+   - Copy from the matching `CHANGELOG.md` section.
+   - Add upgrade notes or breaking changes if needed.
+5. Mark as pre-release only when appropriate.
+6. Publish.
+
+## 5. Post-release verification
+
+- [ ] `git status` is clean.
+- [ ] `main` and `origin/main` are in sync.
+- [ ] Release page shows the correct tag and notes.
+- [ ] `CHANGELOG.md` link for the version points to the correct release URL.
+
+## Notes
+
+- Do not maintain separate version-specific release docs in this repo.
+- Keep release notes in `CHANGELOG.md` and use this file only for process.

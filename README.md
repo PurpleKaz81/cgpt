@@ -1,568 +1,287 @@
-# cgpt — ChatGPT Export → Clean Dossier
+# cgpt: ChatGPT Export to Dossier
 
-Turn messy ChatGPT conversation exports into clean, organized research dossiers.
+`cgpt.py` converts ChatGPT export ZIP files into searchable data and clean dossier files.
 
-```
-┌─────────────────┐     ┌─────────────┐     ┌──────────────────────────────────┐
-│  ChatGPT ZIP    │ ──▶ │   cgpt.py   │ ──▶ │  Clean dossier for ChatGPT       │
-│  (messy export) │     │             │     │  (no noise, organized sources)   │
-└─────────────────┘     └─────────────┘     └──────────────────────────────────┘
-```
+It works locally on your machine with this folder layout:
 
-## 🎯 What Does This Do?
-
-**cgpt** transforms ChatGPT conversation exports into research-grade dossiers by:
-
-1. **Extracting** ChatGPT ZIP files and indexing conversations in SQLite with FTS5 search
-2. **Searching & Selecting** conversations by date, keyword, or full-text content search
-3. **Cleaning & Organizing** by removing tool noise, fixing citations, deduplicating content
-4. **Categorizing Sources** into deliverables, used links, and supplementary references
-5. **Building Two Versions**: 
-   - Full raw transcript for your records
-   - Cleaned working file ready to upload back to ChatGPT
-
-**Perfect for:** Researchers, writers, developers, and anyone managing long-term ChatGPT projects who needs to:
-- Combine multiple conversations into a single reference document
-- Share clean context with ChatGPT without noise
-- Track sources and deliverables across conversations
-- Build searchable archives of your AI interactions
-
----
-
-## ⚡ 30-Second Quick Start
-
-```bash
-# 1. Set up alias (one time only)
-echo 'alias cgpt="python3 /path/to/cgpt.py"' >> ~/.zshrc && source ~/.zshrc
-
-# 2. Extract your ChatGPT export
-cgpt extract conversations.zip
-
-# 3. Build a dossier (interactive menu)
-cgpt r 30 --split --name "my-project"
+```text
+<home>/
+├── cgpt.py
+├── zips/       # put ChatGPT export ZIPs here
+├── extracted/  # extracted exports + cgpt_index.db
+└── dossiers/   # generated output files
 ```
 
-**That's it.** Upload the `__working.txt` file to ChatGPT.
-
----
-
-## 🎯 The Two Commands You Need
-
-```bash
-# Browse recent conversations → pick → build dossier
-cgpt r 30 --split --name "project-name"
-
-# Search by keyword → pick → build dossier
-cgpt q --split --name "project-name" "your search term"
-```
-
-### What the flags mean
-
-| Flag | What it does | Required? |
-|------|--------------|-----------|
-| `--split` | Creates TWO files: full + cleaned for ChatGPT | **YES, always use this** |
-| `--name "X"` | Organizes output into `dossiers/X/` folder | Optional but recommended |
-
----
-
-## 📁 How Output is Organized
-
-```
-Without --name:                          With --name "thesis":
-─────────────────────────────────        ─────────────────────────────────
-dossiers/                                dossiers/
-├── dossier__topic__20260204.txt         └── thesis/
-└── dossier__topic__20260204__working.txt    ├── 2026-02-04_143022.txt
-                                             └── 2026-02-04_143022__working.txt
-     (flat, gets messy fast)                      (organized by project)
-```
-
----
-
-## 📄 Which File Goes to ChatGPT?
-
-```
-┌────────────────────────────────┐     ┌────────────────────────────────────────┐
-│  2026-02-04_143022.txt         │     │  2026-02-04_143022__working.txt        │
-│  ───────────────────────────   │     │  ────────────────────────────────────  │
-│  • Full raw transcript         │     │  • Tool noise REMOVED                  │
-│  • All original messages       │     │  • Citations CLEANED                   │
-│  • For YOUR records            │     │  • Duplicates REMOVED                  │
-│                                │     │  • Sources ORGANIZED                   │
-│  ❌ Don't upload this          │     │  • Navigation INDEX added              │
-│                                │     │                                        │
-│                                │     │  ✅ UPLOAD THIS TO CHATGPT             │
-└────────────────────────────────┘     └────────────────────────────────────────┘
-```
-
----
-
-## 🔧 All Commands
-
-### Extract ZIP
-
-```bash
-cgpt extract conversations.zip    # Full command
-cgpt x conversations.zip          # Short form
-```
-
-### Recent (browse by date)
-
-```bash
-cgpt recent 30 --split --name "project"    # Show last 30, pick interactively
-cgpt r 30 --split --name "project"         # Short form
-cgpt r 50 --split                          # Last 50, no project folder
-```
-
-### Quick (search by keyword)
-
-```bash
-cgpt quick --split --name "project" "machine learning"     # Full command
-cgpt q --split --name "project" "machine learning"         # Short form
-cgpt q --split "AI" "neural networks"                      # Multiple keywords
-cgpt q --where all --split "deep search"                   # Search content too
-```
-
-### Build-Dossier (specific IDs)
-
-```bash
-cgpt d --ids abc123,def456 --split --name "project"
-```
-
-### List IDs
-
-```bash
-cgpt ids                    # List all conversations (newest first)
-cgpt ids | head -30         # Last 30 only
-cgpt i "keyword"            # Filter by keyword
-```
-
-### Search (Advanced FTS5)
-
-```bash
-cgpt search "machine learning"           # Search in titles
-cgpt search --where messages "algorithm" # Search in message content
-cgpt search --where all "neural"         # Search everywhere
-```
-
-### Find (Simple Search)
-
-```bash
-cgpt find "thesis"          # Case-insensitive title search
-cgpt f "research"           # Short form
-```
-
-### Other Commands
-
-```bash
-cgpt make-dossiers --recent 10          # Generate individual files (not combined)
-cgpt index                              # Rebuild search index
-cgpt latest-zip                         # Show path to newest ZIP
-cgpt                                    # No command = auto-extract newest ZIP
-```
-
----
-
-## 🚀 Advanced Features
-
-### Excerpts Mode (Topic Extraction)
-
-Instead of full conversations, extract only relevant portions:
-
-```bash
-# Extract only portions matching your search, with ±2 messages context
-cgpt q --mode excerpts --context 2 --split --name "ml" "machine learning"
-
-# Full conversation (default)
-cgpt q --mode full --split --name "ml" "machine learning"
-```
-
-**When to use excerpts:**
-- Long conversations where only some parts are relevant
-- Building focused dossiers from sprawling discussions
-- Reducing token count for ChatGPT uploads
-
-### Output Formats
-
-```bash
-# Plain text (default)
-cgpt r 30 --split --format txt
-
-# Markdown with headers and formatting
-cgpt r 30 --split --format md
-
-# Microsoft Word document (requires python-docx)
-cgpt r 30 --split --format docx
-```
-
-### Custom Configuration
-
-Create your own `my-config.json` based on `config.json` to customize:
-
-```json
-{
-  "segment_scoring": {
-    "mechanism_terms": ["analysis", "finding", "decision"],
-    "bridging_terms": ["next steps", "follow-up"],
-    "min_score": 0.5
-  },
-  "thread_filters": {
-    "include": {"research": ["study", "analysis"]},
-    "exclude": ["recipe", "weather"]
-  }
-}
-```
-
-Then use it:
-```bash
-cgpt r 30 --config my-config.json --split
-```
-
-### Deliverable Patterns
-
-Customize what gets highlighted as "deliverables":
-
-```bash
-# Create patterns.txt with one pattern per line
-echo "## " > patterns.txt
-echo "Decision:" >> patterns.txt
-echo "Draft:" >> patterns.txt
-
-cgpt r 30 --patterns-file patterns.txt --split
-```
-
-### Source Prioritization
-
-Mark URLs you've already used so they appear first in sources:
-
-```bash
-# Create used-links.txt with one URL per line
-echo "https://example.com/important-source" > used-links.txt
-
-cgpt r 30 --used-links-file used-links.txt --split
-```
-
----
-
-## 🎮 Interactive Selection
-
-When you run `cgpt r` or `cgpt q`, you'll see a numbered list:
-
-```
-=== 30 Most Recent Conversations ===
-
-  1. 69827cba-...   Adam Curtis Radical Islamists       2026-02-03
-  2. 69816199-...   Thinking About MBL and Populism     2026-02-02
-  3. 69815055-...   Cambridge Texts in Politics         2026-02-02
-  ...
-
-Pick by number (e.g. 1 3 7), range (1-5), or 'all':
-```
-
-**Type your selection:**
-
-| Input | Selects |
-|-------|---------|
-| `3` | Just #3 |
-| `1 3 7` | #1, #3, and #7 |
-| `2-5` | #2, #3, #4, #5 |
-| `1-3 7 9-11` | Mix of ranges and singles |
-| `all` | Everything shown |
-
-Then hit Enter → dossier is built.
-
----
-
-## ⚠️ Common Mistakes
-
-### ❌ Forgot `--split`
-
-```bash
-cgpt q "topic"                    # Only creates ONE file (raw only)
-```
-
-**Fix:** Always add `--split`:
-
-```bash
-cgpt q --split "topic"            # Creates BOTH files ✅
-```
-
-### ❌ Used `--all` by accident
-
-```bash
-cgpt q --all "topic"              # Skips selection, processes EVERYTHING
-```
-
-**Fix:** Don't use `--all` unless you mean it. Use interactive selection instead.
-
-### ❌ Uploaded wrong file
-
-```bash
-# You uploaded: dossier__topic__20260204.txt
-# Should be:    dossier__topic__20260204__working.txt
-```
-
-**Fix:** Always upload the `__working.txt` file.
-
----
-
-## 📋 Cheat Sheet (Copy/Paste)
-
-```bash
-# Most common: browse recent + pick + build clean dossier
-cgpt r 30 --split --name "project"
-
-# Search keywords + pick + build clean dossier
-cgpt q --split --name "project" "search term"
-
-# Search in content (not just titles)
-cgpt q --where all --split --name "project" "search term"
-
-# Advanced FTS5 search
-cgpt search --where all "algorithm"
-
-# Extract only relevant excerpts with context
-cgpt r 30 --mode excerpts --context 3 --split --name "project"
-
-# Output as Markdown
-cgpt r 30 --split --format md --name "project"
-
-# Extract a new ChatGPT export (or just run 'cgpt' with no args)
-cgpt extract conversations.zip
-
-# List all conversations
-cgpt ids | head -50
-
-# Find by simple title search
-cgpt find "thesis"
-
-# Rebuild search index
-cgpt index
-```
-
----
-
-## 🗂️ Project Structure
-
-```
-chatgpt_chat_exports/
-├── cgpt.py              # The tool (this is all you need)
-├── README.md            # This file
-├── config.json          # Optional: advanced filtering config
-├── zips/                # Put your ChatGPT ZIPs here
-├── extracted/           # Extracted conversations go here
-└── dossiers/            # Your dossiers appear here
-    ├── thesis/          # Project folders (from --name)
-    ├── research/
-    └── recent/
-```
-When cloned from this repo, these folders are included with `.gitkeep` placeholders; real contents remain ignored by `.gitignore`.
-
----
-
-## 🔧 Installation
-
-### Requirements
+Important:
+- `cgpt` requires `zips/`, `extracted/`, and `dossiers/` to already exist.
+- `cgpt` creates subfolders inside `extracted/` and `dossiers/` as needed.
+- In this repo, those folders are tracked with `.gitkeep`; real contents are git-ignored.
+
+## Requirements
 
 - Python 3.8+
-- Standard library (no dependencies for basic use)
-- **Optional:** `python-docx` (only needed if using `--format docx`)
+- Optional: `python-docx` (only if you use `--format docx`)
 
-### Setup
+## Setup (First Time)
+
+### Option A: Use this repository directly
 
 ```bash
-# 1. Put cgpt.py somewhere permanent
+cd /path/to/cgpt
+python3 cgpt.py --help
+```
+
+The required folders are already present in this repo.
+
+### Option B: Install as a single script elsewhere
+
+```bash
 mkdir -p ~/Documents/chatgpt_exports
 cp cgpt.py ~/Documents/chatgpt_exports/
 cd ~/Documents/chatgpt_exports
-
-# 2. Create required folders (must exist)
 mkdir -p zips extracted dossiers
+```
 
-# 3. Install optional dependencies (if needed)
-pip install python-docx  # Only if you want --format docx
+Optional alias:
 
-# 4. Add alias to your shell (bash or zsh)
+```bash
 echo 'alias cgpt="python3 ~/Documents/chatgpt_exports/cgpt.py"' >> ~/.zshrc
 source ~/.zshrc
-# For bash: use ~/.bashrc instead of ~/.zshrc
-
-# 5. Test it
-cgpt --help
 ```
 
-### Environment Variables
+If you do not create an alias, use `python3 cgpt.py ...` in every example below.
 
-You can customize cgpt's behavior with these environment variables:
+## Quick Start (Recommended Workflow)
+
+### 1. Put your export ZIP into `zips/`
+
+Example:
 
 ```bash
-export CGPT_HOME="/path/to/your/chatgpt_exports"  # Override home directory
-export CGPT_DEFAULT_MODE="excerpts"               # Set default mode (full or excerpts)
+cp ~/Downloads/chatgpt_export.zip zips/
 ```
 
----
+### 2. Generate a dossier from recent conversations
 
-## 🎛️ All Flags Reference
-
-| Flag | Commands | What it does |
-|------|----------|--------------|
-| `--split` | r, q, d | **Creates both raw + working files** |
-| `--name "X"` | r, q, d | Organizes into `dossiers/X/` folder |
-| `--where all` | q, search | Search content, not just titles |
-| `--all` | r, q | ⚠️ Skip selection (use with caution) |
-| `--mode full` | r, q, d | Include full conversations (default) |
-| `--mode excerpts` | r, q, d | Only topic-matching snippets with context |
-| `--context N` | r, q, d | Include ±N messages around matches (excerpts mode) |
-| `--format txt` | r, q, d | Output as plain text (default) |
-| `--format md` | r, q, d | Output as Markdown |
-| `--format docx` | r, q, d | Output as Word (needs python-docx) |
-| `--dedup` | r, q, d | Remove duplicates (default: enabled) |
-| `--no-dedup` | r, q, d | Keep duplicates |
-| `--color` | all | Force colored output |
-| `--no-color` | all | Disable colored output |
-| `--config X.json` | r, q, d | Use custom filter config |
-| `--patterns-file X` | r, q, d | Custom deliverable patterns |
-| `--used-links-file X` | r, q, d | Prioritize these URLs in sources |
-| `--no-index` | extract | Skip auto-indexing after extraction |
-
----
-
-## ❓ FAQ
-
-**Q: Which file do I give ChatGPT?**
-A: The `__working.txt` file. Always.
-
-**Q: Why do I need `--split`?**
-A: Without it, you only get the raw file. `--split` creates the cleaned version for ChatGPT.
-
-**Q: What's `--name` for?**
-A: Organizes your dossiers into project folders. Without it, everything dumps into `dossiers/` flat.
-
-**Q: How do I search conversation content, not just titles?**
-A: Add `--where all`:
 ```bash
-cgpt q --where all --split "keyword"
+cgpt recent 30 --split --name "project-name"
 ```
 
-**Q: What gets removed in the working file?**
-A: JSON tool calls, citation markers, UI noise, duplicates. Sources get categorized.
+What happens:
+- If `extracted/` is empty, `cgpt` auto-extracts the newest ZIP from `zips/`.
+- You get an interactive selection list.
+- Output is written under `dossiers/project-name/`.
 
-**Q: Can I combine flags?**
-A: Yes, order doesn't matter:
+### 3. Upload the working file to ChatGPT
+
+With `--split`, two TXT files are created:
+- `<name>.txt` (raw)
+- `<name>__working.txt` (cleaned)
+
+Use the `__working.txt` file for ChatGPT.
+
+## Command Overview
+
+### Extract / Index
+
 ```bash
-cgpt r 30 --split --name "project"
-cgpt r 30 --name "project" --split    # Same result
+cgpt extract [path/to/export.zip]
+cgpt x [path/to/export.zip]         # alias
+cgpt index                          # rebuild or update search index
+cgpt latest-zip                     # print newest ZIP in zips/
 ```
 
-**Q: What's the difference between `--mode full` and `--mode excerpts`?**
-A: `full` includes entire conversations. `excerpts` extracts only relevant portions based on topic matching, with `--context N` controlling how much surrounding context to include.
+Notes:
+- `extract` without a path uses the newest ZIP in `zips/`.
+- Running just `cgpt` (no subcommand) is equivalent to `extract` with newest ZIP.
 
-**Q: Do I need to manually extract ZIPs?**
-A: No. Running `cgpt` with no command automatically extracts the newest ZIP from `zips/` (once `zips/`, `extracted/`, and `dossiers/` already exist).
+### Build a combined dossier by recency
 
-**Q: What's config.json for?**
-A: Advanced filtering configuration. It defines:
-- Segment scoring criteria (mechanism terms, bridging terms)
-- Thread filters (include/exclude patterns)
-- Deliverable extraction patterns
-- Control layer sections for research-grade output
-
-You can use a custom config with `--config your-config.json`.
-
-**Q: Where does cgpt look for files?**
-A: It searches for a folder with `zips/`, `extracted/`, and `dossiers/` subfolders, starting from:
-1. Current directory
-2. Parent directories (up to 8 levels)
-3. Directory containing cgpt.py
-
-You can override with `CGPT_HOME` environment variable.
-
----
-
-## 🔍 Troubleshooting
-
-### "ERROR: No conversations.json found"
-
-You need to extract a ChatGPT export first:
 ```bash
-cgpt extract path/to/conversations.zip
-# Or just put the ZIP in zips/ folder and run:
-cgpt
+cgpt recent 30 --split --name "thesis"
+cgpt r 30 --split --name "thesis"  # alias
 ```
 
-### "ERROR: Directory layout missing"
+Useful flags:
+- `--all`: skip prompt and include every shown conversation.
+- `--mode excerpts --context 2`: include only matching segments with context.
+- `--format txt md docx`: request multiple output formats.
 
-cgpt expects this structure:
-```
-your-folder/
-├── zips/
-├── extracted/
-└── dossiers/
+### Build a combined dossier by search terms
+
+```bash
+cgpt quick "topic"
+cgpt q "topic"                     # alias
+cgpt q --where all --split "policy" "brief"
+cgpt q --and --split "term1" "term2"
 ```
 
-Create it manually (cgpt does not auto-create these top-level folders):
+Useful flags:
+- `--where title|messages|all` controls where matching happens.
+- `--ids-file <file>` allows non-interactive selection input.
+- `--split` creates raw + working TXT (cleaned) variants.
+
+### Build a combined dossier from explicit IDs
+
+```bash
+cgpt build-dossier \
+  --topic "project-topic" \
+  --ids 123abc 456def \
+  --split \
+  --name "project"
+
+cgpt d --topic "project-topic" --ids 123abc 456def --split --name "project"  # alias
+```
+
+Important for `build-dossier`:
+- You must provide `--topic` and/or `--topics`.
+- You must provide `--ids` and/or `--ids-file`.
+- IDs are space-separated, not comma-separated.
+
+### Generate one file per conversation ID
+
+```bash
+cgpt make-dossiers --ids 123abc 456def
+cgpt make-dossiers --ids-file selected_ids.txt --format txt md
+```
+
+This command writes separate files per conversation, not one combined dossier.
+
+### Discovery and search helpers
+
+```bash
+cgpt ids
+cgpt i                               # alias for ids
+cgpt find "keyword"
+cgpt f "keyword"                    # alias for find
+cgpt search "keyword"
+cgpt search --where messages "keyword"
+cgpt search --terms alpha beta --and --where all
+```
+
+## Interactive Selection Input
+
+For `recent` and `quick`, you can select with:
+- Single numbers: `3`
+- Multiple numbers: `1 4 9`
+- Ranges: `2-6`
+- Mixed: `1-3 7 10-12`
+- `all`
+- Raw conversation IDs (if they are in the shown list)
+
+## Output Layout and Naming
+
+Without `--name`:
+
+```text
+dossiers/
+├── dossier__topic__YYYYMMDD_HHMMSS.txt
+└── dossier__topic__YYYYMMDD_HHMMSS__working.txt   # only with --split
+```
+
+With `--name "thesis"`:
+
+```text
+dossiers/
+└── thesis/
+    ├── YYYY-MM-DD_HHMMSS.txt
+    └── YYYY-MM-DD_HHMMSS__working.txt             # only with --split
+```
+
+## Flags That Matter Most
+
+- `--split`: create both raw and cleaned working TXT files.
+- `--name "X"`: group output under `dossiers/X/`.
+- `--where all`: search titles and messages.
+- `--mode excerpts --context N`: narrower dossier focused on matched segments.
+- `--format txt md docx`: choose output types.
+- `--no-dedup`: disable deduplication in working output.
+- `--home /path/to/home`: override auto home detection.
+- `--quiet`: suppress non-error output.
+
+Important `--split` behavior:
+- `--split` only produces a working file when TXT output is being generated.
+- If you use only `--format md` or only `--format docx`, no `__working.txt` is created.
+
+## Advanced Filter Inputs
+
+These options are supported on `recent`/`r` and `quick`/`q`:
+
+- `--patterns-file <file>`: one deliverable pattern per line.
+- `--used-links-file <file>`: one URL per line to prioritize in source output.
+- `--config <file>`: JSON config for segment filtering/control-layer behavior.
+
+Example:
+
+```bash
+cgpt q --split \
+  --patterns-file patterns.txt \
+  --used-links-file used-links.txt \
+  --config config.json \
+  "topic"
+```
+
+CLI quirk to know:
+- The short alias `d` exposes `--config` and `--used-links-file`.
+- The long form `build-dossier` currently does not expose those two flags in `--help`.
+
+## Home Resolution and Environment Variables
+
+Home folder resolution order:
+1. `--home`
+2. `CGPT_HOME`
+3. Auto-discovery from current directory and parents
+
+Supported environment variables:
+- `CGPT_HOME`: explicit home path.
+- `CGPT_DEFAULT_MODE`: `full` or `excerpts`.
+- `CGPT_FORCE_COLOR`: `1/true/yes/on` or `0/false/no/off`.
+
+## Troubleshooting
+
+### `ERROR: Missing folder: ... Expected: zips/, extracted/, dossiers/`
+
+Create required top-level folders:
+
 ```bash
 mkdir -p zips extracted dossiers
 ```
 
-### "ModuleNotFoundError: No module named 'docx'"
+### `ERROR: No ZIPs found in .../zips`
 
-You're using `--format docx` without python-docx installed:
+Put at least one ChatGPT export ZIP into `zips/`.
+
+### `ERROR: No JSON found under ...`
+
+Your export is not extracted yet, or `--root` points to the wrong place.
+
+Fix:
+
+```bash
+cgpt extract
+```
+
+Then retry your command.
+
+### `ERROR: Provide --topic and/or --topics`
+
+`build-dossier` requires a topic label even in `full` mode.
+
+### `ERROR: Provide --ids and/or --ids-file`
+
+`build-dossier` and `make-dossiers` require explicit conversation IDs.
+
+### `ModuleNotFoundError: No module named 'docx'`
+
+Install optional DOCX dependency:
+
 ```bash
 pip install python-docx
 ```
 
-### "No matching conversations found"
+## Safety Notes
 
-Your search returned nothing. Try:
-- Broader keywords
-- Using `--where all` to search content
-- Running `cgpt ids` to see all available conversations
-
-### Interactive selection isn't working
-
-Make sure you're entering valid formats:
-- Single: `3`
-- Multiple: `1 3 7`
-- Range: `2-5`
-- Mixed: `1-3 7 9-11`
-- All: `all`
-
-### Colors look weird in my terminal
-
-Disable them:
-```bash
-cgpt r 30 --no-color --split
-```
-
----
-
-## 🆘 Help
-
-```bash
-cgpt --help           # General help
-cgpt r --help         # Help for 'recent' command
-cgpt q --help         # Help for 'quick' command
-cgpt d --help         # Help for 'build-dossier' command
-```
-
----
-
-## Summary
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                                                                     │
-│   cgpt r 30 --split --name "project"                                │
-│   ─────────────────────────────────────                             │
-│                                                                     │
-│   This one command:                                                 │
-│   1. Shows your 30 most recent conversations                        │
-│   2. Lets you pick which ones to include                            │
-│   3. Builds a clean dossier for ChatGPT                             │
-│   4. Organizes it in dossiers/project/                              │
-│                                                                     │
-│   Then upload the __working.txt file to ChatGPT. Done.              │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-```
+- This tool processes local files; it does not send your exports to external services.
+- Your ChatGPT exports may include personal/sensitive data.
+- Review files before sharing.
+- See `SECURITY.md` for contributor and data-handling guidance.
