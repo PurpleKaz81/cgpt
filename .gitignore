@@ -11,6 +11,12 @@
 .env
 .env.*
 *.env
+config.personal.json
+config.personal.*.json
+config.private.json
+config.private.*.json
+*.personal.json
+*.private.json
 secret.txt
 secrets.txt
 secret.json
