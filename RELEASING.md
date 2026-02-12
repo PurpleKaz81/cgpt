@@ -24,6 +24,7 @@ Enforcement:
 ## Release Checklist
 
 - [ ] Working tree is clean (`git status`).
+- [ ] No private config files are tracked/staged (`config.personal.json`, `*.private.json`).
 - [ ] `cgpt.py` version (`__version__`) is updated.
 - [ ] `CHANGELOG.md` has a new version section with date and changes.
 - [ ] Core smoke tests pass (see below).
@@ -46,8 +47,14 @@ Update:
 Then commit:
 
 ```bash
-git add cgpt.py CHANGELOG.md README.md SECURITY.md RELEASING.md
+git add cgpt.py CHANGELOG.md README.md SECURITY.md RELEASING.md .gitignore .githooks/pre-commit config.json
 git commit -m "Release vX.Y.Z"
+```
+
+Before commit, verify no private files are staged:
+
+```bash
+git diff --cached --name-only
 ```
 
 ## 2. Run smoke tests

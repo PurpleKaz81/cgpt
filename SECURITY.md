@@ -29,15 +29,28 @@ These directories can contain sensitive personal data from your conversations.
 Current pattern style:
 
 ```gitignore
-zips/*
-!zips/.gitkeep
-extracted/*
-!extracted/.gitkeep
-dossiers/*
-!dossiers/.gitkeep
+/zips/**
+!/zips/.gitkeep
+/extracted/**
+!/extracted/.gitkeep
+/dossiers/**
+!/dossiers/.gitkeep
 ```
 
 It also ignores common sensitive and local-only files (env files, key files, DB files, virtual envs, IDE folders, temp files).
+
+Private config protection:
+
+- Keep public defaults in tracked `config.json`.
+- Keep personal rules in untracked files such as `config.personal.json` or `*.private.json`.
+- `.gitignore` ignores these private config patterns.
+- `.git/info/exclude` can add local-only protection in each clone.
+
+Pre-commit safety net:
+
+- Hook file: `.githooks/pre-commit`
+- Purpose: block commits that include private config files (`config.personal.json`, `*.private.json`, etc.)
+- Activation (local git setting): `git config --local core.hooksPath .githooks`
 
 ## Contributor Checklist (Before Every Commit)
 
@@ -53,6 +66,7 @@ What to verify:
 
 - No real user exports or dossier outputs are staged.
 - No credentials/secrets are staged.
+- No private config files are staged (`config.personal.json`, `*.private.json`).
 - Only intended source/docs/config changes are staged.
 
 Recommended secret scan:

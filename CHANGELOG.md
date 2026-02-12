@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `build-dossier` no longer requires topics when running in `full` mode
 - `make-dossiers` now emits explicit warnings for output-write failures instead of silently swallowing errors
 - Added a small automated CLI critical-path test suite (`tests/test_cli_critical_paths.py`) and CI workflow (`.github/workflows/tests.yml`)
+- Replaced tracked `config.json` content with a neutral public-safe baseline for shared usage
+- Added private-config protection patterns to `.gitignore` (`config.personal.json`, `*.private.json`, etc.)
+- Added local commit safety hook at `.githooks/pre-commit` to block private config files from being committed
+- Documented one-repo public/private workflow and safe pull/merge/push routine in `README.md`
+- Updated `SECURITY.md` and `RELEASING.md` with private config and hook guidance
 
 ### Fixed
 

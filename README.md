@@ -52,6 +52,88 @@ source ~/.zshrc
 
 If you do not create an alias, use `python3 cgpt.py ...` in every example below.
 
+## Private + Public Workflow (One Repository)
+
+You can safely use one repo for both:
+
+- public/shared code and docs
+- your private writing constraints and personal config
+
+The rule is simple:
+
+- keep public defaults in tracked `config.json`
+- keep personal rules in untracked `config.personal.json`
+
+### One-time setup (do this once per clone)
+
+```bash
+cp config.json config.personal.json
+git config --local core.hooksPath .githooks
+```
+
+Edit `config.personal.json` with your personal rules.
+
+Private config files are ignored by git via:
+
+- `.gitignore` (shared repo protection)
+- `.git/info/exclude` (local-only protection)
+
+Safety hook (enabled in this clone):
+
+- `.githooks/pre-commit` blocks commits of files like `config.personal.json` and `*.private.json`.
+- Local git config is set to use it: `core.hooksPath=.githooks`.
+
+### 1. Your day-to-day work with `cgpt` (private use)
+
+Always pass your private config file:
+
+```bash
+cgpt quick --config config.personal.json "topic"
+cgpt recent 30 --config config.personal.json --split
+cgpt build-dossier --ids <id1> <id2> --config config.personal.json --split
+```
+
+If you forget `--config`, `cgpt` uses public `config.json`.
+
+### 2. Safe `pull` / `merge` / `push` without leaking private data
+
+Use this exact routine:
+
+1. Check what changed:
+
+```bash
+git status --short
+```
+
+2. If you have local public changes, commit them first (or stash them).
+
+3. Update from remote:
+
+```bash
+git pull origin main
+```
+
+4. Stage only public files explicitly (never `git add .`):
+
+```bash
+git add cgpt.py README.md CHANGELOG.md SECURITY.md RELEASING.md config.json .gitignore .githooks/pre-commit
+```
+
+5. Verify staged content:
+
+```bash
+git diff --cached
+```
+
+6. Commit and push:
+
+```bash
+git commit -m "your message"
+git push origin <branch>
+```
+
+If a private file is accidentally staged, the pre-commit hook blocks the commit.
+
 ## Quick Start (Recommended Workflow)
 
 ### 1. Put your export ZIP into `zips/`
@@ -227,7 +309,7 @@ Example:
 cgpt q --split \
   --patterns-file patterns.txt \
   --used-links-file used-links.txt \
-  --config config.json \
+  --config config.personal.json \
   "topic"
 ```
 

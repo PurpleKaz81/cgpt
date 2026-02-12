@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Block accidental commits of local/private config files.
+staged_files="$(git diff --cached --name-only --diff-filter=ACMR)"
+
+if [ -z "${staged_files}" ]; then
+  exit 0
+fi
+
+blocked=()
+while IFS= read -r f; do
+  [ -z "${f}" ] && continue
+  case "${f}" in
+    config.personal.json|config.personal.*.json|config.private.json|config.private.*.json|*.personal.json|*.private.json)
+      blocked+=("${f}")
+      ;;
+    .private/*|private/*)
+      blocked+=("${f}")
+      ;;
+  esac
+done <<< "${staged_files}"
+
+if [ "${#blocked[@]}" -gt 0 ]; then
+  echo "ERROR: commit blocked. Private/local files were staged:" >&2
+  for f in "${blocked[@]}"; do
+    echo "  - ${f}" >&2
+  done
+  echo >&2
+  echo "Unstage them with:" >&2
+  echo "  git restore --staged <file>" >&2
+  echo >&2
+  echo "Keep private settings in ignored files such as config.personal.json." >&2
+  exit 1
+fi
+
+exit 0
