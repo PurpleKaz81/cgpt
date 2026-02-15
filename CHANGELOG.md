@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated `SECURITY.md` and `RELEASING.md` with private config and hook guidance
 - Added opt-in split default via `CGPT_DEFAULT_SPLIT` with `--no-split` per-command override
 - Added `quick --recent N` / `q --recent N` and `quick --days N` / `q --days N` to combine keyword matching with recency windows in one command
+- Updated README roadmap to explicitly separate implemented features from remaining planned features
 
 ### Fixed
 

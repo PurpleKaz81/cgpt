@@ -412,6 +412,9 @@ Status labels:
 | Feature | Status | Notes |
 | --- | --- | --- |
 | Automated CLI critical-path tests | `Implemented` | Available via `python -m unittest discover -s tests -p "test_*.py" -v`; covers core selection parsing and output generation paths. |
+| Opt-in split default (`CGPT_DEFAULT_SPLIT`) | `Implemented` | Enables split-by-default for split-capable dossier commands; `--split` / `--no-split` provide per-command override. |
+| Quick recency window by count (`quick --recent N`) | `Implemented` | Limits quick keyword matching to the N most recent conversations before filtering by topic terms. |
+| Quick recency window by time (`quick --days N`) | `Implemented` | Limits quick keyword matching to conversations created in the last N days before filtering by topic terms. |
 | `cgpt init` command | `Planned` | Would create/verify `zips/`, `extracted/`, and `dossiers/`, and optionally scaffold defaults. |
 | `--redact` mode | `Planned` | Would scrub sensitive patterns (for example emails/phones/tokens) from generated dossiers before sharing. |
 | `--json` output for discovery/search commands | `Planned` | Would add machine-readable output mode for `ids`, `find`, and `search` to improve scripting/automation workflows. |
@@ -420,6 +423,13 @@ Status labels:
 Important:
 
 - Planned items are not implemented yet and should not be relied on in production workflows.
+
+Remaining planned features (not implemented yet):
+
+1. `cgpt init` command
+2. `--redact` mode
+3. `--json` output for `ids` / `find` / `search`
+4. Token-aware chunking (`--max-tokens`)
 
 ## Safety Notes
 
