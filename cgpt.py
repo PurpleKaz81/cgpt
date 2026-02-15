@@ -2719,6 +2719,12 @@ def cmd_quick(args: argparse.Namespace) -> None:
 
     mode = args.mode
     context = int(args.context)
+    recent_count = getattr(args, "recent_count", None)
+    days_count = getattr(args, "days_count", None)
+    if recent_count is not None and recent_count < 1:
+        die("--recent must be >= 1")
+    if days_count is not None and days_count < 1:
+        die("--days must be >= 1")
 
     home = home_dir(args.home)
     zips_dir, extracted_dir, dossiers_dir = ensure_layout(home)
@@ -2751,6 +2757,24 @@ def cmd_quick(args: argparse.Namespace) -> None:
         die(f"No JSON found under {root}")
     data = load_json(data_file)
     convs = normalize_conversations(data)
+    if days_count is not None:
+        now_ts = datetime.now(tz=timezone.utc).timestamp()
+        cutoff_ts = now_ts - (days_count * 86400.0)
+        convs = [
+            c
+            for c in convs
+            if c.get("id") and float(c.get("create_time") or 0.0) >= cutoff_ts
+        ]
+    if recent_count is not None:
+        convs_with_time: List[Tuple[Any, float]] = []
+        for c in convs:
+            cid, _ = conv_id_and_title(c)
+            if not cid:
+                continue
+            ctime = float(c.get("create_time") or 0.0)
+            convs_with_time.append((c, ctime))
+        convs_with_time.sort(key=lambda x: x[1], reverse=True)
+        convs = [c for c, _ in convs_with_time[:recent_count]]
 
     needles = [t.lower() for t in topics]
     and_terms = bool(args.and_terms)
@@ -3371,6 +3395,21 @@ def build_parser() -> argparse.ArgumentParser:
         default="title",
         help="Where to search when matching topics: title (default), messages, or all",
     )
+    quick_recency = a.add_mutually_exclusive_group()
+    quick_recency.add_argument(
+        "--recent",
+        dest="recent_count",
+        type=int,
+        default=None,
+        help="Limit quick matching to the N most recent conversations before applying topic filters",
+    )
+    quick_recency.add_argument(
+        "--days",
+        dest="days_count",
+        type=int,
+        default=None,
+        help="Limit quick matching to conversations created in the last N days before applying topic filters",
+    )
     a.add_argument(
         "--root", help="Extracted folder to scan (defaults to extracted/latest)"
     )
@@ -3432,6 +3471,21 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["title", "messages", "all"],
         default="title",
         help="Where to search when matching topics: title (default), messages, or all",
+    )
+    quick_recency = a.add_mutually_exclusive_group()
+    quick_recency.add_argument(
+        "--recent",
+        dest="recent_count",
+        type=int,
+        default=None,
+        help="Limit quick matching to the N most recent conversations before applying topic filters",
+    )
+    quick_recency.add_argument(
+        "--days",
+        dest="days_count",
+        type=int,
+        default=None,
+        help="Limit quick matching to conversations created in the last N days before applying topic filters",
     )
     a.add_argument(
         "--root", help="Extracted folder to scan (defaults to extracted/latest)"

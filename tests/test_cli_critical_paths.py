@@ -2,6 +2,7 @@ import json
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -51,11 +52,12 @@ class TestCliCriticalPaths(unittest.TestCase):
         self.root = self.extracted / "sample_export"
         self.root.mkdir(parents=True)
 
+        now = time.time()
         conversations = [
-            _conv("conv-a", "Alpha planning", 1000.0, "Need a plan", "Draft plan"),
-            _conv("conv-b", "Beta research", 2000.0, "Find sources", "Found sources"),
-            _conv("conv-c", "Alpha delivery", 3000.0, "Write output", "Output done"),
-            _conv("conv-d", "Gamma notes", 4000.0, "Misc", "Misc reply"),
+            _conv("conv-a", "Alpha planning", now - (10 * 86400), "Need a plan", "Draft plan"),
+            _conv("conv-b", "Beta research", now - (5 * 86400), "Find sources", "Found sources"),
+            _conv("conv-c", "Alpha delivery", now - (1 * 86400), "Write output", "Output done"),
+            _conv("conv-d", "Gamma notes", now - int(0.2 * 86400), "Misc", "Misc reply"),
         ]
         (self.root / "conversations.json").write_text(
             json.dumps(conversations), encoding="utf-8"
@@ -144,6 +146,48 @@ class TestCliCriticalPaths(unittest.TestCase):
         md_files = list(self.dossiers.glob("conv-a__*.md"))
         self.assertTrue(txt_files, "Expected TXT dossier for conv-a")
         self.assertTrue(md_files, "Expected Markdown dossier for conv-a")
+
+    def test_quick_recent_window_filters_candidates_before_topic_match(self):
+        result = self.run_cgpt(
+            "quick",
+            "Alpha",
+            "--recent",
+            "2",
+            "--all",
+            "--root",
+            str(self.root),
+            "--format",
+            "txt",
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+        selected_file = self.dossiers / "selected_ids__Alpha.txt"
+        self.assertTrue(selected_file.exists())
+        selected_ids = selected_file.read_text(encoding="utf-8").strip().splitlines()
+        # Most recent two by create_time are conv-d and conv-c; only conv-c matches "Alpha".
+        self.assertEqual(selected_ids, ["conv-c"])
+
+    def test_quick_days_window_filters_candidates_before_topic_match(self):
+        result = self.run_cgpt(
+            "quick",
+            "Alpha",
+            "--days",
+            "2",
+            "--all",
+            "--root",
+            str(self.root),
+            "--format",
+            "txt",
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+        selected_file = self.dossiers / "selected_ids__Alpha.txt"
+        self.assertTrue(selected_file.exists())
+        selected_ids = selected_file.read_text(encoding="utf-8").strip().splitlines()
+        # Last 2 days include conv-d and conv-c; only conv-c matches "Alpha".
+        self.assertEqual(selected_ids, ["conv-c"])
 
 
 if __name__ == "__main__":

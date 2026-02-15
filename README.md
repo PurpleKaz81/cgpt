@@ -199,6 +199,8 @@ Useful flags:
 ```bash
 cgpt quick "topic"
 cgpt q "topic"                     # alias
+cgpt q --recent 25 "exceção"       # only search within most-recent 25 conversations
+cgpt q --days 7 "exceção"          # only search within conversations from last 7 days
 cgpt q --where all --split "policy" "brief"
 cgpt q --and --split "term1" "term2"
 ```
@@ -206,8 +208,15 @@ cgpt q --and --split "term1" "term2"
 Useful flags:
 
 - `--where title|messages|all` controls where matching happens.
+- `--recent N` limits matching to the N most recent conversations first.
+- `--days N` limits matching to conversations from the last N days.
 - `--ids-file <file>` allows non-interactive selection input.
 - `--split` creates raw + working TXT (cleaned) variants.
+
+Note:
+
+- `recent` remains a recency browser and does not accept keyword terms.
+- For keyword + recency together, use `quick --recent N "term"` or `quick --days N "term"`.
 
 ### Build a combined dossier from explicit IDs
 
