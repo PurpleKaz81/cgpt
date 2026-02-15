@@ -2,7 +2,7 @@
 
 `cgpt` turns your ChatGPT export ZIP into clean dossier files you can reuse in new ChatGPT chats.
 
-This page is intentionally non-technical. If you want every command, flag, and edge case, use `TECHNICAL.md`.
+This page is intentionally non-technical. If you want every command, flag, and edge case, see [TECHNICAL.md](TECHNICAL.md).
 
 ## What This Tool Does
 
