@@ -1,115 +1,273 @@
-# cgpt: Start Here
+# cgpt: Beginner Guide (Idiot-Proof)
 
-`cgpt` turns your ChatGPT export ZIP into clean dossier files you can reuse in new ChatGPT chats.
+If you can copy and paste commands, you can use this tool.
 
-This page is intentionally non-technical. If you want every command, flag, and edge case, see [TECHNICAL.md](TECHNICAL.md).
+`cgpt` takes your ChatGPT export ZIP and turns it into clean text files you can work with.
 
-## What This Tool Does
+If you want full technical details and every flag, go to [TECHNICAL.md](TECHNICAL.md).
 
-You give `cgpt` a ChatGPT export ZIP file.
+## What This Tool Is (In Plain English)
 
-`cgpt` then:
+You export your ChatGPT data from ChatGPT.
+You place that ZIP file in this project.
+`cgpt` reads it and creates organized files you can reuse.
 
-1. Extracts it
-2. Lets you pick conversations
-3. Builds clean output files inside `dossiers/`
-
-Visual flow:
+Simple picture:
 
 ```text
-ChatGPT ZIP -> zips/ -> cgpt -> extracted/ + dossiers/
+ChatGPT export ZIP
+        |
+        v
+     zips/
+        |
+        v
+     cgpt
+      / \
+     v   v
+extracted/  dossiers/
+(raw data)  (clean outputs you use)
 ```
 
-## 2-Minute Setup
+Folder picture:
 
-From this repo folder:
+```text
+cgpt/
+|- cgpt.py
+|- zips/       <- put your ChatGPT ZIP here
+|- extracted/  <- cgpt unpacks exports here
+`- dossiers/   <- cgpt writes final output files here
+```
+
+## 5-Minute First Setup
+
+1. Open Terminal (Warp is fine).
+2. Go to this project folder.
+
+```bash
+cd /path/to/cgpt
+```
+
+3. Check the tool works.
 
 ```bash
 python3 cgpt.py --help
 ```
 
-Optional alias (so you can type `cgpt` instead of `python3 cgpt.py`):
+4. Optional quality-of-life alias (so you can type `cgpt`):
 
 ```bash
 echo 'alias cgpt="python3 /path/to/cgpt/cgpt.py"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
-## Daily Workflow (Copy/Paste)
+Replace `/path/to/cgpt` with your actual folder path.
 
-1. Put your export ZIP in `zips/`.
+5. Test alias:
+
+```bash
+cgpt --help
+```
+
+## First Real Use (Step by Step)
+
+### Step 1. Put your ChatGPT ZIP in `zips/`
+
+Example:
 
 ```bash
 cp ~/Downloads/chatgpt_export.zip zips/
 ```
 
-2. Build a dossier from recent conversations.
+### Step 2. Build a dossier from recent chats
 
 ```bash
 cgpt recent 30 --name "my-project" --split
 ```
 
-3. Upload the `__working.txt` file to ChatGPT.
+What this means:
 
-Example output location:
+- `recent 30`: show your 30 most recent conversations.
+- `--name "my-project"`: save output in `dossiers/my-project/`.
+- `--split`: create both raw and cleaned files.
+
+### Step 3. Choose conversations when prompted
+
+When cgpt asks what to include, you can type:
+
+- `all` for everything shown
+- `1 2 5` for specific items
+- `1-10` for a range
+- `1-3 8 12-15` for mixed selections
+
+### Step 4. Use the cleaned output file
+
+After generation, upload the file ending in `__working.txt` to ChatGPT.
+
+Example path:
 
 ```text
 dossiers/my-project/YYYY-MM-DD_HHMMSS__working.txt
 ```
 
-## Most Common Commands
+## Which Command Should You Use?
 
-Quick search by keyword:
+```text
+Need most recent chats?
+  -> cgpt recent 30 --split
+
+Need chats about a keyword/topic?
+  -> cgpt q "topic"
+
+Need keyword + only recent N chats?
+  -> cgpt q --recent 25 "topic"
+
+Need keyword + last N days only?
+  -> cgpt q --days 7 "topic"
+
+Already know exact conversation IDs?
+  -> cgpt build-dossier --ids <id1> <id2> --split
+```
+
+## Copy/Paste Command Pack
+
+Most common commands:
 
 ```bash
+cgpt recent 30 --split
 cgpt q "topic"
-```
-
-Quick search but only in recent conversations:
-
-```bash
 cgpt q --recent 25 "topic"
-```
-
-Quick search but only in last N days:
-
-```bash
 cgpt q --days 7 "topic"
+cgpt build-dossier --ids <id1> <id2> --split
+cgpt make-dossiers --ids <id1> <id2>
 ```
 
-Build from exact IDs:
+Useful helpers:
 
 ```bash
-cgpt build-dossier --ids <id1> <id2> --name "my-project" --split
+cgpt latest-zip
+cgpt extract
+cgpt index
+cgpt ids
+cgpt find "keyword"
+cgpt search "keyword"
 ```
 
-## Personal vs Public Config (One Repo)
+## Private vs Public (Important)
 
-If you keep personal writing constraints, do this once:
+You can keep one public repo and still have private personal settings.
+
+Rule:
+
+- Public defaults live in tracked `config.json`.
+- Personal/private rules live in untracked `config.personal.json`.
+
+Setup once:
 
 ```bash
 cp config.json config.personal.json
+git config --local core.hooksPath .githooks
 ```
 
-Then use your private config in commands:
+Use your private config in commands:
 
 ```bash
 cgpt q --config config.personal.json "topic"
 ```
 
-`config.personal.json` is intentionally ignored by git.
+Why this is safe:
 
-## Full Documentation
+- `config.personal.json` is git-ignored.
+- Pre-commit hook blocks accidental commit of private config files.
 
-- Full command reference and technical details: `TECHNICAL.md`
-- Security/data-handling policy: `SECURITY.md`
-- Release process for maintainers: `RELEASING.md`
-- Version history: `CHANGELOG.md`
+## Pull / Push / Merge Without Leaking Private Data
+
+Use this exact safe routine:
+
+1. Check what changed:
+
+```bash
+git status --short
+```
+
+2. Pull latest main:
+
+```bash
+git pull origin main
+```
+
+3. Stage only public files explicitly (never `git add .`):
+
+```bash
+git add cgpt.py README.md TECHNICAL.md CHANGELOG.md SECURITY.md RELEASING.md config.json .gitignore .githooks/pre-commit
+```
+
+4. Verify staged files:
+
+```bash
+git diff --cached
+```
+
+5. Commit and push:
+
+```bash
+git commit -m "your message"
+git push origin <branch>
+```
+
+## If Something Fails (No Panic)
+
+`ERROR: Missing folder: ... Expected: zips/, extracted/, dossiers/`
+
+Fix:
+
+```bash
+mkdir -p zips extracted dossiers
+```
+
+`ERROR: No ZIPs found in .../zips`
+
+Fix: place at least one export ZIP into `zips/`.
+
+`ERROR: No JSON found under ...`
+
+Fix:
+
+```bash
+cgpt extract
+```
+
+`ModuleNotFoundError: No module named 'docx'`
+
+Fix:
+
+```bash
+pip install python-docx
+```
+
+## What Exists Today vs What Is Planned
+
+Implemented now:
+
+- Automated CLI tests for critical paths
+- Split default opt-in (`CGPT_DEFAULT_SPLIT`) with `--split` / `--no-split`
+- `quick --recent N`
+- `quick --days N`
+
+Planned (not implemented yet):
+
+1. `cgpt init` command
+2. `--redact` mode
+3. `--json` output for `ids` / `find` / `search`
+4. Token-aware chunking (`--max-tokens`)
+
+## Where To Go Next
+
+- Complete command and flag reference: [TECHNICAL.md](TECHNICAL.md)
+- Security and safe data handling: [SECURITY.md](SECURITY.md)
+- Release process (maintainers): [RELEASING.md](RELEASING.md)
+- Full change history: [CHANGELOG.md](CHANGELOG.md)
 
 ## Safety Reminder
 
-Your exports can contain sensitive personal information.
-
-Before sharing any generated dossier, review it first.
-
-For details, see `SECURITY.md`.
+Your ChatGPT exports can contain sensitive personal information.
+Review any output before sharing it.

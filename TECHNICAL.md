@@ -1,60 +1,96 @@
 # cgpt Technical Reference
 
-This is the single source of truth for CLI behavior, command details, flags, and operational edge cases.
+This file is the canonical source of truth for:
 
-If you are looking for a quick, non-technical walkthrough, start with `README.md`.
+- command behavior
+- flags and defaults
+- environment variable behavior
+- operational and troubleshooting details
 
-## System Model
+If you want the beginner walkthrough, use [README.md](README.md).
 
-`cgpt.py` converts ChatGPT export ZIP files into searchable data and dossier files.
+## CLI Surface (Current)
 
-Expected home layout:
+Global command:
+
+```bash
+cgpt.py [global options] <subcommand> [subcommand options]
+```
+
+Subcommands (with aliases):
+
+- `latest-zip`
+- `extract`
+- `x` (alias for `extract`)
+- `index`
+- `ids`
+- `i` (alias for `ids`)
+- `find`
+- `f` (alias for `find`)
+- `search`
+- `make-dossiers`
+- `build-dossier`
+- `d` (alias for `build-dossier`)
+- `quick`
+- `q` (alias for `quick`)
+- `recent`
+- `r` (alias for `recent`)
+
+## Expected Folder Model
+
+`cgpt` expects this home layout:
 
 ```text
 <home>/
 |- cgpt.py
-|- zips/       # ChatGPT export ZIP files
-|- extracted/  # extracted exports + cgpt_index.db
-`- dossiers/   # generated output files
+|- zips/
+|- extracted/
+`- dossiers/
 ```
 
-Important behavior:
+Behavior:
 
 - `zips/`, `extracted/`, and `dossiers/` must exist.
-- `cgpt` creates subfolders inside `extracted/` and `dossiers/` as needed.
-- In this repo, those folders are tracked with `.gitkeep`; real contents are git-ignored.
+- Command logic may create subfolders under `extracted/` and `dossiers/`.
+- In this repository, `.gitkeep` placeholder files are tracked; real content under these folders is ignored.
 
-## Architecture and Data Flow
+## Processing Model
 
 High-level pipeline:
 
 ```text
-latest ZIP discovery -> extraction -> optional indexing -> selection -> dossier build
+ZIP discovery -> extraction -> optional indexing -> selection -> dossier generation
 ```
 
 Operational notes:
 
-- `extract` unpacks ZIP data under `extracted/<zip_stem>/`.
-- Commands that browse/search conversations default to `extracted/latest` unless `--root` is provided.
-- `quick` combines discovery and dossier generation in one flow.
-- `recent` is recency-first browsing and selection.
-- `build-dossier` is ID-first generation.
+- `extract` unpacks exports into `extracted/<zip_stem>/`.
+- Selection/search commands default to `extracted/latest` unless `--root` is provided.
+- `quick` performs topic discovery + selection + dossier generation in one flow.
+- `recent` is recency-first selection.
+- `build-dossier` is explicit-ID-first generation.
 
 ## Requirements
 
 - Python 3.8+
-- Optional: `python-docx` (required only for `--format docx`)
+- Optional dependency for DOCX output: `python-docx`
+
+Install optional DOCX dependency:
+
+```bash
+pip install python-docx
+```
 
 ## Setup
 
-### Option A: Use this repository directly
+### Option A: Run directly in this repository
 
 ```bash
 cd /path/to/cgpt
 python3 cgpt.py --help
 ```
 
-### Option B: Install as a single script elsewhere
+### Option B: Script-only install elsewhere
 
 ```bash
 mkdir -p ~/Documents/chatgpt_exports
@@ -70,195 +106,300 @@ echo 'alias cgpt="python3 ~/Documents/chatgpt_exports/cgpt.py"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
-Without alias, run commands as `python3 cgpt.py ...`.
+## Global Options
 
-## Private + Public Workflow (One Repository)
+These options are valid before subcommands:
 
-Use tracked `config.json` for public defaults and untracked `config.personal.json` for personal rules.
+- `--version`: print version and exit
+- `--color`: force-enable ANSI color output
+- `--no-color`: force-disable ANSI color output
+- `--home <path>`: set home folder containing `zips/`, `extracted/`, `dossiers/`
+- `--quiet`: suppress non-error output
+- `--default-mode {full,excerpts}`: set preferred dossier mode default for this invocation
 
-One-time setup per clone:
+## Command Reference
 
-```bash
-cp config.json config.personal.json
-git config --local core.hooksPath .githooks
-```
+### `latest-zip`
 
-Private protection layers:
-
-- `.gitignore` ignores `config.personal.json` and `*.private.json`
-- `.git/info/exclude` can add clone-local ignore rules
-- `.githooks/pre-commit` blocks commits of private config file patterns
-
-Day-to-day private usage examples:
+Purpose: print newest ZIP found in `zips/`.
 
 ```bash
-cgpt quick --config config.personal.json "topic"
-cgpt recent 30 --config config.personal.json --split
-cgpt build-dossier --ids <id1> <id2> --config config.personal.json --split
+cgpt latest-zip
 ```
 
-Safe pull/merge/push routine:
+Flags:
 
-```bash
-git status --short
-git pull origin main
-git add cgpt.py README.md TECHNICAL.md CHANGELOG.md SECURITY.md RELEASING.md config.json .gitignore .githooks/pre-commit
-git diff --cached
-git commit -m "your message"
-git push origin <branch>
-```
+- `-h`, `--help`
 
-Avoid `git add .` for this repo.
+### `extract` / `x`
 
-## Command Overview
-
-### Extract and Index
+Purpose: extract a ChatGPT export ZIP.
 
 ```bash
 cgpt extract [path/to/export.zip]
-cgpt x [path/to/export.zip]         # alias
-cgpt index                          # rebuild/update search index
-cgpt latest-zip                     # print newest ZIP in zips/
+cgpt x [path/to/export.zip]
 ```
+
+Arguments:
+
+- `zip` (optional positional): explicit path to ZIP
+
+Flags:
+
+- `--no-index`: skip index update after extraction
+- `--reindex`: force full index rebuild after extraction
 
 Notes:
 
-- `extract` without a path uses newest ZIP in `zips/`.
-- Running just `cgpt` (no subcommand) behaves like `extract` with newest ZIP.
+- Without `zip`, newest ZIP in `zips/` is used.
+- Running `cgpt` with no subcommand behaves like extraction of newest ZIP.
 
-### Recency-Based Combined Dossier
+### `index`
 
-```bash
-cgpt recent 30 --split --name "thesis"
-cgpt r 30 --split --name "thesis"  # alias
-```
-
-Useful flags:
-
-- `--all`: include all shown conversations without prompt.
-- `--mode excerpts --context 2`: only matched segments plus nearby context.
-- `--format txt md docx`: request one or many output formats.
-
-### Keyword-Based Combined Dossier
+Purpose: build or rebuild search index.
 
 ```bash
-cgpt quick "topic"
-cgpt q "topic"                     # alias
-cgpt q --recent 25 "exception"      # only most-recent 25 conversations
-cgpt q --days 7 "exception"         # only conversations from last 7 days
-cgpt q --where all --split "policy" "brief"
-cgpt q --and --split "term1" "term2"
+cgpt index
 ```
 
-Useful flags:
+Flags:
 
-- `--where title|messages|all`: controls matching scope.
-- `--recent N`: apply keyword matching only to the N most recent conversations.
-- `--days N`: apply keyword matching only to conversations created in last N days.
-- `--ids-file <file>`: non-interactive selection source.
-- `--split`: create raw plus working TXT output.
+- `--root <path>`: extracted data location to scan (default: `extracted/latest`)
+- `--reindex`: force rebuild
+- `--db <path>`: override index DB path (default: `extracted/cgpt_index.db`)
 
-Important behavior:
+### `ids` / `i`
 
-- `recent` remains recency browsing and does not take keyword positional terms.
-- For keyword + recency in one command, use `quick --recent N "term"` or `quick --days N "term"`.
-
-### Build Combined Dossier from Explicit IDs
-
-```bash
-cgpt build-dossier \
-  --ids 123abc 456def \
-  --topic "project-topic" \
-  --split \
-  --name "project"
-
-cgpt d --ids 123abc 456def --mode full --split --name "project"  # alias
-```
-
-Rules:
-
-- You must provide `--ids` and/or `--ids-file`.
-- IDs are space-separated (not comma-separated).
-- In `--mode excerpts`, you must provide `--topic` and/or `--topics`.
-- In `--mode full`, topic flags are optional.
-
-### Generate One File per ID
-
-```bash
-cgpt make-dossiers --ids 123abc 456def
-cgpt make-dossiers --ids-file selected_ids.txt --format txt md
-```
-
-This produces separate files per conversation ID, not one combined dossier.
-
-### Discovery and Search Helpers
+Purpose: print `id<TAB>title` for conversations.
 
 ```bash
 cgpt ids
-cgpt i                               # alias
-cgpt find "keyword"
-cgpt f "keyword"                    # alias
-cgpt search "keyword"
-cgpt search --where messages "keyword"
-cgpt search --terms alpha beta --and --where all
+cgpt i
 ```
 
-## Interactive Selection Input
+Flags:
 
-For `recent` and `quick`, supported selection input includes:
+- `--root <path>`
 
-- Single numbers: `3`
-- Multiple numbers: `1 4 9`
-- Ranges: `2-6`
-- Mixed: `1-3 7 10-12`
+### `find` / `f`
+
+Purpose: case-insensitive title match helper.
+
+```bash
+cgpt find "keyword"
+cgpt f "keyword"
+```
+
+Arguments:
+
+- `query` (required positional)
+
+Flags:
+
+- `--root <path>`
+
+### `search`
+
+Purpose: search title and/or message text.
+
+```bash
+cgpt search "keyword"
+cgpt search "keyword" all
+cgpt search --terms alpha beta --and --where messages
+```
+
+Arguments:
+
+- `query` (optional positional)
+- optional positional location selector: `title|messages|all`
+
+Flags:
+
+- `--terms <term1> [term2 ...]`: explicit term list
+- `--and`: require all terms (default logic is OR)
+- `--where {title,messages,all}`: explicit search scope
+- `--root <path>`
+
+### `make-dossiers`
+
+Purpose: generate one file per selected conversation ID.
+
+```bash
+cgpt make-dossiers --ids <id1> <id2>
+cgpt make-dossiers --ids-file selected_ids.txt --format txt md docx
+```
+
+Flags:
+
+- `--root <path>`
+- `--ids-file <file>`
+- `--ids <id1> <id2> ...`
+- `--format txt|md|docx [txt|md|docx ...]` (default: `txt`)
+
+Rules:
+
+- requires `--ids` and/or `--ids-file`
+- outputs are per-conversation, not one combined dossier
+
+### `build-dossier` / `d`
+
+Purpose: generate one combined dossier from explicit IDs.
+
+```bash
+cgpt build-dossier --ids 123abc 456def --mode full --split
+cgpt d --ids 123abc 456def --mode excerpts --topic "policy" --context 2
+```
+
+Flags:
+
+- `--topic <term>`
+- `--topics <term1> [term2 ...]`
+- `--mode {full,excerpts}`
+- `--context <N>`
+- `--root <path>`
+- `--ids-file <file>`
+- `--ids <id1> <id2> ...`
+- `--format txt|md|docx [txt|md|docx ...]`
+- `--split` / `--no-split`
+- `--dedup` / `--no-dedup`
+- `--patterns-file <file>`
+- `--used-links-file <file>`
+- `--config <file>`
+- `--name <project_name>`
+
+Rules:
+
+- requires `--ids` and/or `--ids-file`
+- in `full` mode, topic flags are optional
+- in `excerpts` mode, at least one topic flag is required
+
+### `quick` / `q`
+
+Purpose: keyword-based selection + combined dossier generation.
+
+```bash
+cgpt q "topic"
+cgpt q --recent 25 "topic"
+cgpt q --days 7 "topic"
+cgpt q --where all --and "policy" "brief"
+```
+
+Arguments:
+
+- `topics [topics ...]` positional terms
+
+Flags:
+
+- `--and`
+- `--mode {full,excerpts}`
+- `--context <N>`
+- `--all`
+- `--where {title,messages,all}`
+- `--recent <N>`
+- `--days <N>`
+- `--root <path>`
+- `--ids-file <file>`
+- `--format txt|md|docx [txt|md|docx ...]`
+- `--split` / `--no-split`
+- `--dedup` / `--no-dedup`
+- `--patterns-file <file>`
+- `--used-links-file <file>`
+- `--config <file>`
+- `--name <project_name>`
+
+Rules:
+
+- `--recent` and `--days` are mutually exclusive
+- if neither is set, quick uses the full available conversation set
+
+### `recent` / `r`
+
+Purpose: recency-first selection + combined dossier generation.
+
+```bash
+cgpt recent 30 --split
+cgpt r 50 --all --name "thesis"
+```
+
+Arguments:
+
+- `count` (optional positional, default `30`)
+
+Flags:
+
+- `--all`
+- `--root <path>`
+- `--format txt|md|docx [txt|md|docx ...]`
+- `--split` / `--no-split`
+- `--dedup` / `--no-dedup`
+- `--patterns-file <file>`
+- `--used-links-file <file>`
+- `--config <file>`
+- `--name <project_name>`
+- `--mode {full,excerpts}`
+- `--context <N>`
+
+Rules:
+
+- `recent` does not accept keyword positional terms
+- for keyword + recency in one command, use `quick --recent N "term"` or `quick --days N "term"`
+
+## Selection Input Grammar (Interactive)
+
+Used by `recent` and `quick` interactive selection:
+
+- single numbers: `3`
+- multiple numbers: `1 4 9`
+- ranges: `2-6`
+- mixed: `1-3 7 10-12`
 - `all`
-- Raw conversation IDs (if listed in the prompt set)
+- raw conversation IDs (if present in shown list)
 
-## Output Layout and Naming
+## Output Behavior
 
 Without `--name`:
 
 ```text
 dossiers/
 |- dossier__topic__YYYYMMDD_HHMMSS.txt
-`- dossier__topic__YYYYMMDD_HHMMSS__working.txt   # only with --split
+`- dossier__topic__YYYYMMDD_HHMMSS__working.txt   # only when split+txt apply
 ```
 
-With `--name "thesis"`:
+With `--name "project"`:
 
 ```text
 dossiers/
-`- thesis/
+`- project/
    |- YYYY-MM-DD_HHMMSS.txt
-   `- YYYY-MM-DD_HHMMSS__working.txt              # only with --split
+   `- YYYY-MM-DD_HHMMSS__working.txt
 ```
 
-## Flags That Matter Most
+Format behavior:
 
-- `--split`: create raw and cleaned working TXT files.
-- `--no-split`: force-disable split output (useful when `CGPT_DEFAULT_SPLIT` is enabled).
-- `--name "X"`: group output under `dossiers/X/`.
-- `--where all`: search both titles and messages.
-- `--mode excerpts --context N`: narrower dossier from matched segments.
-- `--format txt md docx`: choose output formats.
-- `--no-dedup`: disable deduplication in working output.
-- `--home /path/to/home`: override auto home detection.
-- `--quiet`: suppress non-error output.
+- `--format txt` (default) generates TXT output
+- `--format md` and/or `--format docx` generate additional formats
+- `__working.txt` exists only when TXT output is generated with split enabled
 
-`--split` behavior details:
+## Split and Dedup Semantics
 
-- Split-by-default can be enabled with `CGPT_DEFAULT_SPLIT=1`.
-- `--split` and `--no-split` override environment default for a single command.
-- `--split` creates working file only when TXT output is generated.
-- If output is only `md` and/or `docx`, no `__working.txt` file is created.
+Relevant controls:
 
-## Advanced Filter Inputs
+- `--split` forces split output
+- `--no-split` disables split output
+- `--dedup` / `--no-dedup` control deduplication in working output
 
-Supported by `recent`/`r`, `quick`/`q`, and `build-dossier`/`d`:
+Environment interplay:
 
-- `--patterns-file <file>`: one deliverable pattern per line.
-- `--used-links-file <file>`: one URL per line to prioritize in source output.
-- `--config <file>`: JSON config for segment filtering/control-layer behavior.
+- `CGPT_DEFAULT_SPLIT=1` enables split-by-default behavior
+- per-command flags override environment default
+
+## Advanced Input Files
+
+Supported on `quick`, `recent`, and `build-dossier`:
+
+- `--patterns-file <file>`: one deliverable pattern per line
+- `--used-links-file <file>`: one URL per line to prioritize sources
+- `--config <file>`: JSON config for segment filtering/control-layer behavior
 
 Example:
 
@@ -270,30 +411,61 @@ cgpt q --split \
   "topic"
 ```
 
-Mode caveat:
-
-- `--topic` and `--topics` are only required in `--mode excerpts`.
-
 ## Home Resolution and Environment Variables
 
 Home resolution order:
 
 1. `--home`
 2. `CGPT_HOME`
-3. Auto-discovery from current directory and parents
+3. auto-discovery from current directory and parent folders
 
-Supported environment variables:
+Environment variables:
 
-- `CGPT_HOME`: explicit home path.
-- `CGPT_DEFAULT_MODE`: `full` or `excerpts`.
-- `CGPT_DEFAULT_SPLIT`: `1/true/yes/on` or `0/false/no/off`.
-- `CGPT_FORCE_COLOR`: `1/true/yes/on` or `0/false/no/off`.
+- `CGPT_HOME`: set explicit home path
+- `CGPT_DEFAULT_MODE`: `full` or `excerpts`
+- `CGPT_DEFAULT_SPLIT`: `1/true/yes/on` or `0/false/no/off`
+- `CGPT_FORCE_COLOR`: force-enable or force-disable color (`1/true/yes/on` or `0/false/no/off`)
+
+## Private + Public Workflow (One Repository)
+
+Recommended split:
+
+- tracked `config.json` for public defaults
+- untracked `config.personal.json` for personal/private preferences
+
+One-time setup:
+
+```bash
+cp config.json config.personal.json
+git config --local core.hooksPath .githooks
+```
+
+Day-to-day private usage:
+
+```bash
+cgpt q --config config.personal.json "topic"
+cgpt recent 30 --config config.personal.json --split
+cgpt build-dossier --ids <id1> <id2> --config config.personal.json --split
+```
+
+Safe git routine:
+
+```bash
+git status --short
+git pull origin main
+git add cgpt.py README.md TECHNICAL.md CHANGELOG.md SECURITY.md RELEASING.md config.json .gitignore .githooks/pre-commit
+git diff --cached
+git commit -m "your message"
+git push origin <branch>
+```
+
+Avoid `git add .`.
 
 ## Troubleshooting
 
 ### `ERROR: Missing folder: ... Expected: zips/, extracted/, dossiers/`
 
-Create required folders:
+Fix:
 
 ```bash
 mkdir -p zips extracted dossiers
@@ -301,11 +473,9 @@ mkdir -p zips extracted dossiers
 
 ### `ERROR: No ZIPs found in .../zips`
 
-Put at least one ChatGPT export ZIP in `zips/`.
+Fix: place at least one ChatGPT export ZIP in `zips/`.
 
 ### `ERROR: No JSON found under ...`
-
-Export is not extracted yet, or `--root` points to wrong location.
 
 Fix:
 
@@ -313,33 +483,31 @@ Fix:
 cgpt extract
 ```
 
-Then rerun your command.
-
 ### `ERROR: Provide --topic and/or --topics`
 
-Applies only to excerpts mode (`--mode excerpts`).
+Cause: `excerpts` mode without topic terms.
 
 ### `ERROR: Provide --ids and/or --ids-file`
 
-`build-dossier` and `make-dossiers` require explicit conversation IDs.
+Cause: ID-required command called without IDs.
 
 ### `ModuleNotFoundError: No module named 'docx'`
 
-Install optional DOCX dependency:
+Fix:
 
 ```bash
 pip install python-docx
 ```
 
-## Automated Tests
+## Validation and Tests
 
-Run CLI critical-path suite:
+Run critical-path tests:
 
 ```bash
 python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
-Current suite coverage includes selection parsing and output generation for:
+Current test coverage includes key generation flows around:
 
 - `quick`
 - `recent`
@@ -349,30 +517,30 @@ Current suite coverage includes selection parsing and output generation for:
 
 Status labels:
 
-- `Implemented`: available in current CLI.
-- `Planned`: documented intent only; not implemented.
+- `Implemented`: available now
+- `Planned`: documented intent, not implemented yet
 
 | Feature | Status | Notes |
 | --- | --- | --- |
 | Automated CLI critical-path tests | `Implemented` | Available via `python -m unittest discover -s tests -p "test_*.py" -v`; covers core selection parsing and output generation paths. |
 | Opt-in split default (`CGPT_DEFAULT_SPLIT`) | `Implemented` | Enables split-by-default for split-capable dossier commands; `--split` and `--no-split` provide per-command override. |
-| Quick recency window by count (`quick --recent N`) | `Implemented` | Limits quick keyword matching to the N most recent conversations before filtering by topic terms. |
+| Quick recency window by count (`quick --recent N`) | `Implemented` | Limits quick keyword matching to N most recent conversations before filtering by topic terms. |
 | Quick recency window by time (`quick --days N`) | `Implemented` | Limits quick keyword matching to conversations created in the last N days before filtering by topic terms. |
 | `cgpt init` command | `Planned` | Would create/verify `zips/`, `extracted/`, and `dossiers/`, and optionally scaffold defaults. |
-| `--redact` mode | `Planned` | Would scrub sensitive patterns (for example emails/phones/tokens) from generated dossiers before sharing. |
-| `--json` output for discovery/search commands | `Planned` | Would add machine-readable output mode for `ids`, `find`, and `search` to improve scripting/automation workflows. |
-| Token-aware chunking (`--max-tokens`) | `Planned` | Would split large `__working` outputs into chunked files sized for upload constraints. |
+| `--redact` mode | `Planned` | Would scrub sensitive patterns (for example emails/phones/tokens) before sharing dossiers. |
+| `--json` output for discovery/search commands | `Planned` | Would add machine-readable output mode for `ids`, `find`, and `search`. |
+| Token-aware chunking (`--max-tokens`) | `Planned` | Would split large `__working` outputs into upload-safe chunk files. |
 
-Remaining planned features:
+Remaining planned items:
 
-1. `cgpt init` command
-2. `--redact` mode
-3. `--json` output for `ids` / `find` / `search`
-4. Token-aware chunking (`--max-tokens`)
+1. `cgpt init`
+2. `--redact`
+3. `--json` for `ids` / `find` / `search`
+4. `--max-tokens`
 
-## Safety Notes
+## Security Notes
 
-- `cgpt` runs locally and does not send exports to external services.
-- Chat exports may contain sensitive information.
-- Review generated files before sharing.
-- Security handling rules are in `SECURITY.md`.
+- `cgpt` processes local files and does not require remote APIs.
+- Chat exports may contain sensitive data.
+- Review outputs before sharing.
+- For full policy details, see [SECURITY.md](SECURITY.md).
