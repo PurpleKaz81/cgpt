@@ -87,6 +87,7 @@ Used for configuration only:
 
 - `CGPT_HOME`
 - `CGPT_DEFAULT_MODE`
+- `CGPT_DEFAULT_SPLIT`
 - `CGPT_FORCE_COLOR`
 
 No environment variable is used as an authentication secret.

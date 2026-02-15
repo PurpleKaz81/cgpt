@@ -282,6 +282,7 @@ dossiers/
 ## Flags That Matter Most
 
 - `--split`: create both raw and cleaned working TXT files.
+- `--no-split`: force-disable split output (useful when `CGPT_DEFAULT_SPLIT` is enabled).
 - `--name "X"`: group output under `dossiers/X/`.
 - `--where all`: search titles and messages.
 - `--mode excerpts --context N`: narrower dossier focused on matched segments.
@@ -292,6 +293,8 @@ dossiers/
 
 Important `--split` behavior:
 
+- You can opt in to split-by-default with `CGPT_DEFAULT_SPLIT=1`.
+- `--split` and `--no-split` override `CGPT_DEFAULT_SPLIT` for a single command.
 - `--split` only produces a working file when TXT output is being generated.
 - If you use only `--format md` or only `--format docx`, no `__working.txt` is created.
 
@@ -329,6 +332,7 @@ Supported environment variables:
 
 - `CGPT_HOME`: explicit home path.
 - `CGPT_DEFAULT_MODE`: `full` or `excerpts`.
+- `CGPT_DEFAULT_SPLIT`: `1/true/yes/on` or `0/false/no/off`.
 - `CGPT_FORCE_COLOR`: `1/true/yes/on` or `0/false/no/off`.
 
 ## Troubleshooting

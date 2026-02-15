@@ -189,6 +189,19 @@ def normalize_text(s: str) -> str:
 _CLI_COLOR_OVERRIDE: Optional[bool] = None
 
 
+def _parse_env_bool(name: str) -> Optional[bool]:
+    """Parse a boolean-like env var, returning True/False/None (invalid or unset)."""
+    env = os.environ.get(name)
+    if env is None:
+        return None
+    v = env.strip().lower()
+    if v in ("1", "true", "yes", "on"):
+        return True
+    if v in ("0", "false", "no", "off"):
+        return False
+    return None
+
+
 def _supports_color() -> bool:
     """Return whether to use ANSI colors.
 
@@ -201,13 +214,9 @@ def _supports_color() -> bool:
     if _CLI_COLOR_OVERRIDE is not None:
         return _CLI_COLOR_OVERRIDE
 
-    env = os.environ.get("CGPT_FORCE_COLOR")
-    if env is not None:
-        v = env.strip().lower()
-        if v in ("1", "true", "yes", "on"):
-            return True
-        if v in ("0", "false", "no", "off"):
-            return False
+    force_color = _parse_env_bool("CGPT_FORCE_COLOR")
+    if force_color is not None:
+        return force_color
     try:
         return sys.stdout.isatty()
     except Exception:
@@ -3016,6 +3025,24 @@ def cmd_index(args: argparse.Namespace) -> None:
         die(f"Indexing failed: {e}")
 
 
+def _add_split_flags(parser: argparse.ArgumentParser, split_help: str) -> None:
+    """Add --split/--no-split flags with tri-state default for env fallback."""
+    grp = parser.add_mutually_exclusive_group()
+    grp.add_argument(
+        "--split",
+        dest="split",
+        action="store_true",
+        default=None,
+        help=split_help,
+    )
+    grp.add_argument(
+        "--no-split",
+        dest="split",
+        action="store_false",
+        help="Disable split output (overrides CGPT_DEFAULT_SPLIT).",
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="cgpt.py",
@@ -3233,10 +3260,9 @@ def build_parser() -> argparse.ArgumentParser:
         ),
         default=["txt"],
     )
-    a.add_argument(
-        "--split",
-        action="store_true",
-        help="Generate two TXT files: dossier_raw.txt (full) and dossier_raw__working.txt (cleaned, deduplicated, deliverables-only)",
+    _add_split_flags(
+        a,
+        "Generate two TXT files: dossier_raw.txt (full) and dossier_raw__working.txt (cleaned, deduplicated, deliverables-only).",
     )
     a.add_argument(
         "--dedup",
@@ -3287,10 +3313,9 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["txt", "md", "docx"],
         default=["txt"],
     )
-    a.add_argument(
-        "--split",
-        action="store_true",
-        help="Generate two TXT files: dossier_raw.txt (full) and dossier_raw__working.txt (cleaned, deduplicated, deliverables-only)",
+    _add_split_flags(
+        a,
+        "Generate two TXT files: dossier_raw.txt (full) and dossier_raw__working.txt (cleaned, deduplicated, deliverables-only).",
     )
     a.add_argument(
         "--dedup",
@@ -3361,10 +3386,9 @@ def build_parser() -> argparse.ArgumentParser:
             "python3 cgpt.py quick --format md docx 'research' 'analysis'"
         ),
     )
-    a.add_argument(
-        "--split",
-        action="store_true",
-        help="Generate two TXT files: dossier_raw.txt (full) and dossier_raw__working.txt (cleaned, deduplicated, deliverables-only)",
+    _add_split_flags(
+        a,
+        "Generate two TXT files: dossier_raw.txt (full) and dossier_raw__working.txt (cleaned, deduplicated, deliverables-only).",
     )
     a.add_argument(
         "--dedup",
@@ -3419,10 +3443,9 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["txt", "md", "docx"],
         default=["txt"],
     )
-    a.add_argument(
-        "--split",
-        action="store_true",
-        help="Generate two TXT files: dossier_raw.txt (full) and dossier_raw__working.txt (cleaned, deduplicated, deliverables-only)",
+    _add_split_flags(
+        a,
+        "Generate two TXT files: dossier_raw.txt (full) and dossier_raw__working.txt (cleaned, deduplicated, deliverables-only).",
     )
     a.add_argument(
         "--dedup",
@@ -3477,11 +3500,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=["txt"],
         help="Output format(s) for dossier (default: txt)",
     )
-    a.add_argument(
-        "--split",
-        action="store_true",
-        help="Generate both raw and working TXT files",
-    )
+    _add_split_flags(a, "Generate both raw and working TXT files.")
     a.add_argument(
         "--dedup",
         action="store_true",
@@ -3522,7 +3541,7 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument(
         "--format", nargs="+", choices=["txt", "md", "docx"], default=["txt"]
     )
-    a.add_argument("--split", action="store_true")
+    _add_split_flags(a, "Generate both raw and working TXT files.")
     a.add_argument("--dedup", action="store_true", default=True)
     a.add_argument("--no-dedup", dest="dedup", action="store_false")
     a.add_argument("--patterns-file")
@@ -3571,6 +3590,11 @@ def main() -> None:
     # (we set subparser defaults to None), fill it from the effective default.
     if hasattr(args, "mode") and getattr(args, "mode") is None:
         setattr(args, "mode", effective_default_mode)
+    # Resolve split default from env when subcommand supports split and CLI did not set it.
+    # Priority: CLI --split/--no-split > CGPT_DEFAULT_SPLIT > builtin False.
+    if hasattr(args, "split") and getattr(args, "split") is None:
+        env_split = _parse_env_bool("CGPT_DEFAULT_SPLIT")
+        setattr(args, "split", env_split if env_split is not None else False)
     args.func(args)
 
 

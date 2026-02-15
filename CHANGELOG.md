@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added local commit safety hook at `.githooks/pre-commit` to block private config files from being committed
 - Documented one-repo public/private workflow and safe pull/merge/push routine in `README.md`
 - Updated `SECURITY.md` and `RELEASING.md` with private config and hook guidance
+- Added opt-in split default via `CGPT_DEFAULT_SPLIT` with `--no-split` per-command override
 
 ### Fixed
 
