@@ -32,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Split docs by audience: `README.md` is now user-first and `TECHNICAL.md` is now the canonical command and behavior reference
 - Updated docs policy and docs guard to include `TECHNICAL.md` in the allowed markdown set
 - Expanded docs completeness pass: rewrote `README.md` as an idiot-proof beginner guide with visual flows and copy/paste workflows; expanded `TECHNICAL.md` to cover full command/flag surface
+- Added `scripts/release_check.sh` one-command release preflight and documented it in `RELEASING.md`
 
 ### Fixed
 

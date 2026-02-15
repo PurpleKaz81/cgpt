@@ -60,7 +60,13 @@ git diff --cached --name-only
 
 ## 2. Run smoke tests
 
-From repo root:
+Preferred (one command):
+
+```bash
+./scripts/release_check.sh
+```
+
+Manual equivalent from repo root:
 
 ```bash
 python3 cgpt.py --version
@@ -71,6 +77,7 @@ python3 cgpt.py quick --help
 python3 cgpt.py build-dossier --help
 python3 cgpt.py make-dossiers --help
 python3 cgpt.py search --help
+python3 -m unittest discover -s tests -p "test_*.py"
 ```
 
 If any command fails, fix before tagging.
