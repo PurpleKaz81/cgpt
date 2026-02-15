@@ -8,14 +8,15 @@ This repository intentionally keeps the markdown set minimal.
 
 Allowed markdown files:
 - `README.md`
+- `TECHNICAL.md`
 - `SECURITY.md`
 - `CHANGELOG.md`
 - `RELEASING.md`
 
 Rules:
-- Do not add new `.md` files unless one of the four files cannot reasonably hold the content.
+- Do not add new `.md` files unless one of the five files cannot reasonably hold the content.
 - Every change to `cgpt.py`, `config.json`, or `requirements.txt` must update at least one allowed markdown file.
-- User-visible behavior changes should update `README.md` and `CHANGELOG.md`.
+- User-visible behavior changes should update `README.md` and `CHANGELOG.md`, and update `TECHNICAL.md` when command behavior/flags/examples change.
 - Security/data-handling changes should update `SECURITY.md`.
 
 Enforcement:
@@ -47,7 +48,7 @@ Update:
 Then commit:
 
 ```bash
-git add cgpt.py CHANGELOG.md README.md SECURITY.md RELEASING.md .gitignore .githooks/pre-commit config.json
+git add cgpt.py CHANGELOG.md README.md TECHNICAL.md SECURITY.md RELEASING.md .gitignore .githooks/pre-commit config.json
 git commit -m "Release vX.Y.Z"
 ```
 

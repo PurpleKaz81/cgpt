@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added opt-in split default via `CGPT_DEFAULT_SPLIT` with `--no-split` per-command override
 - Added `quick --recent N` / `q --recent N` and `quick --days N` / `q --days N` to combine keyword matching with recency windows in one command
 - Updated README roadmap to explicitly separate implemented features from remaining planned features
+- Split docs by audience: `README.md` is now user-first and `TECHNICAL.md` is now the canonical command and behavior reference
+- Updated docs policy and docs guard to include `TECHNICAL.md` in the allowed markdown set
 
 ### Fixed
 

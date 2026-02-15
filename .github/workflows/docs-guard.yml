@@ -20,14 +20,14 @@ jobs:
         run: |
           set -euo pipefail
 
-          allowed_md='^(README\.md|SECURITY\.md|CHANGELOG\.md|RELEASING\.md)$'
+          allowed_md='^(README\.md|TECHNICAL\.md|SECURITY\.md|CHANGELOG\.md|RELEASING\.md)$'
 
           # Keep markdown set minimal and explicit.
           disallowed_md="$(git ls-files '*.md' | rg -v "$allowed_md" || true)"
           if [[ -n "$disallowed_md" ]]; then
             echo "Disallowed markdown files detected:"
             echo "$disallowed_md"
-            echo "Allowed files: README.md, SECURITY.md, CHANGELOG.md, RELEASING.md"
+            echo "Allowed files: README.md, TECHNICAL.md, SECURITY.md, CHANGELOG.md, RELEASING.md"
             exit 1
           fi
 
@@ -57,7 +57,7 @@ jobs:
           docs_changed="$(echo "$changed" | rg "$allowed_md" || true)"
           if [[ -z "$docs_changed" ]]; then
             echo "Code/config changed, but no markdown docs were updated."
-            echo "Update at least one of: README.md, SECURITY.md, CHANGELOG.md, RELEASING.md"
+            echo "Update at least one of: README.md, TECHNICAL.md, SECURITY.md, CHANGELOG.md, RELEASING.md"
             exit 1
           fi
 
