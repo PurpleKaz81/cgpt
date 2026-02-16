@@ -47,13 +47,13 @@ cgpt/
 cd /path/to/cgpt
 ```
 
-3. Check the tool works.
+1. Check the tool works.
 
 ```bash
 python3 cgpt.py --help
 ```
 
-4. Optional quality-of-life alias (so you can type `cgpt`):
+1. Optional quality-of-life alias (so you can type `cgpt`):
 
 ```bash
 echo 'alias cgpt="python3 /path/to/cgpt/cgpt.py"' >> ~/.zshrc
@@ -62,7 +62,7 @@ source ~/.zshrc
 
 Replace `/path/to/cgpt` with your actual folder path.
 
-5. Test alias:
+1. Test alias:
 
 ```bash
 cgpt --help
@@ -190,25 +190,25 @@ Use this exact safe routine:
 git status --short
 ```
 
-2. Pull latest main:
+1. Pull latest main:
 
 ```bash
 git pull origin main
 ```
 
-3. Stage only public files explicitly (never `git add .`):
+1. Stage only public files explicitly (never `git add .`):
 
 ```bash
 git add cgpt.py README.md TECHNICAL.md CHANGELOG.md SECURITY.md RELEASING.md config.json .gitignore .githooks/pre-commit
 ```
 
-4. Verify staged files:
+1. Verify staged files:
 
 ```bash
 git diff --cached
 ```
 
-5. Commit and push:
+1. Commit and push:
 
 ```bash
 git commit -m "your message"
