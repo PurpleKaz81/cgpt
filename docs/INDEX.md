@@ -20,6 +20,7 @@ Core canonical docs remain:
 - [`docs/specs/current-capabilities.md`](specs/current-capabilities.md): current feature set, constraints, and known limitations.
 - [`docs/specs/v0.2.1-edge-hardening.md`](specs/v0.2.1-edge-hardening.md): planned security/correctness hardening scope, behavior contracts, and test matrix for patch v0.2.1.
 - [`docs/specs/v0.2.2-remainder-hardening.md`](specs/v0.2.2-remainder-hardening.md): follow-up hardening scope for remaining edge cases, including extraction freshness and input validation.
+- [`docs/specs/v0.2.3-hardening-followups.md`](specs/v0.2.3-hardening-followups.md): next hardening bundle for ZIP limits/special members, strict optional-file validation, config schema checks, duplicate ID detection, and JSON discovery scaling guardrails.
 
 ## ADRs
 

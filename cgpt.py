@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 import argparse
+import heapq
 import json
 import os
 import re
 import shutil
+import stat
 import sys
 import zipfile
 import sqlite3
@@ -32,11 +34,33 @@ try:
 except Exception:
     pass
 
-__version__ = "0.2.2"
+__version__ = "0.2.3"
 
 SAO_PAULO_TZ = "America/Sao_Paulo"
 MIN_CONTEXT = 0
 MAX_CONTEXT = 200
+
+
+def _env_positive_int(name: str, default: int) -> int:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw.strip())
+    except (TypeError, ValueError):
+        return default
+    if value <= 0:
+        return default
+    return value
+
+
+MAX_ZIP_MEMBERS = _env_positive_int("CGPT_MAX_ZIP_MEMBERS", 100_000)
+MAX_ZIP_UNCOMPRESSED_BYTES = _env_positive_int(
+    "CGPT_MAX_ZIP_UNCOMPRESSED_BYTES", 2 * 1024 * 1024 * 1024
+)
+JSON_DISCOVERY_BUCKET_LIMIT = _env_positive_int(
+    "CGPT_JSON_DISCOVERY_BUCKET_LIMIT", 512
+)
 
 
 # ----------------- util -----------------
@@ -223,6 +247,15 @@ def read_nonempty_lines_utf8(path: Path, *, label: str) -> List[str]:
     return [ln.strip() for ln in read_text_utf8(path, label=label).splitlines() if ln.strip()]
 
 
+def require_existing_file(path_value: str, *, label: str) -> Path:
+    path = Path(path_value).expanduser().resolve()
+    if not path.exists():
+        die(f"{label} file not found: {path}")
+    if not path.is_file():
+        die(f"{label} path is not a file: {path}")
+    return path
+
+
 def parse_context(value: Any) -> int:
     try:
         n = int(value)
@@ -273,10 +306,37 @@ def is_unsafe_zip_member(member_name: str, dest_dir: Path) -> bool:
     return False
 
 
+def is_special_zip_member(info: zipfile.ZipInfo) -> bool:
+    mode = (info.external_attr >> 16) & 0xFFFF
+    if not mode:
+        return False
+    file_type = stat.S_IFMT(mode)
+    if not file_type:
+        return False
+    return file_type not in (stat.S_IFREG, stat.S_IFDIR)
+
+
 def validate_zip_members_safe(zf: zipfile.ZipFile, dest_dir: Path) -> None:
+    member_count = 0
+    total_uncompressed = 0
     for info in zf.infolist():
+        member_count += 1
+        if member_count > MAX_ZIP_MEMBERS:
+            die(
+                f"ZIP member limit exceeded: {member_count} > {MAX_ZIP_MEMBERS} members."
+            )
+        if is_special_zip_member(info):
+            die(f"Special ZIP member type is not allowed: {info.filename}")
         if is_unsafe_zip_member(info.filename, dest_dir):
             die(f"Unsafe ZIP member path detected: {info.filename}")
+        if info.is_dir():
+            continue
+        total_uncompressed += max(int(info.file_size), 0)
+        if total_uncompressed > MAX_ZIP_UNCOMPRESSED_BYTES:
+            die(
+                "ZIP uncompressed size limit exceeded: "
+                f"{total_uncompressed} > {MAX_ZIP_UNCOMPRESSED_BYTES} bytes."
+            )
 
 
 def extract_zip_safely(zpath: Path, out_dir: Path) -> None:
@@ -430,14 +490,39 @@ def _looks_like_conversations_payload(data: Any) -> bool:
     return False
 
 
+def _push_json_candidate(
+    heap: List[Tuple[int, str, Path]], path: Path, limit: int
+) -> None:
+    if limit <= 0:
+        return
+    entry = (_safe_file_size(path), str(path), path)
+    if len(heap) < limit:
+        heapq.heappush(heap, entry)
+        return
+    if entry[:2] > heap[0][:2]:
+        heapq.heapreplace(heap, entry)
+
+
 def find_conversations_json(root: Path) -> Optional[Path]:
-    json_files = list(root.rglob("*.json"))
-    if not json_files:
+    buckets: Dict[int, List[Tuple[int, str, Path]]] = {30: [], 25: [], 20: [], 0: []}
+    saw_json = False
+    for path in root.rglob("*.json"):
+        saw_json = True
+        priority = _json_candidate_priority(path)
+        bucket = priority if priority in buckets else 0
+        _push_json_candidate(buckets[bucket], path, JSON_DISCOVERY_BUCKET_LIMIT)
+
+    if not saw_json:
         return None
-    json_files.sort(
-        key=lambda p: (_json_candidate_priority(p), _safe_file_size(p)), reverse=True
-    )
-    for candidate in json_files:
+
+    ordered: List[Path] = []
+    for priority in (30, 25, 20, 0):
+        ranked = sorted(
+            buckets[priority], key=lambda item: (item[0], item[1]), reverse=True
+        )
+        ordered.extend(item[2] for item in ranked)
+
+    for candidate in ordered:
         data = load_json_loose(candidate)
         if data is None:
             continue
@@ -480,6 +565,25 @@ def conv_id_and_title(c: Dict[str, Any]) -> Tuple[Optional[str], str]:
         .strip()
     )
     return cid, title
+
+
+def build_conversation_map_by_id(convs: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    by_id: Dict[str, Dict[str, Any]] = {}
+    duplicates: Set[str] = set()
+    for conv in convs:
+        cid, _ = conv_id_and_title(conv)
+        if not cid:
+            continue
+        if cid in by_id:
+            duplicates.add(cid)
+            continue
+        by_id[cid] = conv
+    if duplicates:
+        die(
+            "Duplicate conversation ID(s) found in export:\n"
+            + "\n".join(sorted(duplicates))
+        )
+    return by_id
 
 
 # ----------------- message extraction -----------------
@@ -1344,19 +1448,22 @@ def _generate_working_index(
       - Section headers for navigation
     """
     index_lines = ["## WORKING INDEX\n\n"]
+    invalid_create_time = [0]
+
+    def _conv_ctime(conv: Dict[str, Any]) -> float:
+        return coerce_create_time(conv.get("create_time"), invalid_create_time)
 
     # Add global timeline if conversations provided
     if conversations:
         index_lines.append("### Timeline\n\n")
         # Sort conversations by create_time
-        sorted_convs = sorted(
-            conversations, key=lambda c: c.get("create_time", 0), reverse=True
-        )
+        sorted_convs = sorted(conversations, key=_conv_ctime, reverse=True)
         for conv in sorted_convs[:10]:  # Show latest 10
             cid, title = conv_id_and_title(conv)
-            ctime = conv.get("create_time", 0)
+            ctime = _conv_ctime(conv)
             date_str = ts_to_local_str(ctime).split()[0] if ctime else "Unknown"
-            index_lines.append(f"  - {date_str}: {title} (ID: {cid[:8]}...)\n")
+            cid_label = f"{cid[:8]}..." if cid else "unknown"
+            index_lines.append(f"  - {date_str}: {title} (ID: {cid_label})\n")
         index_lines.append("\n")
 
     # Add priority threads (based on keywords and recency)
@@ -1391,7 +1498,7 @@ def _generate_working_index(
                     score += 3
 
             # Boost recent conversations
-            ctime = conv.get("create_time", 0)
+            ctime = _conv_ctime(conv)
             if ctime:
                 # Conversations from last 30 days get boost
                 import time
@@ -1476,6 +1583,142 @@ def _reorganize_sources_section(
 # ===== CONFIG-DRIVEN FILTERING & SCORING =====
 
 
+def _config_schema_error(field: str, detail: str) -> None:
+    die(f"Invalid config schema for '{field}': {detail}")
+
+
+def _config_require_keys(
+    obj: Dict[str, Any], *, allowed: Set[str], field: str
+) -> None:
+    unknown = sorted(k for k in obj.keys() if k not in allowed)
+    if unknown:
+        _config_schema_error(field, f"unknown key(s): {', '.join(unknown)}")
+
+
+def _config_require_string_list(value: Any, *, field: str) -> None:
+    if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+        _config_schema_error(field, "expected a list of strings")
+
+
+def validate_column_config_schema(config: Any) -> Dict[str, Any]:
+    if not isinstance(config, dict):
+        _config_schema_error("root", "expected a JSON object")
+
+    allowed_top = {
+        "column_name",
+        "column_objective",
+        "thread_filters",
+        "segment_scoring",
+        "op_v2_constraints",
+        "dossier_contract",
+        "control_layer_sections",
+        "search_terms",
+    }
+    _config_require_keys(config, allowed=allowed_top, field="root")
+
+    for key in ("column_name", "column_objective", "dossier_contract"):
+        if key in config and not isinstance(config[key], str):
+            _config_schema_error(key, "expected a string")
+
+    if "search_terms" in config:
+        _config_require_string_list(config["search_terms"], field="search_terms")
+
+    if "thread_filters" in config:
+        thread_filters = config["thread_filters"]
+        if not isinstance(thread_filters, dict):
+            _config_schema_error("thread_filters", "expected an object")
+        _config_require_keys(
+            thread_filters,
+            allowed={"include", "exclude"},
+            field="thread_filters",
+        )
+        include = thread_filters.get("include", {})
+        if not isinstance(include, dict):
+            _config_schema_error("thread_filters.include", "expected an object")
+        for bucket, terms in include.items():
+            if not isinstance(bucket, str) or not bucket.strip():
+                _config_schema_error(
+                    "thread_filters.include", "bucket names must be non-empty strings"
+                )
+            _config_require_string_list(
+                terms, field=f"thread_filters.include.{bucket}"
+            )
+        exclude = thread_filters.get("exclude", [])
+        _config_require_string_list(exclude, field="thread_filters.exclude")
+
+    if "segment_scoring" in config:
+        segment_scoring = config["segment_scoring"]
+        if not isinstance(segment_scoring, dict):
+            _config_schema_error("segment_scoring", "expected an object")
+        _config_require_keys(
+            segment_scoring,
+            allowed={"mechanism_terms", "bridging_terms", "context_window", "min_score"},
+            field="segment_scoring",
+        )
+        if "mechanism_terms" in segment_scoring:
+            _config_require_string_list(
+                segment_scoring["mechanism_terms"],
+                field="segment_scoring.mechanism_terms",
+            )
+        if "bridging_terms" in segment_scoring:
+            _config_require_string_list(
+                segment_scoring["bridging_terms"],
+                field="segment_scoring.bridging_terms",
+            )
+        if "context_window" in segment_scoring:
+            context_window = segment_scoring["context_window"]
+            if isinstance(context_window, bool) or not isinstance(context_window, int):
+                _config_schema_error(
+                    "segment_scoring.context_window", "expected an integer"
+                )
+            if context_window < 0:
+                _config_schema_error(
+                    "segment_scoring.context_window", "must be >= 0"
+                )
+        if "min_score" in segment_scoring:
+            min_score = segment_scoring["min_score"]
+            if isinstance(min_score, bool) or not isinstance(min_score, (int, float)):
+                _config_schema_error("segment_scoring.min_score", "expected a number")
+            if float(min_score) < 0.0:
+                _config_schema_error("segment_scoring.min_score", "must be >= 0")
+
+    if "op_v2_constraints" in config:
+        _config_require_string_list(
+            config["op_v2_constraints"], field="op_v2_constraints"
+        )
+
+    if "control_layer_sections" in config:
+        control_sections = config["control_layer_sections"]
+        if not isinstance(control_sections, dict):
+            _config_schema_error("control_layer_sections", "expected an object")
+        _config_require_keys(
+            control_sections,
+            allowed={
+                "scope_router",
+                "do_not_repeat_rules",
+                "mechanism_focus",
+                "evidence_vs_inference",
+                "stress_tests",
+            },
+            field="control_layer_sections",
+        )
+        for key in ("scope_router", "mechanism_focus", "evidence_vs_inference"):
+            if key in control_sections and not isinstance(control_sections[key], str):
+                _config_schema_error(f"control_layer_sections.{key}", "expected a string")
+        if "do_not_repeat_rules" in control_sections:
+            _config_require_string_list(
+                control_sections["do_not_repeat_rules"],
+                field="control_layer_sections.do_not_repeat_rules",
+            )
+        if "stress_tests" in control_sections:
+            _config_require_string_list(
+                control_sections["stress_tests"],
+                field="control_layer_sections.stress_tests",
+            )
+
+    return config
+
+
 def load_column_config(config_file: str) -> Dict[str, Any]:
     """Load column-specific constraints from JSON config file."""
     config_path = Path(config_file).expanduser().resolve()
@@ -1483,9 +1726,10 @@ def load_column_config(config_file: str) -> Dict[str, Any]:
         die(f"Config file not found: {config_file}")
     try:
         with open(config_path, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
     except Exception as e:
         die(f"Error loading config: {e}")
+    return validate_column_config_schema(data)
 
 
 def matches_thread_filter(
@@ -1595,8 +1839,9 @@ def generate_completeness_check(
     # Find date range
     dates = []
     for conv in convs:
-        if conv.get("create_time"):
-            dates.append(conv["create_time"])
+        ctime = coerce_create_time(conv.get("create_time"))
+        if ctime:
+            dates.append(ctime)
 
     if not dates:
         return "No date information available."
@@ -1883,11 +2128,7 @@ def build_combined_dossier(
     if not wanted_ids:
         die("No valid selections provided; cannot build dossier.")
 
-    by_id: Dict[str, Dict[str, Any]] = {}
-    for c in convs:
-        cid, _ = conv_id_and_title(c)
-        if cid:
-            by_id[cid] = c
+    by_id = build_conversation_map_by_id(convs)
 
     missing = [i for i in wanted_ids if i not in by_id]
     if missing:
@@ -2044,8 +2285,11 @@ def build_combined_dossier(
 
             # Load used links if file provided
             used_links: Optional[Set[str]] = None
-            if used_links_file and Path(used_links_file).exists():
-                used_links_text = read_text_utf8(Path(used_links_file), label="used-links")
+            if used_links_file:
+                used_links_path = require_existing_file(
+                    used_links_file, label="used-links"
+                )
+                used_links_text = read_text_utf8(used_links_path, label="used-links")
                 used_links = {
                     line.strip()
                     for line in used_links_text.splitlines()
@@ -2413,11 +2657,7 @@ def cmd_make_dossiers(args: argparse.Namespace) -> None:
     if not wanted:
         die("Provide --ids and/or --ids-file")
 
-    by_id = {}
-    for c in convs:
-        cid, _ = conv_id_and_title(c)
-        if cid:
-            by_id[cid] = c
+    by_id = build_conversation_map_by_id(convs)
 
     missing = [i for i in wanted if i not in by_id]
     if missing:
@@ -2606,13 +2846,16 @@ def cmd_build_dossier(args: argparse.Namespace) -> None:
     # Load patterns from file if provided
     patterns = None
     if getattr(args, "patterns_file", None):
-        pf = Path(args.patterns_file).expanduser().resolve()
-        if pf.exists():
-            patterns = read_nonempty_lines_utf8(pf, label="patterns")
+        pf = require_existing_file(args.patterns_file, label="patterns")
+        patterns = read_nonempty_lines_utf8(pf, label="patterns")
 
     split = bool(getattr(args, "split", False))
     dedup = bool(getattr(args, "dedup", True))
     used_links_file = getattr(args, "used_links_file", None)
+    if used_links_file:
+        used_links_file = str(
+            require_existing_file(used_links_file, label="used-links")
+        )
     config_file = getattr(args, "config", None)
     name = getattr(args, "name", None)
 
@@ -2818,13 +3061,16 @@ def cmd_recent(args: argparse.Namespace) -> None:
     formats = [f.lower() for f in (getattr(args, "format", None) or [])]
     patterns = None
     if getattr(args, "patterns_file", None):
-        pf = Path(args.patterns_file).expanduser().resolve()
-        if pf.exists():
-            patterns = read_nonempty_lines_utf8(pf, label="patterns")
+        pf = require_existing_file(args.patterns_file, label="patterns")
+        patterns = read_nonempty_lines_utf8(pf, label="patterns")
 
     split = bool(getattr(args, "split", False))
     dedup = bool(getattr(args, "dedup", True))
     used_links_file = getattr(args, "used_links_file", None)
+    if used_links_file:
+        used_links_file = str(
+            require_existing_file(used_links_file, label="used-links")
+        )
     config_file = getattr(args, "config", None)
     if config_file:
         # Validate upfront so explicit --config errors are not deferred/silent.
@@ -3141,13 +3387,16 @@ def cmd_quick(args: argparse.Namespace) -> None:
     # Load patterns from file if provided
     patterns = None
     if getattr(args, "patterns_file", None):
-        pf = Path(args.patterns_file).expanduser().resolve()
-        if pf.exists():
-            patterns = read_nonempty_lines_utf8(pf, label="patterns")
+        pf = require_existing_file(args.patterns_file, label="patterns")
+        patterns = read_nonempty_lines_utf8(pf, label="patterns")
 
     split = bool(getattr(args, "split", False))
     dedup = bool(getattr(args, "dedup", True))
     used_links_file = getattr(args, "used_links_file", None)
+    if used_links_file:
+        used_links_file = str(
+            require_existing_file(used_links_file, label="used-links")
+        )
     config_file = getattr(args, "config", None)
     name = getattr(args, "name", None)
 

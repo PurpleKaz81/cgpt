@@ -44,6 +44,7 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 - Local private overrides via untracked `config.personal.json`.
 - Environment defaults including `CGPT_DEFAULT_MODE` and `CGPT_DEFAULT_SPLIT`.
 - Explicit `--config` errors fail fast (missing file or invalid JSON).
+- Config schema validation rejects unknown keys and wrong-typed values.
 
 ## Operating Model
 
@@ -56,6 +57,7 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 - CLI-first interface only; no native GUI app yet.
 - The generated dossier is a strong starting context artifact, not a guaranteed final optimized prompt package.
 - File-based CLI inputs (`--ids-file`, `--patterns-file`, `--used-links-file`) are expected to be UTF-8 family encoded.
+- `--patterns-file` and `--used-links-file` fail fast when explicitly provided but missing.
 - `--name` values must normalize to a non-empty safe slug.
 
 ## Reliability and Validation
@@ -64,8 +66,11 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 - One-command release preflight is available at `scripts/release_check.sh`.
 - Edge-case hardening tests cover ZIP path safety, timestamp coercion, strict config handling, and input-file decoding behavior.
 - Extraction rejects unsafe ZIP member paths before writing files.
+- Extraction rejects ZIP symlink/special members and enforces bounded member-count/uncompressed-size limits.
 - Re-extraction for the same ZIP stem replaces prior extraction contents to avoid stale files.
 - Conversations JSON discovery uses conversation-aware heuristics instead of generic largest-file fallback.
+- Conversations JSON discovery uses bounded per-priority candidate shortlists to avoid unbounded parse growth.
+- Duplicate conversation IDs in exports fail fast in map-building command paths.
 
 ## Canonical Future Source
 

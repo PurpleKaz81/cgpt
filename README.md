@@ -259,10 +259,20 @@ Cause: extracted folder does not contain a valid conversations JSON payload.
 Cause: the ZIP contains unsafe extraction paths.  
 Fix: re-export the archive from ChatGPT and retry.
 
-`ERROR: Config file not found: ...` or `ERROR: Error loading config: ...`
+`ERROR: Special ZIP member type is not allowed: ...` or ZIP size/member limit errors
 
-Cause: explicit `--config` file is missing or invalid JSON.  
-Fix: verify path and JSON format.
+Cause: ZIP includes symlink/special entries or exceeds hardening limits for member count/uncompressed size.  
+Fix: re-export and retry with a safe archive.
+
+`ERROR: patterns file not found: ...` or `ERROR: used-links file not found: ...`
+
+Cause: you passed `--patterns-file`/`--used-links-file` with a missing path.  
+Fix: verify the file path or remove the flag.
+
+`ERROR: Config file not found: ...`, `ERROR: Error loading config: ...`, or `ERROR: Invalid config schema ...`
+
+Cause: explicit `--config` file is missing, invalid JSON, or has unsupported keys/wrong types.  
+Fix: verify path, JSON syntax, and supported schema keys/types.
 
 `ERROR: Failed to read ... file as UTF-8 text: ...`
 
@@ -278,6 +288,11 @@ Fix: use a value in range `0..200`.
 
 Cause: `--name` was effectively empty after cleanup (for example `"!!!"`).  
 Fix: provide a name with letters or numbers.
+
+`ERROR: Duplicate conversation ID(s) found in export: ...`
+
+Cause: export payload contains repeated conversation IDs and selection would be ambiguous.  
+Fix: use a clean export source and retry.
 
 `ModuleNotFoundError: No module named 'docx'`
 

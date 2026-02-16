@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-02-16
+
+### Added
+
+- Added `v0.2.3` hardening tests in `tests/test_edge_case_hardening.py` covering:
+  - ZIP special-member and archive limit validation
+  - strict missing-file handling for `--patterns-file` and `--used-links-file`
+  - config schema validation for unknown keys and wrong-typed values
+  - duplicate conversation ID detection in map-building paths
+  - bounded JSON discovery candidate parsing
+
+### Changed
+
+- ZIP extraction now enforces member-count and total uncompressed-size limits and rejects symlink/special ZIP entries.
+- Conversations JSON discovery now uses bounded per-priority candidate shortlists to reduce scaling costs on large trees.
+- `build-dossier`/`quick`/`recent` now fail fast when explicit optional file flags reference missing files.
+- Updated `README.md`, `TECHNICAL.md`, `docs/specs/current-capabilities.md`, and roadmap status for the `v0.2.3` hardening pass.
+
+### Fixed
+
+- Working-index generation now coerces malformed conversation `create_time` values before sorting/scoring math.
+- Config loading now validates schema (unknown keys and wrong-typed fields fail explicitly).
+- Duplicate conversation IDs in export input now fail fast instead of silently overwriting map entries.
+
 ## [0.2.2] - 2026-02-16
 
 ### Added
@@ -142,8 +166,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - FAQ and troubleshooting section
 - Common mistakes and fixes guide
 
+[0.2.3]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.3
 [0.2.2]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.2
 [0.2.1]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.1
 [0.2.0]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.0
 [0.1.0]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.1.0
-[Unreleased]: https://github.com/PurpleKaz81/cgpt/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/PurpleKaz81/cgpt/compare/v0.2.3...HEAD
