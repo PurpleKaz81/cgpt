@@ -4,18 +4,25 @@ This file is the single source of truth for creating a release.
 
 ## Documentation Contract (Every Code Change)
 
-This repository intentionally keeps the markdown set minimal.
+This repository uses a controlled markdown policy:
 
-Allowed markdown files:
+Core markdown files (canonical):
 - `README.md`
 - `TECHNICAL.md`
 - `SECURITY.md`
 - `CHANGELOG.md`
 - `RELEASING.md`
 
+Scoped supplemental markdown files (allowed):
+- `docs/INDEX.md`
+- `docs/specs/**/*.md`
+- `docs/adr/**/*.md`
+- `docs/runbooks/**/*.md`
+- `docs/roadmap/**/*.md`
+
 Rules:
-- Do not add new `.md` files unless one of the five files cannot reasonably hold the content.
-- Every change to `cgpt.py`, `config.json`, or `requirements.txt` must update at least one allowed markdown file.
+- Every scoped supplemental markdown file must be linked from `docs/INDEX.md`.
+- Every change to `cgpt.py`, `config.json`, or `requirements.txt` must update at least one core markdown file.
 - User-visible behavior changes should update `README.md` and `CHANGELOG.md`, and update `TECHNICAL.md` when command behavior/flags/examples change.
 - Security/data-handling changes should update `SECURITY.md`.
 
@@ -49,6 +56,7 @@ Then commit:
 
 ```bash
 git add cgpt.py CHANGELOG.md README.md TECHNICAL.md SECURITY.md RELEASING.md .gitignore .githooks/pre-commit config.json
+git add docs/INDEX.md docs/specs docs/adr docs/runbooks docs/roadmap
 git commit -m "Release vX.Y.Z"
 ```
 

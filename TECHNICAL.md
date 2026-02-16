@@ -9,6 +9,27 @@ This file is the canonical source of truth for:
 
 If you want the beginner walkthrough, use [README.md](README.md).
 
+## Documentation Topology
+
+Canonical docs:
+
+- `README.md`: beginner-first usage and quick workflows
+- `TECHNICAL.md`: canonical command/flag/behavior reference
+- `SECURITY.md`: security and privacy handling
+- `CHANGELOG.md`: release history and unreleased changes
+- `RELEASING.md`: maintainer release workflow
+
+Scoped supplemental docs are allowed only in:
+
+- `docs/specs/`
+- `docs/adr/`
+- `docs/runbooks/`
+- `docs/roadmap/`
+
+Index requirement:
+
+- every markdown file under the scoped `docs/` folders must be linked from `docs/INDEX.md`
+
 ## CLI Surface (Current)
 
 Global command:
@@ -489,6 +510,7 @@ Safe git routine:
 git status --short
 git pull origin main
 git add cgpt.py README.md TECHNICAL.md CHANGELOG.md SECURITY.md RELEASING.md config.json .gitignore .githooks/pre-commit
+git add docs/INDEX.md docs/specs docs/adr docs/runbooks docs/roadmap
 git diff --cached
 git commit -m "your message"
 git push origin <branch>

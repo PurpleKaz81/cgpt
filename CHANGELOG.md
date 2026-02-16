@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Combined dossier commands now fail clearly when no requested output can be generated (for example docx-only without `python-docx`) instead of printing a non-existent fallback path
 - Updated `make-dossiers` CLI help and docs to reflect strict format behavior and current `init`-first workflow guidance
 - Unified roadmap documentation across `README.md` and `TECHNICAL.md` with one prioritized implementation queue, status split (`Planned (Committed)` vs `Proposed Enhancement`), and explicit implementation order
+- Expanded docs guard policy to allow scoped `docs/` markdown (`specs`, `adr`, `runbooks`, `roadmap`) with required indexing in `docs/INDEX.md` while keeping code-doc sync tied to core docs
 - Added a small automated CLI critical-path test suite (`tests/test_cli_critical_paths.py`) and CI workflow (`.github/workflows/tests.yml`)
 - Replaced tracked `config.json` content with a neutral public-safe baseline for shared usage
 - Added private-config protection patterns to `.gitignore` (`config.personal.json`, `*.private.json`, etc.)

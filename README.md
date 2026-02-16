@@ -200,6 +200,8 @@ git pull origin main
 
 ```bash
 git add cgpt.py README.md TECHNICAL.md CHANGELOG.md SECURITY.md RELEASING.md config.json .gitignore .githooks/pre-commit
+# if scoped docs changed, add them explicitly too:
+git add docs/INDEX.md docs/specs docs/adr docs/runbooks docs/roadmap
 ```
 
 1. Verify staged files:
@@ -282,6 +284,7 @@ For the decision-complete implementation roadmap (scope, interfaces, dependencie
 ## Where To Go Next
 
 - Complete command and flag reference: [TECHNICAL.md](TECHNICAL.md)
+- Scoped docs index (specs, ADRs, runbooks, roadmap notes): [docs/INDEX.md](docs/INDEX.md)
 - Security and safe data handling: [SECURITY.md](SECURITY.md)
 - Release process (maintainers): [RELEASING.md](RELEASING.md)
 - Full change history: [CHANGELOG.md](CHANGELOG.md)
