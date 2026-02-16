@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added remaining-edge hardening tests in `tests/test_edge_case_hardening.py` covering:
+  - same-stem re-extraction stale-file cleanup
+  - message-level timestamp coercion resilience
+  - conversations JSON discovery robustness
+  - `--context` bounds validation
+  - `--name` normalized-slug validation
+
+### Changed
+
+- Extraction now uses a temporary target and replace flow so repeated extraction of the same ZIP stem does not keep stale files.
+- Conversations JSON discovery now uses conversation-aware candidate selection instead of generic largest-JSON fallback.
+- `--context` now enforces a bounded range (`0..200`) across dossier-producing commands.
+- Updated `README.md`, `TECHNICAL.md`, `docs/specs/current-capabilities.md`, and roadmap status for `v0.2.2` hardening.
+
+### Fixed
+
+- Message extraction now coerces malformed message `create_time` values to `0.0` instead of failing silently via exception fallbacks.
+- `--name` now fails fast when normalization yields an empty/unsafe slug, avoiding accidental writes to the root dossier directory.
+
 ## [0.2.1] - 2026-02-16
 
 ### Added

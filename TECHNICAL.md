@@ -196,6 +196,7 @@ Notes:
 - Without `zip`, newest ZIP in `zips/` is used.
 - Running `cgpt` with no subcommand behaves like extraction of newest ZIP.
 - ZIP members are security-validated before extraction; unsafe member paths fail fast with no extraction writes.
+- Re-extracting the same ZIP stem replaces prior extraction contents (no stale-file carryover).
 
 ### `index`
 
@@ -316,6 +317,7 @@ Rules:
 - requires `--ids` and/or `--ids-file`
 - in `full` mode, topic flags are optional
 - in `excerpts` mode, at least one topic flag is required
+- `--context` must be within `0..200`
 - exits with an error when none of the requested output formats can be created (for example `--format docx` without `python-docx`)
 
 ### `quick` / `q`
@@ -358,6 +360,7 @@ Rules:
 - if neither is set, quick uses the full available conversation set
 - `--and --where messages` requires every term in message text scope.
 - `--and --where all` requires every term across title+message union scope.
+- `--context` must be within `0..200`
 
 ### `recent` / `r`
 
@@ -390,6 +393,7 @@ Rules:
 
 - `recent` does not accept keyword positional terms
 - for keyword + recency in one command, use `quick --recent N "term"` or `quick --days N "term"`
+- `--context` must be within `0..200`
 
 ## Selection Input Grammar (Interactive)
 
@@ -422,6 +426,8 @@ dossiers/
    |- YYYY-MM-DD_HHMMSS.txt
    `- YYYY-MM-DD_HHMMSS__working.txt
 ```
+
+`--name` is normalized for filesystem safety; if normalization would produce an empty/unsafe slug (`""`, `"."`, `".."`), command fails explicitly.
 
 Format behavior for combined dossier commands:
 
@@ -543,13 +549,15 @@ mkdir -p zips extracted dossiers
 
 Fix: place at least one ChatGPT export ZIP in `zips/`.
 
-### `ERROR: No JSON found under ...`
+### `ERROR: No conversations JSON found under ...`
 
 Fix:
 
 ```bash
 cgpt extract
 ```
+
+Cause: extracted root does not contain a valid conversations JSON payload.
 
 ### `ERROR: Provide --topic and/or --topics`
 
@@ -570,6 +578,14 @@ Cause: input file for IDs/patterns/used-links is not UTF-8/UTF-8-BOM decodable.
 ### `ERROR: Config file not found: ...` / `ERROR: Error loading config: ...`
 
 Cause: explicit `--config` file is missing or invalid JSON.
+
+### `ERROR: argument --context: --context must be between 0 and 200`
+
+Cause: `--context` is outside allowed bounds.
+
+### `ERROR: --name must contain at least one safe alphanumeric character after normalization.`
+
+Cause: `--name` normalizes to an empty/unsafe path segment.
 
 ### `ModuleNotFoundError: No module named 'docx'`
 
@@ -597,10 +613,14 @@ Current test coverage includes key generation flows around:
 - `build-dossier` docx-only failure behavior when `python-docx` is unavailable
 - edge-case hardening suite covering:
   - ZIP path safety validation
+  - extraction freshness on repeated same-stem extraction
   - `quick --and` behavior by scope
   - invalid timestamp coercion in recency/day filtering
+  - invalid message timestamp coercion during message extraction
   - strict config load/parse failures
   - UTF-8-family input file decoding guarantees
+  - conversations JSON discovery robustness
+  - `--context`/`--name` input validation
 
 ## Feature Roadmap Status
 
