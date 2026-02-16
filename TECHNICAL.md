@@ -553,27 +553,149 @@ Current test coverage includes key generation flows around:
 
 ## Feature Roadmap Status
 
-Status labels:
+This section is the canonical, implementation-ordered queue for roadmap items that are not yet implemented.
 
-- `Implemented`: available now
-- `Planned`: documented intent, not implemented yet
+### Roadmap Status Model
 
-| Feature | Status | Notes |
-| --- | --- | --- |
-| Automated CLI critical-path tests | `Implemented` | Available via `python -m unittest discover -s tests -p "test_*.py" -v`; covers core selection parsing and output generation paths. |
-| Opt-in split default (`CGPT_DEFAULT_SPLIT`) | `Implemented` | Enables split-by-default for split-capable dossier commands; `--split` and `--no-split` provide per-command override. |
-| Quick recency window by count (`quick --recent N`) | `Implemented` | Limits quick keyword matching to N most recent conversations before filtering by topic terms. |
-| Quick recency window by time (`quick --days N`) | `Implemented` | Limits quick keyword matching to conversations created in the last N days before filtering by topic terms. |
-| `cgpt init` command | `Implemented` | Creates and verifies required folders (`zips/`, `extracted/`, `dossiers/`) under the resolved home path. |
-| `--redact` mode | `Planned` | Would scrub sensitive patterns (for example emails/phones/tokens) before sharing dossiers. |
-| `--json` output for discovery/search commands | `Planned` | Would add machine-readable output mode for `ids`, `find`, and `search`. |
-| Token-aware chunking (`--max-tokens`) | `Planned` | Would split large `__working` outputs into upload-safe chunk files. |
+- `Implemented`: available now in CLI/runtime behavior.
+- `Planned (Committed)`: approved implementation intent; not built yet.
+- `Proposed Enhancement`: prioritized recommendation; not yet committed.
 
-Remaining planned items:
+### Unified Priority Queue
 
-1. `--redact`
-2. `--json` for `ids` / `find` / `search`
-3. `--max-tokens`
+| Priority | Feature | Status | Why now | Interface changes | Dependencies | Effort | Primary acceptance gate |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | Optional dependency CI matrix (`python-docx` present/missing) | `Proposed Enhancement` | Prevent regressions in optional DOCX paths early | CI matrix jobs for dependency-on and dependency-off runs | none | `M` | CI passes in both environments |
+| 2 | `cgpt doctor` command | `Proposed Enhancement` | Reduce setup/support friction with deterministic health checks | New `doctor` subcommand and structured check output | none | `M` | Detects layout/dependency/config failures with correct exit code |
+| 3 | `--redact` mode | `Planned (Committed)` | High data-safety value before sharing outputs | `--redact` on dossier-producing commands | none | `L` | Sensitive patterns are scrubbed with predictable rules |
+| 4 | `--json` output for `ids` / `find` / `search` | `Planned (Committed)` | Enables script/automation integration for discovery flows | `--json` on discovery/search commands with stable schema | none | `M` | JSON schema is stable and parity-tested against text mode |
+| 5 | `--dry-run` mode for write commands | `Proposed Enhancement` | Improves confidence before writes/overwrites | `--dry-run` for `build-dossier`, `make-dossiers`, `quick`, `recent` | none | `M` | Dry-run produces plan output and writes zero files |
+| 6 | Token-aware chunking (`--max-tokens`) | `Planned (Committed)` | Prevents oversized working outputs for downstream upload limits | `--max-tokens <N>` for combined dossier working outputs | none | `M` | Chunk files respect token limits and preserve ordering |
+| 7 | `--json` output for write commands | `Proposed Enhancement` | Standardizes machine-readable output metadata | `--json` on write commands (paths, warnings, counts, timings) | discovery `--json` (P4) | `M` | Write command results are schema-validated and stable |
+| 8 | `--strict` automation mode | `Proposed Enhancement` | Strengthens CI/script reliability by hard-failing warning states | `--strict` mode for write/validation flows | warning surfaces stabilized (P7) | `M` | Warnings become failures with deterministic non-zero exits |
+| 9 | Date range filters (`--since`, `--until`) | `Proposed Enhancement` | Adds reproducible time-window control beyond relative filters | `--since` / `--until` on query/selection flows | none | `M` | Filtering is timezone-consistent and boundary-tested |
+| 10 | Output control flags (`--out-dir`, `--output-prefix`) | `Proposed Enhancement` | Improves automation and deterministic output naming | `--out-dir` / `--output-prefix` on write commands | none | `M` | Outputs land in requested locations with validated naming |
+| 11 | Config profiles (`--profile`) | `Proposed Enhancement` | Simplifies repeatable workflows without long flag strings | `--profile <name>` config-profile selection | none | `L` | Profile resolution is deterministic and overrides are well-defined |
+
+### Feature Specs (Decision-Complete Cards)
+
+#### P1. Optional Dependency CI Matrix (`python-docx` present/missing) [`Proposed Enhancement`]
+
+- Goal: prevent regressions in optional DOCX behavior across dependency states.
+- In scope: CI matrix for dependency-present and dependency-missing jobs; existing suite execution in both jobs.
+- Out of scope: changing runtime feature behavior beyond test hardening.
+- CLI/API contract: no user-facing CLI changes.
+- Error/failure behavior: CI must fail on behavior drift in either dependency state.
+- Test scenarios: run full unit suite in both matrix lanes; validate docx-failure paths when dependency is missing.
+- Exit criteria: CI config merged and green in both lanes on `main`.
+
+#### P2. `cgpt doctor` [`Proposed Enhancement`]
+
+- Goal: provide a one-command health check for environment/workspace readiness.
+- In scope: layout checks (`zips/`, `extracted/`, `dossiers/`), optional dependency checks, config parse checks, index presence/basic integrity checks.
+- Out of scope: auto-remediation that mutates user data beyond optional explicit flags.
+- CLI/API contract: add `cgpt doctor` subcommand; optional `--json` output is allowed if designed in the same effort.
+- Error/failure behavior: non-zero exit on hard failures; clear categorized diagnostics.
+- Test scenarios: healthy workspace, missing folders, invalid config JSON, missing optional dependency.
+- Exit criteria: deterministic output and exit code semantics documented and tested.
+
+#### P3. `--redact` Mode [`Planned (Committed)`]
+
+- Goal: reduce accidental leakage of sensitive data in generated outputs.
+- In scope: redact emails, phone-like values, API-key/token patterns in output text.
+- Out of scope: irreversible mutation of source export files.
+- CLI/API contract: add `--redact` to dossier-producing commands (`build-dossier`, `quick`, `recent`, optional `make-dossiers` coverage decision documented at implementation).
+- Error/failure behavior: invalid redact configuration fails fast with descriptive error.
+- Test scenarios: redact on/off comparisons; mixed content with multiple sensitive pattern types.
+- Exit criteria: default-off behavior, deterministic redaction output, and test coverage for major pattern classes.
+
+#### P4. Discovery `--json` (`ids` / `find` / `search`) [`Planned (Committed)`]
+
+- Goal: provide stable machine-readable discovery outputs for scripts and tooling.
+- In scope: JSON schemas for each command including IDs, titles, scopes, and metadata.
+- Out of scope: replacing human-readable default output.
+- CLI/API contract: `--json` flag on `ids`, `find`, and `search`.
+- Error/failure behavior: schema serialization errors return non-zero and descriptive stderr.
+- Test scenarios: parity tests between text output rows and JSON item counts/fields.
+- Exit criteria: schema documented in TECHNICAL and regression-tested.
+
+#### P5. `--dry-run` for Write Commands [`Proposed Enhancement`]
+
+- Goal: allow safe previews before generating files.
+- In scope: `build-dossier`, `make-dossiers`, `quick`, `recent` plan output without writes.
+- Out of scope: deep simulation of optional side effects outside normal write paths.
+- CLI/API contract: add `--dry-run` on targeted write commands.
+- Error/failure behavior: invalid argument combinations fail with current command validation semantics.
+- Test scenarios: verify selection/planning output exists and file system remains unchanged.
+- Exit criteria: zero-write guarantee validated by tests.
+
+#### P6. Token-Aware Chunking (`--max-tokens`) [`Planned (Committed)`]
+
+- Goal: split working outputs into upload-safe segments.
+- In scope: chunking for combined dossier working outputs with ordering and naming guarantees.
+- Out of scope: exact model-tokenizer parity for every downstream model family.
+- CLI/API contract: add `--max-tokens <N>` to combined dossier generation paths.
+- Error/failure behavior: invalid `N` values fail with clear validation message.
+- Test scenarios: near-boundary chunk sizes, minimal chunk size, multi-chunk ordering.
+- Exit criteria: deterministic chunk boundaries and complete content preservation.
+
+#### P7. Write-Command `--json` Output [`Proposed Enhancement`]
+
+- Goal: provide structured machine-readable metadata for generated artifacts.
+- In scope: JSON results for `build-dossier`, `make-dossiers`, `quick`, `recent` including output paths, warnings, counts, timings.
+- Out of scope: removal of current human-readable output.
+- CLI/API contract: add `--json` to write commands with shared response envelope.
+- Error/failure behavior: schema failures return non-zero and emit error diagnostics.
+- Test scenarios: single-output, multi-output, warning-producing runs, no-output failures.
+- Exit criteria: schema stability and command parity tests across write commands.
+
+#### P8. `--strict` Automation Mode [`Proposed Enhancement`]
+
+- Goal: make automation pipelines fail fast on warning conditions.
+- In scope: promote eligible warnings to hard failures in strict mode.
+- Out of scope: changing default non-strict behavior.
+- CLI/API contract: add `--strict` mode to relevant commands (write/validation flows).
+- Error/failure behavior: warning states produce non-zero exit in strict mode with clear reason.
+- Test scenarios: known warning-producing paths in strict vs non-strict mode.
+- Exit criteria: strict behavior is deterministic and documented.
+
+#### P9. Date Range Filters (`--since`, `--until`) [`Proposed Enhancement`]
+
+- Goal: support deterministic date-bounded query/selection workflows.
+- In scope: date-range filtering for query/selection commands.
+- Out of scope: replacing existing `--recent` / `--days` shortcuts.
+- CLI/API contract: add `--since <date>` and `--until <date>` where selection/query semantics apply.
+- Error/failure behavior: invalid date format or impossible range fails with clear diagnostics.
+- Test scenarios: open-ended ranges, inclusive boundaries, empty result windows.
+- Exit criteria: documented date format and timezone handling with boundary tests.
+
+#### P10. Output Control Flags (`--out-dir`, `--output-prefix`) [`Proposed Enhancement`]
+
+- Goal: provide deterministic output paths and names for automation.
+- In scope: path/prefix control for write commands.
+- Out of scope: changing existing defaults when flags are omitted.
+- CLI/API contract: add `--out-dir <path>` and `--output-prefix <prefix>` to write commands.
+- Error/failure behavior: invalid or unwritable directories fail fast before processing.
+- Test scenarios: valid custom dirs, non-existent dirs, permission errors, prefix formatting.
+- Exit criteria: outputs consistently honor requested location/naming.
+
+#### P11. Config Profiles (`--profile`) [`Proposed Enhancement`]
+
+- Goal: reduce repetitive flag usage with named reusable configuration profiles.
+- In scope: profile lookup and merge resolution across config sources.
+- Out of scope: dynamic remote profile fetching.
+- CLI/API contract: add `--profile <name>` profile selection in config handling.
+- Error/failure behavior: missing/invalid profile fails with explicit profile list guidance.
+- Test scenarios: default profile fallback, explicit profile selection, override precedence.
+- Exit criteria: deterministic precedence rules documented and covered by tests.
+
+### Dependency Graph Notes
+
+- Discovery `--json` (P4) is a prerequisite for write-command `--json` (P7) to keep schemas aligned.
+- Optional dependency CI matrix (P1) should land before broad feature rollout to catch dependency-state regressions continuously.
+- `--strict` (P8) should be introduced only after warning surfaces and structured outputs are standardized (P7).
+- `--dry-run` (P5) should precede output-path customization (P10) to validate no-write semantics independently.
+- `cgpt doctor` (P2) is best delivered early to reduce support/debug load during subsequent feature rollouts.
 
 ## Security Notes
 
