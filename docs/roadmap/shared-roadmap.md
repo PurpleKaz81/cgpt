@@ -40,6 +40,7 @@ Planning horizon tags:
 | ID | Initiative | Status | Commitment | Horizon | Notes |
 | --- | --- | --- | --- | --- | --- |
 | R0 | Documented, reproducible CLI workflow | `implemented` | `committed` | `2026-T1` | Foundation complete via docs topology + release preflight + critical-path tests. |
+| R0.1 | Edge-case hardening patch (`v0.2.1`) | `planned` | `committed` | `2026-T1` | Security and correctness bundle: ZIP extraction safety, quick AND-scope correctness, timestamp coercion, config hard-fail, and input-file decode policy. |
 | R1 | Optional dependency CI matrix (`python-docx` present/missing) | `planned` | `target` | `2026-T1` | Prevent regressions in optional DOCX paths. |
 | R2 | `--redact` mode on dossier-producing commands | `planned` | `committed` | `2026-T1` | Privacy protection before sharing generated outputs. |
 | R3 | Discovery `--json` (`ids`, `find`, `search`) | `planned` | `committed` | `2026-T1` | Machine-readable discovery pipeline for automation. |

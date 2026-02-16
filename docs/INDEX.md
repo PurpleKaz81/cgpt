@@ -18,6 +18,7 @@ Core canonical docs remain:
 
 - [`docs/specs/product-vision.md`](specs/product-vision.md): neutral mission, scope, principles, local-first posture, and non-goals.
 - [`docs/specs/current-capabilities.md`](specs/current-capabilities.md): current feature set, constraints, and known limitations.
+- [`docs/specs/v0.2.1-edge-hardening.md`](specs/v0.2.1-edge-hardening.md): planned security/correctness hardening scope, behavior contracts, and test matrix for patch v0.2.1.
 
 ## ADRs
 
