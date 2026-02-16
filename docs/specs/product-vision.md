@@ -8,11 +8,17 @@ Define what `cgpt` is, who it serves, and what it is intentionally not trying to
 
 ## Mission
 
-`cgpt` helps a user turn prior AI conversations into reusable context summaries for better future AI conversations.
+`cgpt` helps a user compile prior AI conversations into reusable context artifacts that preserve continuity of reasoning for future AI sessions.
 
 ## Problem Statement
 
 Users with long AI chat histories often cannot quickly recover the context they need for a new session. Manual rereading is slow, and chat UIs are not optimized for assembling cross-conversation context packets.
+
+## Core Product Identity
+
+- Context continuity over transcript cleanup: the primary value is preserving reasoning and decisions across sessions.
+- Deterministic local context builds: treat conversation exports + selection + config as reproducible inputs that generate reusable artifacts.
+- Handoff reliability: produced dossiers should help another work cycle, another user, or another model session resume with less ambiguity.
 
 ## Primary Users
 
@@ -26,6 +32,11 @@ Users with long AI chat histories often cannot quickly recover the context they 
 - Support conversation discovery and selection from the local dataset.
 - Generate dossier artifacts designed to be reused as context input for later AI chats.
 - Prioritize reproducible CLI workflows over GUI-first features.
+
+## Strategic Framing (Near-Term)
+
+- Build-system framing: `cgpt` behaves like a local build system for context artifacts, favoring deterministic command execution over ad-hoc manual curation.
+- Handoff framing: `cgpt` outputs are context handoff packages designed to improve continuity between sessions rather than one-off transcript exports.
 
 ## Positioning and Tone
 
