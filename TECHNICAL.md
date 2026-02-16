@@ -195,6 +195,7 @@ Notes:
 
 - Without `zip`, newest ZIP in `zips/` is used.
 - Running `cgpt` with no subcommand behaves like extraction of newest ZIP.
+- ZIP members are security-validated before extraction; unsafe member paths fail fast with no extraction writes.
 
 ### `index`
 
@@ -355,6 +356,8 @@ Rules:
 
 - `--recent` and `--days` are mutually exclusive
 - if neither is set, quick uses the full available conversation set
+- `--and --where messages` requires every term in message text scope.
+- `--and --where all` requires every term across title+message union scope.
 
 ### `recent` / `r`
 
@@ -463,6 +466,7 @@ Supported on `quick`, `recent`, and `build-dossier`:
 - `--patterns-file <file>`: one deliverable pattern per line
 - `--used-links-file <file>`: one URL per line to prioritize sources
 - `--config <file>`: JSON config for segment filtering/control-layer behavior
+- file encoding for these inputs is UTF-8 (UTF-8 BOM accepted)
 
 Example:
 
@@ -555,6 +559,18 @@ Cause: `excerpts` mode without topic terms.
 
 Cause: ID-required command called without IDs.
 
+### `ERROR: Unsafe ZIP member path detected: ...`
+
+Cause: ZIP contains unsafe extraction paths (for example parent traversal or absolute paths).
+
+### `ERROR: Failed to read ... file as UTF-8 text: ...`
+
+Cause: input file for IDs/patterns/used-links is not UTF-8/UTF-8-BOM decodable.
+
+### `ERROR: Config file not found: ...` / `ERROR: Error loading config: ...`
+
+Cause: explicit `--config` file is missing or invalid JSON.
+
 ### `ModuleNotFoundError: No module named 'docx'`
 
 Fix:
@@ -579,6 +595,12 @@ Current test coverage includes key generation flows around:
 - `init`
 - strict `make-dossiers --format` behavior (`txt`-only and `md`-only)
 - `build-dossier` docx-only failure behavior when `python-docx` is unavailable
+- edge-case hardening suite covering:
+  - ZIP path safety validation
+  - `quick --and` behavior by scope
+  - invalid timestamp coercion in recency/day filtering
+  - strict config load/parse failures
+  - UTF-8-family input file decoding guarantees
 
 ## Feature Roadmap Status
 

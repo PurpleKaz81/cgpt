@@ -252,6 +252,21 @@ Fix:
 cgpt extract
 ```
 
+`ERROR: Unsafe ZIP member path detected: ...`
+
+Cause: the ZIP contains unsafe extraction paths.  
+Fix: re-export the archive from ChatGPT and retry.
+
+`ERROR: Config file not found: ...` or `ERROR: Error loading config: ...`
+
+Cause: explicit `--config` file is missing or invalid JSON.  
+Fix: verify path and JSON format.
+
+`ERROR: Failed to read ... file as UTF-8 text: ...`
+
+Cause: IDs/patterns/used-links file is not UTF-8/UTF-8-BOM decodable.  
+Fix: re-save the file as UTF-8 (or UTF-8 with BOM).
+
 `ModuleNotFoundError: No module named 'docx'`
 
 Fix:

@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added edge-case hardening test suite at `tests/test_edge_case_hardening.py` covering:
+  - ZIP extraction safety checks
+  - `quick --and` scope semantics
+  - invalid timestamp handling
+  - strict config error behavior
+  - UTF-8-family input-file decoding
+
+### Changed
+
+- `extract`/`quick`/`recent` now apply ZIP member safety validation before extraction writes.
+- File-based CLI inputs for IDs/patterns/used-links now use UTF-8-family decoding with explicit failure messages.
+- Updated `README.md`, `TECHNICAL.md`, `docs/specs/current-capabilities.md`, and roadmap status for the hardening bundle.
+
+### Fixed
+
+- Fixed `quick --and` behavior for `--where messages` and `--where all`.
+- Fixed recency/day filtering crashes on malformed `create_time` values by coercing invalid values to `0.0` with warning summaries.
+- Removed silent config-extension swallowing in `quick`/`build-dossier`; explicit `--config` failures now fail fast.
+
 ## [0.2.0] - 2026-02-16
 
 ### Changed
