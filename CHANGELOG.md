@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Clarified product identity positioning in `README.md` and `docs/specs/product-vision.md` to emphasize continuity, deterministic context builds, and handoff reliability.
+- Added roadmap initiative `R15` in `docs/roadmap/shared-roadmap.md` to package Quality Gates as one planned, committed reliability feature family with phased scope.
+- Synced GitHub repository About description to the new one-line positioning: local-first context compiler for reusable AI working-memory dossiers.
+
 ## [0.2.3] - 2026-02-16
 
 ### Added
