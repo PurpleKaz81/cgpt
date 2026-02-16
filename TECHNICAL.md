@@ -196,6 +196,7 @@ Notes:
 - Without `zip`, newest ZIP in `zips/` is used.
 - Running `cgpt` with no subcommand behaves like extraction of newest ZIP.
 - ZIP members are security-validated before extraction; unsafe member paths fail fast with no extraction writes.
+- ZIP extraction rejects symlink/special entries and enforces limits for member count and total uncompressed bytes.
 - Re-extracting the same ZIP stem replaces prior extraction contents (no stale-file carryover).
 
 ### `index`
@@ -285,6 +286,7 @@ Rules:
 - requires `--ids` and/or `--ids-file`
 - outputs are per-conversation, not one combined dossier
 - output formats are strict: only explicitly requested formats are written
+- duplicate conversation IDs in export input fail fast (ambiguous map protection)
 
 ### `build-dossier` / `d`
 
@@ -318,6 +320,7 @@ Rules:
 - in `full` mode, topic flags are optional
 - in `excerpts` mode, at least one topic flag is required
 - `--context` must be within `0..200`
+- explicit `--patterns-file`/`--used-links-file` paths must exist
 - exits with an error when none of the requested output formats can be created (for example `--format docx` without `python-docx`)
 
 ### `quick` / `q`
@@ -361,6 +364,7 @@ Rules:
 - `--and --where messages` requires every term in message text scope.
 - `--and --where all` requires every term across title+message union scope.
 - `--context` must be within `0..200`
+- explicit `--patterns-file`/`--used-links-file` paths must exist
 
 ### `recent` / `r`
 
@@ -394,6 +398,7 @@ Rules:
 - `recent` does not accept keyword positional terms
 - for keyword + recency in one command, use `quick --recent N "term"` or `quick --days N "term"`
 - `--context` must be within `0..200`
+- explicit `--patterns-file`/`--used-links-file` paths must exist
 
 ## Selection Input Grammar (Interactive)
 
@@ -473,6 +478,8 @@ Supported on `quick`, `recent`, and `build-dossier`:
 - `--used-links-file <file>`: one URL per line to prioritize sources
 - `--config <file>`: JSON config for segment filtering/control-layer behavior
 - file encoding for these inputs is UTF-8 (UTF-8 BOM accepted)
+- missing `--patterns-file`/`--used-links-file` paths are hard errors
+- `--config` schema is strict (unknown keys and wrong-typed fields fail fast)
 
 Example:
 
@@ -498,6 +505,9 @@ Environment variables:
 - `CGPT_DEFAULT_MODE`: `full` or `excerpts`
 - `CGPT_DEFAULT_SPLIT`: `1/true/yes/on` or `0/false/no/off`
 - `CGPT_FORCE_COLOR`: force-enable or force-disable color (`1/true/yes/on` or `0/false/no/off`)
+- `CGPT_MAX_ZIP_MEMBERS`: override extraction ZIP member-count limit
+- `CGPT_MAX_ZIP_UNCOMPRESSED_BYTES`: override extraction ZIP total-uncompressed-size limit
+- `CGPT_JSON_DISCOVERY_BUCKET_LIMIT`: override per-priority JSON discovery shortlist cap
 
 ## Private + Public Workflow (One Repository)
 
@@ -571,13 +581,25 @@ Cause: ID-required command called without IDs.
 
 Cause: ZIP contains unsafe extraction paths (for example parent traversal or absolute paths).
 
+### `ERROR: Special ZIP member type is not allowed: ...`
+
+Cause: ZIP contains symlink/special entries.
+
+### ZIP member/uncompressed size limit errors
+
+Cause: ZIP exceeds hardening limits for member count or aggregate uncompressed bytes.
+
 ### `ERROR: Failed to read ... file as UTF-8 text: ...`
 
 Cause: input file for IDs/patterns/used-links is not UTF-8/UTF-8-BOM decodable.
 
-### `ERROR: Config file not found: ...` / `ERROR: Error loading config: ...`
+### `ERROR: patterns file not found: ...` / `ERROR: used-links file not found: ...`
 
-Cause: explicit `--config` file is missing or invalid JSON.
+Cause: explicit optional file path flag points to a missing path.
+
+### `ERROR: Config file not found: ...` / `ERROR: Error loading config: ...` / `ERROR: Invalid config schema ...`
+
+Cause: explicit `--config` file is missing, invalid JSON, or violates schema constraints.
 
 ### `ERROR: argument --context: --context must be between 0 and 200`
 
@@ -586,6 +608,10 @@ Cause: `--context` is outside allowed bounds.
 ### `ERROR: --name must contain at least one safe alphanumeric character after normalization.`
 
 Cause: `--name` normalizes to an empty/unsafe path segment.
+
+### `ERROR: Duplicate conversation ID(s) found in export: ...`
+
+Cause: source export contains repeated IDs, so map resolution would be ambiguous.
 
 ### `ModuleNotFoundError: No module named 'docx'`
 
@@ -613,13 +639,16 @@ Current test coverage includes key generation flows around:
 - `build-dossier` docx-only failure behavior when `python-docx` is unavailable
 - edge-case hardening suite covering:
   - ZIP path safety validation
+  - ZIP symlink/special-member and archive-limit validation
   - extraction freshness on repeated same-stem extraction
   - `quick --and` behavior by scope
   - invalid timestamp coercion in recency/day filtering
   - invalid message timestamp coercion during message extraction
-  - strict config load/parse failures
+  - strict config load/parse/schema failures
+  - strict missing-file errors for `--patterns-file` and `--used-links-file`
+  - duplicate conversation ID detection in map-building paths
   - UTF-8-family input file decoding guarantees
-  - conversations JSON discovery robustness
+  - conversations JSON discovery robustness and bounded candidate parsing
   - `--context`/`--name` input validation
 
 ## Feature Roadmap Status
