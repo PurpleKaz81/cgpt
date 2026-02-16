@@ -140,7 +140,7 @@ class TestQuickAndSemantics(EdgeCaseBase):
                 "Neutral title",
                 now - 2000,
                 "alpha appears here",
-                "no beta here",
+                "no second term here",
             ),
             _conv(
                 "conv-title-plus-message",

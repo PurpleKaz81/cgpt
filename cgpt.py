@@ -207,6 +207,71 @@ def normalize_text(s: str) -> str:
     return s
 
 
+def read_text_utf8(path: Path, *, label: str) -> str:
+    """Read text inputs with UTF-8/UTF-8-BOM support and clear decode failures."""
+    try:
+        return path.read_text(encoding="utf-8-sig")
+    except UnicodeDecodeError as e:
+        die(f"Failed to read {label} file as UTF-8 text: {path}\n{e}")
+    except Exception as e:
+        die(f"Failed to read {label} file: {path}\n{e}")
+
+
+def read_nonempty_lines_utf8(path: Path, *, label: str) -> List[str]:
+    return [ln.strip() for ln in read_text_utf8(path, label=label).splitlines() if ln.strip()]
+
+
+def coerce_create_time(value: Any, invalid_counter: Optional[List[int]] = None) -> float:
+    try:
+        return float(value or 0.0)
+    except (TypeError, ValueError):
+        if invalid_counter is not None:
+            invalid_counter[0] += 1
+        return 0.0
+
+
+def warn_invalid_create_time(invalid_count: int, command_name: str) -> None:
+    if invalid_count > 0:
+        print(
+            f"WARNING: Encountered {invalid_count} invalid create_time value(s) in {command_name}; coerced to 0.0.",
+            file=sys.stderr,
+        )
+
+
+def is_unsafe_zip_member(member_name: str, dest_dir: Path) -> bool:
+    """Return True when a ZIP member path is unsafe for extraction."""
+    normalized = member_name.replace("\\", "/")
+    if not normalized or normalized == ".":
+        return True
+    if normalized.startswith("/") or normalized == ".." or normalized.startswith("../"):
+        return True
+    if "/../" in normalized:
+        return True
+    if re.match(r"^[a-zA-Z]:", member_name) or re.match(r"^[a-zA-Z]:", normalized):
+        return True
+
+    dest_root = dest_dir.resolve()
+    candidate = (dest_dir / normalized).resolve()
+    try:
+        candidate.relative_to(dest_root)
+    except ValueError:
+        return True
+    return False
+
+
+def validate_zip_members_safe(zf: zipfile.ZipFile, dest_dir: Path) -> None:
+    for info in zf.infolist():
+        if is_unsafe_zip_member(info.filename, dest_dir):
+            die(f"Unsafe ZIP member path detected: {info.filename}")
+
+
+def extract_zip_safely(zpath: Path, out_dir: Path) -> None:
+    with zipfile.ZipFile(zpath, "r") as zf:
+        validate_zip_members_safe(zf, out_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        zf.extractall(out_dir)
+
+
 # ----------------- color helpers -----------------
 _CLI_COLOR_OVERRIDE: Optional[bool] = None
 
@@ -412,6 +477,14 @@ def conversation_matches_text(c: Dict[str, Any], pat: re.Pattern) -> bool:
     return False
 
 
+def conversation_messages_blob(c: Dict[str, Any]) -> str:
+    try:
+        msgs = extract_messages_best_effort(c)
+        return "\n".join(m.text for m in msgs)
+    except Exception:
+        return ""
+
+
 # ----------------- sqlite FTS index (simple skeleton) -----------------
 def _init_index(db_path: Path) -> None:
     conn = sqlite3.connect(str(db_path))
@@ -485,7 +558,7 @@ def index_export(
             cid, title = conv_id_and_title(c)
             if not cid:
                 continue
-            ctime = float(c.get("create_time") or 0.0)
+            ctime = coerce_create_time(c.get("create_time"))
             msgs = extract_messages_best_effort(c)
             content = "\n".join(m.text for m in msgs)
             try:
@@ -1620,7 +1693,7 @@ def _generate_working_index_with_tags(
             # Map bucket name to short tag
             short_tag = _get_short_tag(bucket_tag)
 
-            ctime = float(c.get("create_time") or 0.0)
+            ctime = coerce_create_time(c.get("create_time"))
             priority_threads.append((cid, title, ctime, short_tag))
             included_count += 1
             tag_counts[short_tag] = tag_counts.get(short_tag, 0) + 1
@@ -1742,7 +1815,7 @@ def build_combined_dossier(
     for cid in wanted_ids:
         c = by_id[cid]
         _, title = conv_id_and_title(c)
-        ctime = float(c.get("create_time") or 0.0)
+        ctime = coerce_create_time(c.get("create_time"))
         msgs = extract_messages_best_effort(c)
         convo_items.append(
             {
@@ -1882,17 +1955,12 @@ def build_combined_dossier(
             # Load used links if file provided
             used_links: Optional[Set[str]] = None
             if used_links_file and Path(used_links_file).exists():
-                try:
-                    with open(used_links_file, "r", encoding="utf-8") as f:
-                        used_links = {
-                            line.strip()
-                            for line in f
-                            if line.strip() and not line.startswith("#")
-                        }
-                except Exception as e:
-                    print(
-                        f"WARNING: Could not load used_links_file: {e}", file=sys.stderr
-                    )
+                used_links_text = read_text_utf8(Path(used_links_file), label="used-links")
+                used_links = {
+                    line.strip()
+                    for line in used_links_text.splitlines()
+                    if line.strip() and not line.startswith("#")
+                }
 
             working_txt = raw_txt
             # Apply all processing filters (in order)
@@ -2087,9 +2155,7 @@ def cmd_extract(args: argparse.Namespace) -> None:
     if not zpath.exists():
         die(f"ZIP not found: {zpath}")
     out_dir = extracted_dir / zpath.stem
-    out_dir.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(zpath, "r") as zf:
-        zf.extractall(out_dir)
+    extract_zip_safely(zpath, out_dir)
     refresh_latest_symlink(extracted_dir, out_dir)
     # Print output unless quiet requested (top-level or subcommand)
     quiet = bool(getattr(args, "quiet", False))
@@ -2252,13 +2318,7 @@ def cmd_make_dossiers(args: argparse.Namespace) -> None:
         p = Path(args.ids_file).expanduser().resolve()
         if not p.exists():
             die(f"IDs file not found: {p}")
-        wanted.extend(
-            [
-                ln.strip()
-                for ln in p.read_text(encoding="utf-8").splitlines()
-                if ln.strip()
-            ]
-        )
+        wanted.extend(read_nonempty_lines_utf8(p, label="IDs"))
     wanted = [w.strip() for w in wanted if w.strip()]
     if not wanted:
         die("Provide --ids and/or --ids-file")
@@ -2413,13 +2473,10 @@ def cmd_build_dossier(args: argparse.Namespace) -> None:
         topics.extend(args.topics or [])
     # Optional: extend search terms from config
     if getattr(args, "config", None):
-        try:
-            cfg = load_column_config(args.config)
-            extra_terms = cfg.get("search_terms", [])
-            if isinstance(extra_terms, list):
-                topics.extend([t for t in extra_terms if isinstance(t, str)])
-        except Exception:
-            pass
+        cfg = load_column_config(args.config)
+        extra_terms = cfg.get("search_terms", [])
+        if isinstance(extra_terms, list):
+            topics.extend([t for t in extra_terms if isinstance(t, str)])
     topics = [t.strip() for t in topics if t and t.strip()]
     if not topics and mode == "excerpts":
         die("Provide --topic and/or --topics when using --mode excerpts")
@@ -2448,13 +2505,7 @@ def cmd_build_dossier(args: argparse.Namespace) -> None:
         p = Path(args.ids_file).expanduser().resolve()
         if not p.exists():
             die(f"IDs file not found: {p}")
-        wanted.extend(
-            [
-                ln.strip()
-                for ln in p.read_text(encoding="utf-8").splitlines()
-                if ln.strip()
-            ]
-        )
+        wanted.extend(read_nonempty_lines_utf8(p, label="IDs"))
     wanted = [w.strip() for w in wanted if w.strip()]
     if not wanted:
         die("Provide --ids and/or --ids-file")
@@ -2465,16 +2516,9 @@ def cmd_build_dossier(args: argparse.Namespace) -> None:
     # Load patterns from file if provided
     patterns = None
     if getattr(args, "patterns_file", None):
-        try:
-            pf = Path(args.patterns_file).expanduser().resolve()
-            if pf.exists():
-                patterns = [
-                    ln.strip()
-                    for ln in pf.read_text(encoding="utf-8").splitlines()
-                    if ln.strip()
-                ]
-        except Exception as e:
-            print(f"WARNING: Failed to load patterns file: {e}", file=sys.stderr)
+        pf = Path(args.patterns_file).expanduser().resolve()
+        if pf.exists():
+            patterns = read_nonempty_lines_utf8(pf, label="patterns")
 
     split = bool(getattr(args, "split", False))
     dedup = bool(getattr(args, "dedup", True))
@@ -2521,9 +2565,7 @@ def cmd_recent(args: argparse.Namespace) -> None:
         # auto-extract newest zip
         zpath = newest_zip(zips_dir)
         out_dir = extracted_dir / zpath.stem
-        out_dir.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(zpath, "r") as zf:
-            zf.extractall(out_dir)
+        extract_zip_safely(zpath, out_dir)
         refresh_latest_symlink(extracted_dir, out_dir)
     else:
         newest = newest_extracted(extracted_dir)
@@ -2542,15 +2584,17 @@ def cmd_recent(args: argparse.Namespace) -> None:
     convs = normalize_conversations(data)
 
     # Sort by create_time descending (newest first), then take top N
+    invalid_create_time = [0]
     convs_with_time: List[Tuple[Any, float]] = []
     for c in convs:
         cid, title = conv_id_and_title(c)
         if cid:
-            ctime = float(c.get("create_time") or 0.0)
+            ctime = coerce_create_time(c.get("create_time"), invalid_create_time)
             convs_with_time.append((c, ctime))
 
     convs_with_time.sort(key=lambda x: x[1], reverse=True)
     recent_convs = convs_with_time[:count]
+    warn_invalid_create_time(invalid_create_time[0], "recent")
 
     if not recent_convs:
         die("No conversations found.")
@@ -2684,21 +2728,17 @@ def cmd_recent(args: argparse.Namespace) -> None:
     formats = [f.lower() for f in (getattr(args, "format", None) or [])]
     patterns = None
     if getattr(args, "patterns_file", None):
-        try:
-            pf = Path(args.patterns_file).expanduser().resolve()
-            if pf.exists():
-                patterns = [
-                    ln.strip()
-                    for ln in pf.read_text(encoding="utf-8").splitlines()
-                    if ln.strip()
-                ]
-        except Exception as e:
-            print(f"WARNING: Failed to load patterns file: {e}", file=sys.stderr)
+        pf = Path(args.patterns_file).expanduser().resolve()
+        if pf.exists():
+            patterns = read_nonempty_lines_utf8(pf, label="patterns")
 
     split = bool(getattr(args, "split", False))
     dedup = bool(getattr(args, "dedup", True))
     used_links_file = getattr(args, "used_links_file", None)
     config_file = getattr(args, "config", None)
+    if config_file:
+        # Validate upfront so explicit --config errors are not deferred/silent.
+        load_column_config(config_file)
     mode = getattr(args, "mode", None) or "full"
     context = int(getattr(args, "context", 2))
     name = getattr(args, "name", None)
@@ -2732,13 +2772,10 @@ def cmd_quick(args: argparse.Namespace) -> None:
     """
     topics = [t.strip() for t in args.topics if t.strip()]
     if getattr(args, "config", None):
-        try:
-            cfg = load_column_config(args.config)
-            extra_terms = cfg.get("search_terms", [])
-            if isinstance(extra_terms, list):
-                topics.extend([t for t in extra_terms if isinstance(t, str)])
-        except Exception:
-            pass
+        cfg = load_column_config(args.config)
+        extra_terms = cfg.get("search_terms", [])
+        if isinstance(extra_terms, list):
+            topics.extend([t for t in extra_terms if isinstance(t, str)])
     if not topics:
         die("Provide at least one topic.")
 
@@ -2762,9 +2799,7 @@ def cmd_quick(args: argparse.Namespace) -> None:
         # auto-extract newest zip
         zpath = newest_zip(zips_dir)
         out_dir = extracted_dir / zpath.stem
-        out_dir.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(zpath, "r") as zf:
-            zf.extractall(out_dir)
+        extract_zip_safely(zpath, out_dir)
         refresh_latest_symlink(extracted_dir, out_dir)
     else:
         # refresh latest to newest extracted dir (keeps things consistent)
@@ -2782,21 +2817,29 @@ def cmd_quick(args: argparse.Namespace) -> None:
         die(f"No JSON found under {root}")
     data = load_json(data_file)
     convs = normalize_conversations(data)
+    invalid_create_time = [0]
+
+    def _ctime_for(c: Dict[str, Any]) -> float:
+        return coerce_create_time(c.get("create_time"), invalid_create_time)
+
     if days_count is not None:
         now_ts = datetime.now(tz=timezone.utc).timestamp()
         cutoff_ts = now_ts - (days_count * 86400.0)
-        convs = [
-            c
-            for c in convs
-            if c.get("id") and float(c.get("create_time") or 0.0) >= cutoff_ts
-        ]
+        filtered: List[Dict[str, Any]] = []
+        for c in convs:
+            cid, _ = conv_id_and_title(c)
+            if not cid:
+                continue
+            if _ctime_for(c) >= cutoff_ts:
+                filtered.append(c)
+        convs = filtered
     if recent_count is not None:
         convs_with_time: List[Tuple[Any, float]] = []
         for c in convs:
             cid, _ = conv_id_and_title(c)
             if not cid:
                 continue
-            ctime = float(c.get("create_time") or 0.0)
+            ctime = _ctime_for(c)
             convs_with_time.append((c, ctime))
         convs_with_time.sort(key=lambda x: x[1], reverse=True)
         convs = [c for c, _ in convs_with_time[:recent_count]]
@@ -2804,32 +2847,34 @@ def cmd_quick(args: argparse.Namespace) -> None:
     needles = [t.lower() for t in topics]
     and_terms = bool(args.and_terms)
     where = getattr(args, "where", "title")
-    topic_re = compile_topic_pattern(topics)
 
     matches: List[Tuple[str, str, float]] = []  # (id, title, create_time)
     for c in convs:
         cid, title = conv_id_and_title(c)
         if not cid:
             continue
-        matched = False
-        if where in ("title", "all"):
-            t = (title or "").lower()
-            ok_title = (
-                all(n in t for n in needles)
-                if and_terms
-                else any(n in t for n in needles)
-            )
-            if ok_title:
-                matched = True
-        if not matched and where in ("messages", "all"):
-            if conversation_matches_text(c, topic_re):
-                matched = True
+        title_lower = (title or "").lower()
+        messages_lower = conversation_messages_blob(c).lower()
+
+        checks: List[bool] = []
+        if where == "title":
+            checks = [n in title_lower for n in needles]
+        elif where == "messages":
+            checks = [n in messages_lower for n in needles]
+        elif where == "all":
+            checks = [(n in title_lower) or (n in messages_lower) for n in needles]
+        else:
+            die(f"Invalid --where value: {where}")
+
+        matched = all(checks) if and_terms else any(checks)
         if matched:
-            ctime = float(c.get("create_time") or 0.0)
+            ctime = _ctime_for(c)
             matches.append((cid, title or "", ctime))
 
+    warn_invalid_create_time(invalid_create_time[0], "quick")
+
     if not matches:
-        die("No conversation titles matched those topic terms.")
+        die("No conversations matched those topic terms.")
 
     # Sort by conversation create_time (sane for selection)
     matches.sort(key=lambda x: x[2])
@@ -2862,7 +2907,7 @@ def cmd_quick(args: argparse.Namespace) -> None:
                 if not path.exists():
                     warnings.append(f"IDs file not found: {path}")
                     continue
-                for ln in path.read_text(encoding="utf-8").splitlines():
+                for ln in read_text_utf8(path, label="IDs").splitlines():
                     ln = ln.strip()
                     if not ln:
                         continue
@@ -2919,13 +2964,7 @@ def cmd_quick(args: argparse.Namespace) -> None:
         p = Path(args.ids_file).expanduser().resolve()
         if not p.exists():
             die(f"IDs file not found: {p}")
-        raw = "\n".join(
-            [
-                ln.strip()
-                for ln in p.read_text(encoding="utf-8").splitlines()
-                if ln.strip()
-            ]
-        )
+        raw = "\n".join(read_nonempty_lines_utf8(p, label="IDs"))
         picked, warnings = parse_selection_text(raw)
         if warnings:
             for w in warnings:
@@ -3012,16 +3051,9 @@ def cmd_quick(args: argparse.Namespace) -> None:
     # Load patterns from file if provided
     patterns = None
     if getattr(args, "patterns_file", None):
-        try:
-            pf = Path(args.patterns_file).expanduser().resolve()
-            if pf.exists():
-                patterns = [
-                    ln.strip()
-                    for ln in pf.read_text(encoding="utf-8").splitlines()
-                    if ln.strip()
-                ]
-        except Exception as e:
-            print(f"WARNING: Failed to load patterns file: {e}", file=sys.stderr)
+        pf = Path(args.patterns_file).expanduser().resolve()
+        if pf.exists():
+            patterns = read_nonempty_lines_utf8(pf, label="patterns")
 
     split = bool(getattr(args, "split", False))
     dedup = bool(getattr(args, "dedup", True))
