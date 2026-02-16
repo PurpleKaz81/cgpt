@@ -190,5 +190,46 @@ class TestCliCriticalPaths(unittest.TestCase):
         self.assertEqual(selected_ids, ["conv-c"])
 
 
+class TestInitCommand(unittest.TestCase):
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.home = Path(self.tempdir.name) / "fresh_home"
+
+    def tearDown(self):
+        self.tempdir.cleanup()
+
+    def run_cgpt(self, *args):
+        cmd = [sys.executable, str(CGPT), "--home", str(self.home), *args]
+        return subprocess.run(
+            cmd,
+            text=True,
+            capture_output=True,
+            cwd=REPO_ROOT,
+            check=False,
+        )
+
+    def test_init_creates_required_folders(self):
+        result = self.run_cgpt("init")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertTrue((self.home / "zips").is_dir())
+        self.assertTrue((self.home / "extracted").is_dir())
+        self.assertTrue((self.home / "dossiers").is_dir())
+
+    def test_init_is_idempotent(self):
+        first = self.run_cgpt("init")
+        second = self.run_cgpt("init")
+        self.assertEqual(first.returncode, 0, msg=first.stderr)
+        self.assertEqual(second.returncode, 0, msg=second.stderr)
+        self.assertIn("All required folders already exist.", second.stdout)
+
+    def test_init_fails_when_required_path_is_file(self):
+        self.home.mkdir(parents=True, exist_ok=True)
+        (self.home / "zips").write_text("not a folder", encoding="utf-8")
+
+        result = self.run_cgpt("init")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Expected directory but found file", result.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()

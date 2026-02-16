@@ -106,6 +106,28 @@ def ensure_layout(home: Path) -> Tuple[Path, Path, Path]:
     return zips_dir, extracted_dir, dossiers_dir
 
 
+def init_layout(home: Path) -> Tuple[List[Path], List[Path]]:
+    """Create required folders under home when missing; verify existing layout."""
+    required = [home / "zips", home / "extracted", home / "dossiers"]
+    created: List[Path] = []
+    existing: List[Path] = []
+
+    if home.exists() and not home.is_dir():
+        die(f"Home path is not a directory: {home}")
+    home.mkdir(parents=True, exist_ok=True)
+
+    for d in required:
+        if d.exists():
+            if not d.is_dir():
+                die(f"Expected directory but found file: {d}")
+            existing.append(d)
+            continue
+        d.mkdir(parents=True, exist_ok=True)
+        created.append(d)
+
+    return created, existing
+
+
 def newest_zip(zips_dir: Path) -> Path:
     zips = sorted(zips_dir.glob("*.zip"), key=lambda p: p.stat().st_mtime, reverse=True)
     if not zips:
@@ -2036,6 +2058,23 @@ def build_combined_dossier(
 # ----------------- commands -----------------
 
 
+def cmd_init(args: argparse.Namespace) -> None:
+    home = home_dir(args.home)
+    created, existing = init_layout(home)
+
+    quiet = bool(getattr(args, "quiet", False))
+    if quiet:
+        return
+
+    print(f"Home: {home}")
+    for d in created:
+        print(f"created: {d.name}/")
+    for d in existing:
+        print(f"exists: {d.name}/")
+    if not created:
+        print("All required folders already exist.")
+
+
 def cmd_latest_zip(args: argparse.Namespace) -> None:
     home = home_dir(args.home)
     zips_dir, _, _ = ensure_layout(home)
@@ -3105,6 +3144,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     # If no subcommand is provided, we'll default to extracting the newest ZIP.
     sub = p.add_subparsers(dest="cmd", required=False)
+
+    a = sub.add_parser(
+        "init", help="Create/verify required folders: zips/, extracted/, dossiers/"
+    )
+    a.set_defaults(func=cmd_init)
 
     a = sub.add_parser("latest-zip", help="Print newest ZIP in zips/")
     a.set_defaults(func=cmd_latest_zip)
