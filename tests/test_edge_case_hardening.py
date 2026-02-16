@@ -399,5 +399,160 @@ class TestInputEncodingPolicy(EdgeCaseBase):
         self.assertIn("utf-8", result.stderr.lower())
 
 
+class TestRemainingEdgeCases(EdgeCaseBase):
+    def setUp(self):
+        super().setUp()
+        self.root = self.extracted / "remaining_edge_export"
+        now = time.time()
+        conversations = [
+            _conv("conv-a", "Alpha title", now - 1000, "alpha content", "assistant alpha"),
+        ]
+        self.write_conversations(self.root, conversations)
+
+    def _write_zip(self, path: Path, members):
+        with zipfile.ZipFile(path, "w") as zf:
+            for member_name, payload in members.items():
+                zf.writestr(member_name, payload)
+
+    def test_extract_same_zip_stem_replaces_stale_files(self):
+        zpath = self.zips / "same_stem.zip"
+        out_dir = self.extracted / "same_stem"
+
+        self._write_zip(
+            zpath,
+            {
+                "conversations.json": "[]",
+                "stale_only.txt": "first payload",
+            },
+        )
+        first = self.run_cgpt("extract", str(zpath))
+        self.assertEqual(first.returncode, 0, msg=first.stderr)
+        self.assertTrue((out_dir / "stale_only.txt").exists())
+
+        self._write_zip(
+            zpath,
+            {
+                "conversations.json": "[]",
+                "fresh_only.txt": "second payload",
+            },
+        )
+        second = self.run_cgpt("extract", str(zpath))
+        self.assertEqual(second.returncode, 0, msg=second.stderr)
+        self.assertFalse((out_dir / "stale_only.txt").exists())
+        self.assertTrue((out_dir / "fresh_only.txt").exists())
+
+    def test_quick_where_messages_tolerates_invalid_message_create_time(self):
+        bad_conv = {
+            "id": "conv-bad-msg-ts",
+            "title": "Bad message timestamp",
+            "create_time": time.time(),
+            "mapping": {
+                "u1": {
+                    "message": {
+                        "create_time": "not-a-float",
+                        "author": {"role": "user"},
+                        "content": {"content_type": "text", "parts": ["alpha in message"]},
+                    }
+                }
+            },
+        }
+        self.write_conversations(self.root, [bad_conv])
+
+        result = self.run_cgpt(
+            "quick",
+            "--where",
+            "messages",
+            "--all",
+            "--root",
+            str(self.root),
+            "alpha",
+        )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        selected = (self.dossiers / "selected_ids__alpha.txt").read_text(encoding="utf-8")
+        self.assertIn("conv-bad-msg-ts", selected)
+
+    def test_find_prefers_conversation_like_json_when_largest_is_unrelated(self):
+        root = self.extracted / "json_discovery_mix"
+        root.mkdir(parents=True, exist_ok=True)
+        (root / "huge.json").write_text(
+            json.dumps({"payload": "x" * 200000}), encoding="utf-8"
+        )
+        (root / "archive.json").write_text(
+            json.dumps(
+                [
+                    _conv(
+                        "conv-json-choice",
+                        "Discovery pick",
+                        time.time(),
+                        "alpha",
+                        "beta",
+                    )
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        result = self.run_cgpt("ids", "--root", str(root))
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn("conv-json-choice", result.stdout)
+
+    def test_ids_fails_when_no_conversation_like_json_exists(self):
+        root = self.extracted / "json_discovery_none"
+        root.mkdir(parents=True, exist_ok=True)
+        (root / "data.json").write_text(
+            json.dumps({"payload": "not conversation export"}), encoding="utf-8"
+        )
+
+        result = self.run_cgpt("ids", "--root", str(root))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("conversation", result.stderr.lower())
+        self.assertIn("json", result.stderr.lower())
+
+    def test_build_dossier_rejects_negative_context(self):
+        result = self.run_cgpt(
+            "build-dossier",
+            "--root",
+            str(self.root),
+            "--ids",
+            "conv-a",
+            "--mode",
+            "excerpts",
+            "--topic",
+            "alpha",
+            "--context",
+            "-1",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("context", result.stderr.lower())
+
+    def test_quick_rejects_excessive_context(self):
+        result = self.run_cgpt(
+            "quick",
+            "--root",
+            str(self.root),
+            "--context",
+            "99999",
+            "--all",
+            "alpha",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("context", result.stderr.lower())
+
+    def test_build_dossier_rejects_name_that_normalizes_empty(self):
+        result = self.run_cgpt(
+            "build-dossier",
+            "--root",
+            str(self.root),
+            "--ids",
+            "conv-a",
+            "--mode",
+            "full",
+            "--name",
+            "!!!",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("--name", result.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()
