@@ -2322,15 +2322,6 @@ def cmd_make_dossiers(args: argparse.Namespace) -> None:
                     f"WARNING: Failed to write Markdown file {md_path}: {e}",
                     file=sys.stderr,
                 )
-        else:
-            # still write the md as source for conversions
-            try:
-                md_path.write_text(md_content, encoding="utf-8")
-            except Exception as e:
-                print(
-                    f"WARNING: Failed to write intermediate Markdown file {md_path}: {e}",
-                    file=sys.stderr,
-                )
 
         if "txt" in req_formats:
             try:
@@ -2406,14 +2397,10 @@ def cmd_make_dossiers(args: argparse.Namespace) -> None:
                     continue
                 break
         else:
-            if md_path.exists():
-                # fallback: print md path if it exists
-                print(md_path)
-            else:
-                print(
-                    f"WARNING: No output files created for conversation {cid}",
-                    file=sys.stderr,
-                )
+            print(
+                f"WARNING: No output files created for conversation {cid}",
+                file=sys.stderr,
+            )
 
 
 def cmd_build_dossier(args: argparse.Namespace) -> None:
@@ -3273,7 +3260,7 @@ def build_parser() -> argparse.ArgumentParser:
     a.set_defaults(func=cmd_search)
 
     a = sub.add_parser(
-        "make-dossiers", help="Write one Markdown file per selected conversation ID"
+        "make-dossiers", help="Write one or more formats per selected conversation ID"
     )
     a.add_argument(
         "--root", help="Extracted folder to scan (defaults to extracted/latest)"
