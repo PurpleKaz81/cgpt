@@ -1,3 +1,4 @@
+import importlib.util
 import json
 import subprocess
 import sys
@@ -9,6 +10,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CGPT = REPO_ROOT / "cgpt.py"
+HAS_DOCX = importlib.util.find_spec("docx") is not None
 
 
 def _conv(cid: str, title: str, create_time: float, user_text: str, assistant_text: str):
@@ -182,6 +184,27 @@ class TestCliCriticalPaths(unittest.TestCase):
         txt_files = list(self.dossiers.glob("conv-a__*.txt"))
         self.assertTrue(md_files, "Expected Markdown dossier for conv-a")
         self.assertFalse(txt_files, "Did not expect TXT dossier for conv-a")
+
+    @unittest.skipIf(HAS_DOCX, "requires missing python-docx environment")
+    def test_build_dossier_docx_only_fails_when_docx_dependency_missing(self):
+        result = self.run_cgpt(
+            "build-dossier",
+            "--root",
+            str(self.root),
+            "--ids",
+            "conv-a",
+            "--mode",
+            "full",
+            "--format",
+            "docx",
+            "--no-split",
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("No dossier output files were created", result.stderr)
+        self.assertIn("python-docx", result.stderr)
+        self.assertFalse(list(self.dossiers.glob("*.docx")))
+        self.assertFalse(list(self.dossiers.glob("*.txt")))
 
     def test_quick_recent_window_filters_candidates_before_topic_match(self):
         result = self.run_cgpt(
