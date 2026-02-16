@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -50,14 +51,18 @@ class EdgeCaseBase(unittest.TestCase):
     def tearDown(self):
         self.tempdir.cleanup()
 
-    def run_cgpt(self, *args, input_text=None):
+    def run_cgpt(self, *args, input_text=None, env=None):
         cmd = [sys.executable, str(CGPT), "--home", str(self.home), *args]
+        run_env = os.environ.copy()
+        if env:
+            run_env.update(env)
         return subprocess.run(
             cmd,
             input=input_text,
             text=True,
             capture_output=True,
             cwd=REPO_ROOT,
+            env=run_env,
             check=False,
         )
 
@@ -100,6 +105,52 @@ class TestZipSafety(EdgeCaseBase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("unsafe", result.stderr.lower())
+
+    def test_extract_rejects_symlink_member(self):
+        zpath = self.zips / "unsafe_symlink.zip"
+        with zipfile.ZipFile(zpath, "w") as zf:
+            info = zipfile.ZipInfo("link_to_payload")
+            info.create_system = 3  # unix
+            info.external_attr = (0o120777 << 16)
+            zf.writestr(info, "conversations.json")
+
+        result = self.run_cgpt("extract", str(zpath))
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("special", result.stderr.lower())
+
+    def test_extract_rejects_zip_member_count_over_limit(self):
+        zpath = self.zips / "unsafe_member_count.zip"
+        with zipfile.ZipFile(zpath, "w") as zf:
+            for i in range(3):
+                zf.writestr(f"file_{i}.txt", "x")
+
+        result = self.run_cgpt(
+            "extract",
+            str(zpath),
+            env={"CGPT_MAX_ZIP_MEMBERS": "2"},
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("member", result.stderr.lower())
+        self.assertIn("limit", result.stderr.lower())
+
+    def test_extract_rejects_zip_uncompressed_size_over_limit(self):
+        zpath = self.zips / "unsafe_uncompressed_size.zip"
+        payload = "x" * 24
+        with zipfile.ZipFile(zpath, "w") as zf:
+            zf.writestr("a.txt", payload)
+            zf.writestr("b.txt", payload)
+
+        result = self.run_cgpt(
+            "extract",
+            str(zpath),
+            env={"CGPT_MAX_ZIP_UNCOMPRESSED_BYTES": "32"},
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("uncompressed", result.stderr.lower())
+        self.assertIn("limit", result.stderr.lower())
 
     def test_extract_unsafe_zip_writes_nothing_and_does_not_update_latest(self):
         safe_root = self.extracted / "safe_export"
@@ -321,6 +372,46 @@ class TestConfigErrorPolicy(EdgeCaseBase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("config", result.stderr.lower())
         self.assertIn("error", result.stderr.lower())
+
+    def test_quick_fails_on_unknown_config_key(self):
+        bad = self.home / "unknown_key_config.json"
+        bad.write_text(
+            json.dumps({"search_terms": ["alpha"], "unknown_key": True}),
+            encoding="utf-8",
+        )
+        result = self.run_cgpt(
+            "quick",
+            "--config",
+            str(bad),
+            "--all",
+            "--root",
+            str(self.root),
+            "alpha",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("unknown", result.stderr.lower())
+        self.assertIn("config", result.stderr.lower())
+
+    def test_build_dossier_fails_on_wrong_typed_config_key(self):
+        bad = self.home / "wrong_type_config.json"
+        bad.write_text(
+            json.dumps({"thread_filters": "not-a-dict"}),
+            encoding="utf-8",
+        )
+        result = self.run_cgpt(
+            "build-dossier",
+            "--config",
+            str(bad),
+            "--root",
+            str(self.root),
+            "--ids",
+            "conv-a",
+            "--mode",
+            "full",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("thread_filters", result.stderr.lower())
+        self.assertIn("config", result.stderr.lower())
 
 
 class TestInputEncodingPolicy(EdgeCaseBase):
@@ -552,6 +643,196 @@ class TestRemainingEdgeCases(EdgeCaseBase):
         )
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("--name", result.stderr)
+
+    def test_build_dossier_fails_on_missing_patterns_file(self):
+        missing_patterns = self.home / "missing_patterns.txt"
+        result = self.run_cgpt(
+            "build-dossier",
+            "--root",
+            str(self.root),
+            "--ids",
+            "conv-a",
+            "--mode",
+            "full",
+            "--patterns-file",
+            str(missing_patterns),
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("patterns", result.stderr.lower())
+        self.assertIn("not found", result.stderr.lower())
+
+    def test_quick_fails_on_missing_patterns_file(self):
+        missing_patterns = self.home / "missing_patterns.txt"
+        result = self.run_cgpt(
+            "quick",
+            "--all",
+            "--root",
+            str(self.root),
+            "--patterns-file",
+            str(missing_patterns),
+            "alpha",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("patterns", result.stderr.lower())
+        self.assertIn("not found", result.stderr.lower())
+
+    def test_recent_fails_on_missing_patterns_file(self):
+        missing_patterns = self.home / "missing_patterns.txt"
+        result = self.run_cgpt(
+            "recent",
+            "1",
+            "--all",
+            "--root",
+            str(self.root),
+            "--patterns-file",
+            str(missing_patterns),
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("patterns", result.stderr.lower())
+        self.assertIn("not found", result.stderr.lower())
+
+    def test_build_dossier_split_fails_on_missing_used_links_file(self):
+        missing_used_links = self.home / "missing_used_links.txt"
+        result = self.run_cgpt(
+            "build-dossier",
+            "--root",
+            str(self.root),
+            "--ids",
+            "conv-a",
+            "--mode",
+            "full",
+            "--split",
+            "--used-links-file",
+            str(missing_used_links),
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("used-links", result.stderr.lower())
+        self.assertIn("not found", result.stderr.lower())
+
+    def test_build_dossier_split_tolerates_string_create_time_in_working_index(self):
+        self.write_conversations(
+            self.root,
+            [
+                _conv(
+                    "conv-string-ts",
+                    "Alpha title",
+                    "not-a-number",
+                    "alpha content",
+                    "assistant alpha",
+                )
+            ],
+        )
+        result = self.run_cgpt(
+            "build-dossier",
+            "--root",
+            str(self.root),
+            "--ids",
+            "conv-string-ts",
+            "--mode",
+            "full",
+            "--split",
+            "--format",
+            "txt",
+        )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertNotIn("traceback", result.stderr.lower())
+
+    def test_build_dossier_fails_on_duplicate_conversation_ids(self):
+        now = time.time()
+        dup = [
+            _conv("dup-1", "Alpha first", now - 1000, "alpha", "beta"),
+            _conv("dup-1", "Alpha second", now - 900, "alpha", "beta"),
+        ]
+        self.write_conversations(self.root, dup)
+        result = self.run_cgpt(
+            "build-dossier",
+            "--root",
+            str(self.root),
+            "--ids",
+            "dup-1",
+            "--mode",
+            "full",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("duplicate", result.stderr.lower())
+        self.assertIn("dup-1", result.stderr)
+
+    def test_make_dossiers_fails_on_duplicate_conversation_ids(self):
+        now = time.time()
+        dup = [
+            _conv("dup-2", "Alpha first", now - 1000, "alpha", "beta"),
+            _conv("dup-2", "Alpha second", now - 900, "alpha", "beta"),
+        ]
+        self.write_conversations(self.root, dup)
+        result = self.run_cgpt(
+            "make-dossiers",
+            "--root",
+            str(self.root),
+            "--ids",
+            "dup-2",
+            "--format",
+            "txt",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("duplicate", result.stderr.lower())
+        self.assertIn("dup-2", result.stderr)
+
+
+class TestJsonDiscoveryScaling(unittest.TestCase):
+    def test_find_conversations_json_limits_candidate_parsing_per_priority_bucket(self):
+        import cgpt as cgpt_module
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            nested = root / "nested"
+            nested.mkdir(parents=True, exist_ok=True)
+
+            for i in range(12):
+                (nested / f"conversations_noise_{i}.json").write_text(
+                    json.dumps({"payload": f"bad-{i}"}),
+                    encoding="utf-8",
+                )
+                (nested / f"data_noise_{i}.json").write_text(
+                    json.dumps({"payload": f"fallback-bad-{i}"}),
+                    encoding="utf-8",
+                )
+
+            valid_path = nested / "archive.json"
+            valid_path.write_text(
+                json.dumps(
+                    [
+                        {
+                            "id": "conv-scale-valid",
+                            "title": "Scaled discovery",
+                            "create_time": time.time(),
+                            "mapping": {},
+                            "padding": ("x" * 5000),
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            bucket_limit = 4
+            original_limit = cgpt_module.JSON_DISCOVERY_BUCKET_LIMIT
+            original_loader = cgpt_module.load_json_loose
+            calls = [0]
+
+            def counting_loader(path: Path):
+                calls[0] += 1
+                return original_loader(path)
+
+            try:
+                cgpt_module.JSON_DISCOVERY_BUCKET_LIMIT = bucket_limit
+                cgpt_module.load_json_loose = counting_loader
+                picked = cgpt_module.find_conversations_json(root)
+            finally:
+                cgpt_module.JSON_DISCOVERY_BUCKET_LIMIT = original_limit
+                cgpt_module.load_json_loose = original_loader
+
+            self.assertIsNotNone(picked)
+            self.assertEqual(picked.resolve(), valid_path.resolve())
+            self.assertLessEqual(calls[0], bucket_limit * 2)
 
 
 if __name__ == "__main__":
