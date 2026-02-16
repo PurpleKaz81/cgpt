@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `build-dossier` now honors global default mode resolution (`--default-mode` / `CGPT_DEFAULT_MODE`)
 - `build-dossier` no longer requires topics when running in `full` mode
 - `make-dossiers` now emits explicit warnings for output-write failures instead of silently swallowing errors
+- `make-dossiers --format` now strictly writes only explicitly requested formats (no implicit Markdown sidecar)
+- Updated `make-dossiers` CLI help and docs to reflect strict format behavior and current `init`-first workflow guidance
 - Added a small automated CLI critical-path test suite (`tests/test_cli_critical_paths.py`) and CI workflow (`.github/workflows/tests.yml`)
 - Replaced tracked `config.json` content with a neutral public-safe baseline for shared usage
 - Added private-config protection patterns to `.gitignore` (`config.personal.json`, `*.private.json`, etc.)

@@ -147,6 +147,42 @@ class TestCliCriticalPaths(unittest.TestCase):
         self.assertTrue(txt_files, "Expected TXT dossier for conv-a")
         self.assertTrue(md_files, "Expected Markdown dossier for conv-a")
 
+    def test_make_dossiers_txt_only_does_not_create_md(self):
+        result = self.run_cgpt(
+            "make-dossiers",
+            "--root",
+            str(self.root),
+            "--ids",
+            "conv-a",
+            "--format",
+            "txt",
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+        txt_files = list(self.dossiers.glob("conv-a__*.txt"))
+        md_files = list(self.dossiers.glob("conv-a__*.md"))
+        self.assertTrue(txt_files, "Expected TXT dossier for conv-a")
+        self.assertFalse(md_files, "Did not expect Markdown dossier for conv-a")
+
+    def test_make_dossiers_md_only_does_not_create_txt(self):
+        result = self.run_cgpt(
+            "make-dossiers",
+            "--root",
+            str(self.root),
+            "--ids",
+            "conv-a",
+            "--format",
+            "md",
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+        md_files = list(self.dossiers.glob("conv-a__*.md"))
+        txt_files = list(self.dossiers.glob("conv-a__*.txt"))
+        self.assertTrue(md_files, "Expected Markdown dossier for conv-a")
+        self.assertFalse(txt_files, "Did not expect TXT dossier for conv-a")
+
     def test_quick_recent_window_filters_candidates_before_topic_match(self):
         result = self.run_cgpt(
             "quick",
