@@ -2046,12 +2046,11 @@ def build_combined_dossier(
         except Exception as e:
             print(f"WARNING: DOCX generation failed: {e}", file=sys.stderr)
 
-    # If nothing was created, default to TXT
     if created_primary is None:
-        try:
-            return out_path.with_suffix(".txt")
-        except Exception:
-            return out_path
+        die(
+            "No dossier output files were created. "
+            "Check requested formats and dependencies (for DOCX, install python-docx)."
+        )
     return created_primary
 
 
