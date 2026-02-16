@@ -7,6 +7,7 @@ This file is the single source of truth for creating a release.
 This repository uses a controlled markdown policy:
 
 Core markdown files (canonical):
+
 - `README.md`
 - `TECHNICAL.md`
 - `SECURITY.md`
@@ -14,6 +15,7 @@ Core markdown files (canonical):
 - `RELEASING.md`
 
 Scoped supplemental markdown files (allowed):
+
 - `docs/INDEX.md`
 - `docs/specs/**/*.md`
 - `docs/adr/**/*.md`
@@ -21,12 +23,14 @@ Scoped supplemental markdown files (allowed):
 - `docs/roadmap/**/*.md`
 
 Rules:
+
 - Every scoped supplemental markdown file must be linked from `docs/INDEX.md`.
 - Every change to `cgpt.py`, `config.json`, or `requirements.txt` must update at least one core markdown file.
 - User-visible behavior changes should update `README.md` and `CHANGELOG.md`, and update `TECHNICAL.md` when command behavior/flags/examples change.
 - Security/data-handling changes should update `SECURITY.md`.
 
 Enforcement:
+
 - CI workflow `.github/workflows/docs-guard.yml` enforces this policy on PRs and pushes to `main`.
 
 ## Release Checklist
@@ -48,6 +52,7 @@ git pull origin main
 ```
 
 Update:
+
 - `cgpt.py` (`__version__`)
 - `CHANGELOG.md`
 - Any docs changed by the release

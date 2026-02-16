@@ -3,9 +3,11 @@
 This file is the canonical index for scoped markdown documentation under `docs/`.
 
 Rule:
+
 - Every markdown file under `docs/specs/`, `docs/adr/`, `docs/runbooks/`, and `docs/roadmap/` must be linked in this file.
 
 Core canonical docs remain:
+
 - `README.md` (beginner-first usage)
 - `TECHNICAL.md` (canonical command/reference behavior)
 - `SECURITY.md`
