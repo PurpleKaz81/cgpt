@@ -68,9 +68,11 @@ Commitment:
 - Any new markdown file under scoped docs must be linked in `docs/INDEX.md`.
 - Behavior changes in `cgpt.py`, `config.json`, or `requirements.txt` must update at least one core canonical doc.
 - Release cadence requires docs review and roadmap status refresh.
+- For `CHANGELOG.md` numbered releases, use unique level-3 subsection headings to satisfy markdown lint (for example: `### Added in 0.2.4`, `### Changed in 0.2.4`, `### Fixed in 0.2.4`).
 
 ## Agent Guardrails
 
 - Do not present roadmap items as already implemented.
 - Do not claim support for non-ChatGPT providers unless capability is moved to `implemented`.
 - Prefer updating canonical docs over creating parallel redundant descriptions.
+- Do not introduce duplicate sibling headings in `CHANGELOG.md`; preserve the version-qualified heading pattern for release sections.
