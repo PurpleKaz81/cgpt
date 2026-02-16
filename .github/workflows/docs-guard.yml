@@ -20,15 +20,43 @@ jobs:
         run: |
           set -euo pipefail
 
-          allowed_md='^(README\.md|TECHNICAL\.md|SECURITY\.md|CHANGELOG\.md|RELEASING\.md)$'
+          core_md='^(README\.md|TECHNICAL\.md|SECURITY\.md|CHANGELOG\.md|RELEASING\.md)$'
+          allowed_md='^(README\.md|TECHNICAL\.md|SECURITY\.md|CHANGELOG\.md|RELEASING\.md|docs/INDEX\.md|docs/(specs|adr|runbooks|roadmap)/.+\.md)$'
 
           # Keep markdown set minimal and explicit.
           disallowed_md="$(git ls-files '*.md' | rg -v "$allowed_md" || true)"
           if [[ -n "$disallowed_md" ]]; then
             echo "Disallowed markdown files detected:"
             echo "$disallowed_md"
-            echo "Allowed files: README.md, TECHNICAL.md, SECURITY.md, CHANGELOG.md, RELEASING.md"
+            echo "Allowed markdown paths:"
+            echo "- README.md, TECHNICAL.md, SECURITY.md, CHANGELOG.md, RELEASING.md"
+            echo "- docs/INDEX.md"
+            echo "- docs/specs/**/*.md, docs/adr/**/*.md, docs/runbooks/**/*.md, docs/roadmap/**/*.md"
             exit 1
+          fi
+
+          # Require canonical docs index.
+          if [[ ! -f "docs/INDEX.md" ]]; then
+            echo "Missing required docs index: docs/INDEX.md"
+            exit 1
+          fi
+
+          # Every scoped docs markdown file must be linked from docs/INDEX.md.
+          scoped_docs="$(git ls-files '*.md' | rg '^docs/(specs|adr|runbooks|roadmap)/.+\.md$' || true)"
+          if [[ -n "$scoped_docs" ]]; then
+            missing_links=""
+            while IFS= read -r doc_path; do
+              [[ -z "$doc_path" ]] && continue
+              if ! rg -F -- "$doc_path" docs/INDEX.md >/dev/null; then
+                missing_links+="$doc_path"$'\n'
+              fi
+            done <<< "$scoped_docs"
+
+            if [[ -n "$missing_links" ]]; then
+              echo "Scoped docs markdown files missing from docs/INDEX.md:"
+              echo "$missing_links"
+              exit 1
+            fi
           fi
 
           # Compare against base for PRs and pushes.
@@ -54,10 +82,10 @@ jobs:
             exit 0
           fi
 
-          docs_changed="$(echo "$changed" | rg "$allowed_md" || true)"
+          docs_changed="$(echo "$changed" | rg "$core_md" || true)"
           if [[ -z "$docs_changed" ]]; then
-            echo "Code/config changed, but no markdown docs were updated."
-            echo "Update at least one of: README.md, TECHNICAL.md, SECURITY.md, CHANGELOG.md, RELEASING.md"
+            echo "Code/config changed, but no core markdown docs were updated."
+            echo "Update at least one core doc: README.md, TECHNICAL.md, SECURITY.md, CHANGELOG.md, RELEASING.md"
             exit 1
           fi
 
