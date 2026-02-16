@@ -39,6 +39,9 @@ Enforcement:
 - [ ] No private config files are tracked/staged (`config.personal.json`, `*.private.json`).
 - [ ] `cgpt.py` version (`__version__`) is updated.
 - [ ] `CHANGELOG.md` has a new version section with date and changes.
+- [ ] `docs/specs/current-capabilities.md` is reviewed and reflects shipped behavior.
+- [ ] `docs/roadmap/shared-roadmap.md` status/commitment/horizon tags are reviewed for this release.
+- [ ] `README.md` high-level positioning still matches current scope and constraints.
 - [ ] Core smoke tests pass (see below).
 - [ ] Release commit is on `main`.
 - [ ] Annotated git tag is created and pushed.
@@ -56,6 +59,9 @@ Update:
 - `cgpt.py` (`__version__`)
 - `CHANGELOG.md`
 - Any docs changed by the release
+- `docs/specs/current-capabilities.md` (current-state sync)
+- `docs/roadmap/shared-roadmap.md` (status/priority sync)
+- `README.md` (if user-facing positioning changed)
 
 Then commit:
 
@@ -128,6 +134,7 @@ git ls-remote --tags origin | rg "vX.Y.Z"
 - [ ] `main` and `origin/main` are in sync.
 - [ ] Release page shows the correct tag and notes.
 - [ ] `CHANGELOG.md` link for the version points to the correct release URL.
+- [ ] Roadmap and capability docs still agree with the released behavior.
 
 ## Notes
 

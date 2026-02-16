@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Added a structured documentation architecture for users and AI agents:
+  - `docs/specs/product-vision.md` (mission, posture, non-goals)
+  - `docs/specs/current-capabilities.md` (implemented behavior and limits)
+  - `docs/roadmap/shared-roadmap.md` (trimester planning with `status`, `commitment`, `horizon` tags)
+  - `docs/runbooks/ai-agent-reference.md` (deterministic agent context and guardrails)
+- Updated `README.md` and `TECHNICAL.md` to use the new canonical vision/capability/roadmap sources and avoid duplicate roadmap status models.
+- Updated `RELEASING.md` checklist to require roadmap and capability documentation review at each release.
 - Consolidated release documentation into a single maintainer guide: `RELEASING.md`
 - Removed redundant, version-specific release docs (`RELEASE_NOTES.md`, `RELEASE_INSTRUCTIONS.md`)
 - Rewrote `README.md` with corrected command examples, folder requirements, and step-by-step usage
