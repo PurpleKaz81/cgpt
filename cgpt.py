@@ -35,6 +35,8 @@ except Exception:
 __version__ = "0.2.1"
 
 SAO_PAULO_TZ = "America/Sao_Paulo"
+MIN_CONTEXT = 0
+MAX_CONTEXT = 200
 
 
 # ----------------- util -----------------
@@ -221,6 +223,18 @@ def read_nonempty_lines_utf8(path: Path, *, label: str) -> List[str]:
     return [ln.strip() for ln in read_text_utf8(path, label=label).splitlines() if ln.strip()]
 
 
+def parse_context(value: Any) -> int:
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        raise argparse.ArgumentTypeError("--context must be an integer")
+    if n < MIN_CONTEXT or n > MAX_CONTEXT:
+        raise argparse.ArgumentTypeError(
+            f"--context must be between {MIN_CONTEXT} and {MAX_CONTEXT}"
+        )
+    return n
+
+
 def coerce_create_time(value: Any, invalid_counter: Optional[List[int]] = None) -> float:
     try:
         return float(value or 0.0)
@@ -266,10 +280,24 @@ def validate_zip_members_safe(zf: zipfile.ZipFile, dest_dir: Path) -> None:
 
 
 def extract_zip_safely(zpath: Path, out_dir: Path) -> None:
-    with zipfile.ZipFile(zpath, "r") as zf:
-        validate_zip_members_safe(zf, out_dir)
-        out_dir.mkdir(parents=True, exist_ok=True)
-        zf.extractall(out_dir)
+    parent = out_dir.parent
+    temp_dir = parent / f".{out_dir.name}.tmp-{os.getpid()}-{int(time.time() * 1_000_000)}"
+    try:
+        with zipfile.ZipFile(zpath, "r") as zf:
+            validate_zip_members_safe(zf, out_dir)
+            temp_dir.mkdir(parents=True, exist_ok=False)
+            zf.extractall(temp_dir)
+
+        if out_dir.exists():
+            if out_dir.is_symlink() or not out_dir.is_dir():
+                die(f"Refusing to replace non-directory extraction target: {out_dir}")
+            shutil.rmtree(out_dir)
+
+        temp_dir.replace(out_dir)
+    except BaseException:
+        if temp_dir.exists():
+            shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
 
 
 # ----------------- color helpers -----------------
@@ -349,16 +377,73 @@ def _colorize_title_with_topics(title: str, topics: List[str]) -> str:
         return title
 
 
+def _json_candidate_priority(path: Path) -> int:
+    name = path.name.lower()
+    if name == "conversations.json":
+        return 30
+    if name.startswith("conversations") and name.endswith(".json"):
+        return 25
+    if "conversation" in name and name.endswith(".json"):
+        return 20
+    return 0
+
+
+def _safe_file_size(path: Path) -> int:
+    try:
+        return path.stat().st_size
+    except OSError:
+        return -1
+
+
+def load_json_loose(path: Path) -> Optional[Any]:
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def _looks_like_conversation_record(record: Any) -> bool:
+    if not isinstance(record, dict):
+        return False
+    has_id = any(k in record for k in ("id", "conversation_id", "uuid"))
+    has_message_data = isinstance(record.get("mapping"), dict) or isinstance(
+        record.get("messages"), list
+    )
+    has_metadata = isinstance(record.get("title"), str) or isinstance(
+        record.get("name"), str
+    )
+    has_time = "create_time" in record
+    return bool(has_id and (has_message_data or has_metadata or has_time))
+
+
+def _looks_like_conversations_payload(data: Any) -> bool:
+    if isinstance(data, list):
+        return any(_looks_like_conversation_record(item) for item in data[:50])
+    if isinstance(data, dict):
+        convs = data.get("conversations")
+        if isinstance(convs, list):
+            return any(_looks_like_conversation_record(item) for item in convs[:50])
+        values = list(data.values())[:50]
+        if values and all(isinstance(v, dict) for v in values):
+            return any(_looks_like_conversation_record(v) for v in values)
+    return False
+
+
 def find_conversations_json(root: Path) -> Optional[Path]:
-    candidates = list(root.rglob("conversations*.json"))
-    if candidates:
-        candidates.sort(key=lambda p: p.stat().st_size, reverse=True)
-        return candidates[0]
     json_files = list(root.rglob("*.json"))
     if not json_files:
         return None
-    json_files.sort(key=lambda p: p.stat().st_size, reverse=True)
-    return json_files[0]
+    json_files.sort(
+        key=lambda p: (_json_candidate_priority(p), _safe_file_size(p)), reverse=True
+    )
+    for candidate in json_files:
+        data = load_json_loose(candidate)
+        if data is None:
+            continue
+        if _looks_like_conversations_payload(data):
+            return candidate
+    return None
 
 
 def load_json(p: Path) -> Any:
@@ -431,7 +516,7 @@ def extract_messages_best_effort(c: Dict[str, Any]) -> List[Msg]:
             for m in flat:
                 if not isinstance(m, dict):
                     continue
-                t = float(m.get("create_time") or 0.0)
+                t = coerce_create_time(m.get("create_time"))
                 role = (m.get("author") or {}).get("role") or "unknown"
                 text = render_content((m.get("content") or {})).strip()
                 if text:
@@ -445,7 +530,7 @@ def extract_messages_best_effort(c: Dict[str, Any]) -> List[Msg]:
         m = node.get("message")
         if not isinstance(m, dict):
             continue
-        t = float(m.get("create_time") or 0.0)
+        t = coerce_create_time(m.get("create_time"))
         author = m.get("author") or {}
         role = author.get("role") or "unknown"
         content = m.get("content") or {}
@@ -1843,8 +1928,13 @@ def build_combined_dossier(
     # Determine output directory and filename
     timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
     if name:
+        normalized_name = safe_slug(name)
+        if not normalized_name or normalized_name in {".", ".."}:
+            die(
+                "--name must contain at least one safe alphanumeric character after normalization."
+            )
         # Create named subfolder: dossiers/{name}/
-        named_dir = dossiers_dir / safe_slug(name)
+        named_dir = dossiers_dir / normalized_name
         named_dir.mkdir(parents=True, exist_ok=True)
         out_name = f"{timestamp}.md"
         out_path = named_dir / out_name
@@ -2184,7 +2274,7 @@ def cmd_ids(args: argparse.Namespace) -> None:
     )
     data_file = find_conversations_json(root)
     if not data_file:
-        die(f"No JSON found under {root}")
+        die(f"No conversations JSON found under {root}")
     data = load_json(data_file)
     convs = normalize_conversations(data)
     for c in convs:
@@ -2207,7 +2297,7 @@ def cmd_find(args: argparse.Namespace) -> None:
     )
     data_file = find_conversations_json(root)
     if not data_file:
-        die(f"No JSON found under {root}")
+        die(f"No conversations JSON found under {root}")
     data = load_json(data_file)
     convs = normalize_conversations(data)
     pat = re.compile(re.escape(query_raw), re.IGNORECASE)
@@ -2255,7 +2345,7 @@ def cmd_search(args: argparse.Namespace) -> None:
 
     data_file = find_conversations_json(root)
     if not data_file:
-        die(f"No JSON found under {root}")
+        die(f"No conversations JSON found under {root}")
     data = load_json(data_file)
     convs = normalize_conversations(data)
 
@@ -2307,7 +2397,7 @@ def cmd_make_dossiers(args: argparse.Namespace) -> None:
     )
     data_file = find_conversations_json(root)
     if not data_file:
-        die(f"No JSON found under {root}")
+        die(f"No conversations JSON found under {root}")
     data = load_json(data_file)
     convs = normalize_conversations(data)
 
@@ -2494,7 +2584,7 @@ def cmd_build_dossier(args: argparse.Namespace) -> None:
 
     data_file = find_conversations_json(root)
     if not data_file:
-        die(f"No JSON found under {root}")
+        die(f"No conversations JSON found under {root}")
     data = load_json(data_file)
     convs = normalize_conversations(data)
 
@@ -2579,7 +2669,7 @@ def cmd_recent(args: argparse.Namespace) -> None:
 
     data_file = find_conversations_json(root)
     if not data_file:
-        die(f"No JSON found under {root}")
+        die(f"No conversations JSON found under {root}")
     data = load_json(data_file)
     convs = normalize_conversations(data)
 
@@ -2814,7 +2904,7 @@ def cmd_quick(args: argparse.Namespace) -> None:
 
     data_file = find_conversations_json(root)
     if not data_file:
-        die(f"No JSON found under {root}")
+        die(f"No conversations JSON found under {root}")
     data = load_json(data_file)
     convs = normalize_conversations(data)
     invalid_create_time = [0]
@@ -3328,6 +3418,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     a.add_argument(
         "--context",
+        type=parse_context,
         default=2,
         help="In excerpts mode, include +/- N messages around matches",
     )
@@ -3387,7 +3478,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--topics", nargs="*", help="One or more topics (OR logic) (for excerpts mode)"
     )
     a.add_argument("--mode", choices=["full", "excerpts"], default=None)
-    a.add_argument("--context", default=2)
+    a.add_argument("--context", type=parse_context, default=2)
     a.add_argument(
         "--root", help="Extracted folder to scan (defaults to extracted/latest)"
     )
@@ -3449,7 +3540,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Require ALL terms to appear in title (default is OR)",
     )
     a.add_argument("--mode", choices=["full", "excerpts"], default=None)
-    a.add_argument("--context", default=2)
+    a.add_argument("--context", type=parse_context, default=2)
     a.add_argument("--all", action="store_true", help="Select all matches (no prompt)")
     a.add_argument(
         "--where",
@@ -3526,7 +3617,7 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("topics", nargs="+")
     a.add_argument("--and", dest="and_terms", action="store_true")
     a.add_argument("--mode", choices=["full", "excerpts"], default=None)
-    a.add_argument("--context", default=2)
+    a.add_argument("--context", type=parse_context, default=2)
     a.add_argument("--all", action="store_true")
     a.add_argument(
         "--where",
@@ -3646,7 +3737,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Project name for organizing output. Creates dossiers/{name}/ subfolder.",
     )
     a.add_argument("--mode", choices=["full", "excerpts"], default=None)
-    a.add_argument("--context", default=2)
+    a.add_argument("--context", type=parse_context, default=2)
     a.set_defaults(func=cmd_recent)
 
     # Short alias for recent
@@ -3665,7 +3756,7 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("--config")
     a.add_argument("--name", help="Project name for organizing output.")
     a.add_argument("--mode", choices=["full", "excerpts"], default=None)
-    a.add_argument("--context", default=2)
+    a.add_argument("--context", type=parse_context, default=2)
     a.set_defaults(func=cmd_recent)
 
     return p
