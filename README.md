@@ -244,13 +244,15 @@ mkdir -p zips extracted dossiers
 
 Fix: place at least one export ZIP into `zips/`.
 
-`ERROR: No JSON found under ...`
+`ERROR: No conversations JSON found under ...`
 
 Fix:
 
 ```bash
 cgpt extract
 ```
+
+Cause: extracted folder does not contain a valid conversations JSON payload.
 
 `ERROR: Unsafe ZIP member path detected: ...`
 
@@ -266,6 +268,16 @@ Fix: verify path and JSON format.
 
 Cause: IDs/patterns/used-links file is not UTF-8/UTF-8-BOM decodable.  
 Fix: re-save the file as UTF-8 (or UTF-8 with BOM).
+
+`ERROR: argument --context: --context must be between 0 and 200`
+
+Cause: `--context` is negative or too large.  
+Fix: use a value in range `0..200`.
+
+`ERROR: --name must contain at least one safe alphanumeric character after normalization.`
+
+Cause: `--name` was effectively empty after cleanup (for example `"!!!"`).  
+Fix: provide a name with letters or numbers.
 
 `ModuleNotFoundError: No module named 'docx'`
 

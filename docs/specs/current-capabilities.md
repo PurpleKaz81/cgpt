@@ -30,6 +30,7 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 - Day-window filtering (`quick --days N`).
 - Keyword/topic-driven conversation discovery.
 - `quick --and` enforces all-term matching for `--where title`, `--where messages`, and `--where all` (title+message union).
+- `--context` input is validated to bounded range (`0..200`) across dossier-producing commands.
 
 ## Output Features Implemented
 
@@ -55,6 +56,7 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 - CLI-first interface only; no native GUI app yet.
 - The generated dossier is a strong starting context artifact, not a guaranteed final optimized prompt package.
 - File-based CLI inputs (`--ids-file`, `--patterns-file`, `--used-links-file`) are expected to be UTF-8 family encoded.
+- `--name` values must normalize to a non-empty safe slug.
 
 ## Reliability and Validation
 
@@ -62,6 +64,8 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 - One-command release preflight is available at `scripts/release_check.sh`.
 - Edge-case hardening tests cover ZIP path safety, timestamp coercion, strict config handling, and input-file decoding behavior.
 - Extraction rejects unsafe ZIP member paths before writing files.
+- Re-extraction for the same ZIP stem replaces prior extraction contents to avoid stale files.
+- Conversations JSON discovery uses conversation-aware heuristics instead of generic largest-file fallback.
 
 ## Canonical Future Source
 
