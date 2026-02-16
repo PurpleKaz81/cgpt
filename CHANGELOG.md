@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-02-16
+
 ### Added
 
 - Added edge-case hardening test suite at `tests/test_edge_case_hardening.py` covering:
@@ -117,6 +119,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - FAQ and troubleshooting section
 - Common mistakes and fixes guide
 
+[0.2.1]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.1
 [0.2.0]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.0
 [0.1.0]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.1.0
-[Unreleased]: https://github.com/PurpleKaz81/cgpt/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/PurpleKaz81/cgpt/compare/v0.2.1...HEAD
