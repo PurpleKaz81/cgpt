@@ -39,6 +39,7 @@ Enforcement:
 - [ ] No private config files are tracked/staged (`config.personal.json`, `*.private.json`).
 - [ ] `cgpt.py` version (`__version__`) is updated.
 - [ ] `CHANGELOG.md` has a new version section with date and changes.
+- [ ] `CHANGELOG.md` numbered release subsections use unique version-qualified H3 headings (`Added/Changed/Fixed in X.Y.Z`) to satisfy markdown lint.
 - [ ] `docs/specs/current-capabilities.md` is reviewed and reflects shipped behavior.
 - [ ] `docs/roadmap/shared-roadmap.md` status/commitment/horizon tags are reviewed for this release.
 - [ ] `README.md` high-level positioning still matches current scope and constraints.
@@ -62,6 +63,9 @@ Update:
 - `docs/specs/current-capabilities.md` (current-state sync)
 - `docs/roadmap/shared-roadmap.md` (status/priority sync)
 - `README.md` (if user-facing positioning changed)
+- `CHANGELOG.md` subsection heading convention for lint compliance:
+  - use `### Added in X.Y.Z`, `### Changed in X.Y.Z`, and `### Fixed in X.Y.Z` under the numbered release heading.
+  - keep `[Unreleased]` headings concise (`### Added`, `### Changed`, `### Fixed`) as needed.
 
 Then commit:
 
