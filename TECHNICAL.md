@@ -19,6 +19,7 @@ cgpt.py [global options] <subcommand> [subcommand options]
 
 Subcommands (with aliases):
 
+- `init`
 - `latest-zip`
 - `extract`
 - `x` (alias for `extract`)
@@ -51,6 +52,7 @@ Subcommands (with aliases):
 Behavior:
 
 - `zips/`, `extracted/`, and `dossiers/` must exist.
+- `cgpt init` can create and verify these required folders.
 - Command logic may create subfolders under `extracted/` and `dossiers/`.
 - In this repository, `.gitkeep` placeholder files are tracked; real content under these folders is ignored.
 
@@ -118,6 +120,18 @@ These options are valid before subcommands:
 - `--default-mode {full,excerpts}`: set preferred dossier mode default for this invocation
 
 ## Command Reference
+
+### `init`
+
+Purpose: create/verify required home folders (`zips/`, `extracted/`, `dossiers/`).
+
+```bash
+cgpt init
+```
+
+Flags:
+
+- `-h`, `--help`
 
 ### `latest-zip`
 
@@ -526,17 +540,16 @@ Status labels:
 | Opt-in split default (`CGPT_DEFAULT_SPLIT`) | `Implemented` | Enables split-by-default for split-capable dossier commands; `--split` and `--no-split` provide per-command override. |
 | Quick recency window by count (`quick --recent N`) | `Implemented` | Limits quick keyword matching to N most recent conversations before filtering by topic terms. |
 | Quick recency window by time (`quick --days N`) | `Implemented` | Limits quick keyword matching to conversations created in the last N days before filtering by topic terms. |
-| `cgpt init` command | `Planned` | Would create/verify `zips/`, `extracted/`, and `dossiers/`, and optionally scaffold defaults. |
+| `cgpt init` command | `Implemented` | Creates and verifies required folders (`zips/`, `extracted/`, `dossiers/`) under the resolved home path. |
 | `--redact` mode | `Planned` | Would scrub sensitive patterns (for example emails/phones/tokens) before sharing dossiers. |
 | `--json` output for discovery/search commands | `Planned` | Would add machine-readable output mode for `ids`, `find`, and `search`. |
 | Token-aware chunking (`--max-tokens`) | `Planned` | Would split large `__working` outputs into upload-safe chunk files. |
 
 Remaining planned items:
 
-1. `cgpt init`
-2. `--redact`
-3. `--json` for `ids` / `find` / `search`
-4. `--max-tokens`
+1. `--redact`
+2. `--json` for `ids` / `find` / `search`
+3. `--max-tokens`
 
 ## Security Notes
 

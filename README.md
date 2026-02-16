@@ -252,13 +252,13 @@ Implemented now:
 - Split default opt-in (`CGPT_DEFAULT_SPLIT`) with `--split` / `--no-split`
 - `quick --recent N`
 - `quick --days N`
+- `cgpt init` command for creating/verifying required folders
 
 Planned (not implemented yet):
 
-1. `cgpt init` command
-2. `--redact` mode
-3. `--json` output for `ids` / `find` / `search`
-4. Token-aware chunking (`--max-tokens`)
+1. `--redact` mode
+2. `--json` output for `ids` / `find` / `search`
+3. Token-aware chunking (`--max-tokens`)
 
 ## Where To Go Next
 
