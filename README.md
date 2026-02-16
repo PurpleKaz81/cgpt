@@ -6,6 +6,13 @@ If you can copy and paste commands, you can use this tool.
 
 If you want full technical details and every flag, go to [TECHNICAL.md](TECHNICAL.md).
 
+## Project Snapshot
+
+- Mission: transform previous AI chats into reusable context dossiers for new conversations.
+- Product posture: local-first, single-user CLI in `v0.x`.
+- Current hard constraint: supported ingestion is ChatGPT export ZIP data.
+- Product strategy and future horizons live in [`docs/roadmap/shared-roadmap.md`](docs/roadmap/shared-roadmap.md).
+
 ## What This Tool Is (In Plain English)
 
 You export your ChatGPT data from ChatGPT.
@@ -255,31 +262,23 @@ pip install python-docx
 
 Note: if you request only DOCX output before installing this dependency, the command will fail.
 
-## What Exists Today vs What Is Planned
+## Product Status and Roadmap
 
-Implemented now:
+Current-state source of truth:
 
-- Automated CLI tests for critical paths
-- Split default opt-in (`CGPT_DEFAULT_SPLIT`) with `--split` / `--no-split`
-- `quick --recent N`
-- `quick --days N`
-- `cgpt init` command for creating/verifying required folders
+- [`docs/specs/current-capabilities.md`](docs/specs/current-capabilities.md)
 
-What's next (ordered):
+Roadmap source of truth (shared by users, contributors, and AI agents):
 
-1. `Optional dependency CI matrix` (`Proposed`): run CI with and without `python-docx` to prevent optional-dependency regressions.
-2. `cgpt doctor` (`Proposed`): add a one-command environment and workspace health check.
-3. `--redact` mode (`Committed`): scrub sensitive patterns before sharing generated outputs.
-4. `--json` for `ids` / `find` / `search` (`Committed`): add stable machine-readable discovery output.
-5. `--dry-run` on write commands (`Proposed`): preview matches/outputs without writing files.
-6. `--max-tokens` (`Committed`): chunk large working outputs into upload-safe files.
-7. `--json` for write commands (`Proposed`): return structured output paths, warnings, and counts.
-8. `--strict` automation mode (`Proposed`): treat warnings as failures for CI/script workflows.
-9. `--since` / `--until` filters (`Proposed`): support date-range constrained query/selection workflows.
-10. `--out-dir` / `--output-prefix` (`Proposed`): improve output path and naming control for automation.
-11. `--profile` config selection (`Proposed`): support named config profiles for repeatable workflows.
+- [`docs/roadmap/shared-roadmap.md`](docs/roadmap/shared-roadmap.md)
 
-For the decision-complete implementation roadmap (scope, interfaces, dependencies, tests, acceptance gates), use [TECHNICAL.md](TECHNICAL.md).
+Vision and non-goals:
+
+- [`docs/specs/product-vision.md`](docs/specs/product-vision.md)
+
+Agent reference:
+
+- [`docs/runbooks/ai-agent-reference.md`](docs/runbooks/ai-agent-reference.md)
 
 ## Where To Go Next
 
