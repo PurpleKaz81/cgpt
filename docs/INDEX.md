@@ -16,7 +16,8 @@ Core canonical docs remain:
 
 ## Specs
 
-No entries yet.
+- [`docs/specs/product-vision.md`](specs/product-vision.md): neutral mission, scope, principles, local-first posture, and non-goals.
+- [`docs/specs/current-capabilities.md`](specs/current-capabilities.md): current feature set, constraints, and known limitations.
 
 ## ADRs
 
@@ -24,11 +25,11 @@ No entries yet.
 
 ## Runbooks
 
-No entries yet.
+- [`docs/runbooks/ai-agent-reference.md`](runbooks/ai-agent-reference.md): deterministic repository and workflow reference for AI agents and automation.
 
 ## Roadmap Notes
 
-No entries yet.
+- [`docs/roadmap/shared-roadmap.md`](roadmap/shared-roadmap.md): canonical trimester roadmap with status and commitment tags.
 
 ## New Doc Checklist
 
