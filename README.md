@@ -263,11 +263,21 @@ Implemented now:
 - `quick --days N`
 - `cgpt init` command for creating/verifying required folders
 
-Planned (not implemented yet):
+What's next (ordered):
 
-1. `--redact` mode
-2. `--json` output for `ids` / `find` / `search`
-3. Token-aware chunking (`--max-tokens`)
+1. `Optional dependency CI matrix` (`Proposed`): run CI with and without `python-docx` to prevent optional-dependency regressions.
+2. `cgpt doctor` (`Proposed`): add a one-command environment and workspace health check.
+3. `--redact` mode (`Committed`): scrub sensitive patterns before sharing generated outputs.
+4. `--json` for `ids` / `find` / `search` (`Committed`): add stable machine-readable discovery output.
+5. `--dry-run` on write commands (`Proposed`): preview matches/outputs without writing files.
+6. `--max-tokens` (`Committed`): chunk large working outputs into upload-safe files.
+7. `--json` for write commands (`Proposed`): return structured output paths, warnings, and counts.
+8. `--strict` automation mode (`Proposed`): treat warnings as failures for CI/script workflows.
+9. `--since` / `--until` filters (`Proposed`): support date-range constrained query/selection workflows.
+10. `--out-dir` / `--output-prefix` (`Proposed`): improve output path and naming control for automation.
+11. `--profile` config selection (`Proposed`): support named config profiles for repeatable workflows.
+
+For the decision-complete implementation roadmap (scope, interfaces, dependencies, tests, acceptance gates), use [TECHNICAL.md](TECHNICAL.md).
 
 ## Where To Go Next
 
