@@ -144,6 +144,7 @@ cgpt make-dossiers --ids <id1> <id2>
 Useful helpers:
 
 ```bash
+cgpt init
 cgpt latest-zip
 cgpt extract
 cgpt index
@@ -218,7 +219,13 @@ git push origin <branch>
 
 `ERROR: Missing folder: ... Expected: zips/, extracted/, dossiers/`
 
-Fix:
+Fix (recommended):
+
+```bash
+cgpt init
+```
+
+Fallback:
 
 ```bash
 mkdir -p zips extracted dossiers

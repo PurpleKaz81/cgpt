@@ -236,7 +236,7 @@ Flags:
 
 ### `make-dossiers`
 
-Purpose: generate one file per selected conversation ID.
+Purpose: generate one or more files per selected conversation ID.
 
 ```bash
 cgpt make-dossiers --ids <id1> <id2>
@@ -254,6 +254,7 @@ Rules:
 
 - requires `--ids` and/or `--ids-file`
 - outputs are per-conversation, not one combined dossier
+- output formats are strict: only explicitly requested formats are written
 
 ### `build-dossier` / `d`
 
@@ -371,6 +372,8 @@ Used by `recent` and `quick` interactive selection:
 
 ## Output Behavior
 
+### Combined dossier commands (`build-dossier`, `quick`, `recent`)
+
 Without `--name`:
 
 ```text
@@ -388,11 +391,27 @@ dossiers/
    `- YYYY-MM-DD_HHMMSS__working.txt
 ```
 
-Format behavior:
+Format behavior for combined dossier commands:
 
 - `--format txt` (default) generates TXT output
 - `--format md` and/or `--format docx` generate additional formats
 - `__working.txt` exists only when TXT output is generated with split enabled
+
+### Per-conversation command (`make-dossiers`)
+
+Output naming:
+
+```text
+dossiers/
+|- <conversation_id>__<title_slug>.txt
+|- <conversation_id>__<title_slug>.md
+`- <conversation_id>__<title_slug>.docx
+```
+
+Format behavior for `make-dossiers`:
+
+- only the formats explicitly requested with `--format` are written
+- no implicit sidecar format is created
 
 ## Split and Dedup Semantics
 
@@ -526,6 +545,8 @@ Current test coverage includes key generation flows around:
 - `quick`
 - `recent`
 - `make-dossiers`
+- `init`
+- strict `make-dossiers --format` behavior (`txt`-only and `md`-only)
 
 ## Feature Roadmap Status
 
