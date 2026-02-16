@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.3] - 2026-02-16
 
-### Added
+### Added in 0.2.3
 
 - Added `v0.2.3` hardening tests in `tests/test_edge_case_hardening.py` covering:
   - ZIP special-member and archive limit validation
@@ -24,22 +24,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - duplicate conversation ID detection in map-building paths
   - bounded JSON discovery candidate parsing
 
-### Changed
+### Changed in 0.2.3
 
 - ZIP extraction now enforces member-count and total uncompressed-size limits and rejects symlink/special ZIP entries.
 - Conversations JSON discovery now uses bounded per-priority candidate shortlists to reduce scaling costs on large trees.
 - `build-dossier`/`quick`/`recent` now fail fast when explicit optional file flags reference missing files.
 - Updated `README.md`, `TECHNICAL.md`, `docs/specs/current-capabilities.md`, and roadmap status for the `v0.2.3` hardening pass.
-
-### Fixed
-
 - Working-index generation now coerces malformed conversation `create_time` values before sorting/scoring math.
 - Config loading now validates schema (unknown keys and wrong-typed fields fail explicitly).
 - Duplicate conversation IDs in export input now fail fast instead of silently overwriting map entries.
 
 ## [0.2.2] - 2026-02-16
 
-### Added
+### Added in 0.2.2
 
 - Added remaining-edge hardening tests in `tests/test_edge_case_hardening.py` covering:
   - same-stem re-extraction stale-file cleanup
@@ -48,21 +45,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `--context` bounds validation
   - `--name` normalized-slug validation
 
-### Changed
+### Changed in 0.2.2
 
 - Extraction now uses a temporary target and replace flow so repeated extraction of the same ZIP stem does not keep stale files.
 - Conversations JSON discovery now uses conversation-aware candidate selection instead of generic largest-JSON fallback.
 - `--context` now enforces a bounded range (`0..200`) across dossier-producing commands.
 - Updated `README.md`, `TECHNICAL.md`, `docs/specs/current-capabilities.md`, and roadmap status for `v0.2.2` hardening.
 
-### Fixed
+### Fixed in 0.2.2
 
 - Message extraction now coerces malformed message `create_time` values to `0.0` instead of failing silently via exception fallbacks.
 - `--name` now fails fast when normalization yields an empty/unsafe slug, avoiding accidental writes to the root dossier directory.
 
 ## [0.2.1] - 2026-02-16
 
-### Added
+### Added in 0.2.1
 
 - Added edge-case hardening test suite at `tests/test_edge_case_hardening.py` covering:
   - ZIP extraction safety checks
@@ -71,7 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - strict config error behavior
   - UTF-8-family input-file decoding
 
-### Changed
+### Changed in 0.2.1
 
 - `extract`/`quick`/`recent` now apply ZIP member safety validation before extraction writes.
 - File-based CLI inputs for IDs/patterns/used-links now use UTF-8-family decoding with explicit failure messages.
@@ -85,7 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.0] - 2026-02-16
 
-### Changed
+### Added in 0.2.0
 
 - Added a structured documentation architecture for users and AI agents:
   - `docs/specs/product-vision.md` (mission, posture, non-goals)
@@ -124,14 +121,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Expanded docs completeness pass: rewrote `README.md` as an idiot-proof beginner guide with visual flows and copy/paste workflows; expanded `TECHNICAL.md` to cover full command/flag surface
 - Added `scripts/release_check.sh` one-command release preflight and documented it in `RELEASING.md`
 - Added `init` command to create/verify required home folders (`zips/`, `extracted/`, `dossiers/`)
-
-### Fixed
-
 - Fixed `quick --ids-file` crash caused by selection parser scope (`UnboundLocalError`)
 
 ## [0.1.0] - 2026-02-10
 
-### Added
+### Added in 0.1.0
 
 - Initial release of cgpt - ChatGPT Export → Clean Dossier tool
 - Extract ChatGPT conversation exports from ZIP files
