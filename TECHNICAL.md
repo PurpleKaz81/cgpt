@@ -287,6 +287,7 @@ Rules:
 - requires `--ids` and/or `--ids-file`
 - in `full` mode, topic flags are optional
 - in `excerpts` mode, at least one topic flag is required
+- exits with an error when none of the requested output formats can be created (for example `--format docx` without `python-docx`)
 
 ### `quick` / `q`
 
@@ -396,6 +397,7 @@ Format behavior for combined dossier commands:
 - `--format txt` (default) generates TXT output
 - `--format md` and/or `--format docx` generate additional formats
 - `__working.txt` exists only when TXT output is generated with split enabled
+- if all requested outputs fail to generate, the command exits with an error
 
 ### Per-conversation command (`make-dossiers`)
 
@@ -547,6 +549,7 @@ Current test coverage includes key generation flows around:
 - `make-dossiers`
 - `init`
 - strict `make-dossiers --format` behavior (`txt`-only and `md`-only)
+- `build-dossier` docx-only failure behavior when `python-docx` is unavailable
 
 ## Feature Roadmap Status
 

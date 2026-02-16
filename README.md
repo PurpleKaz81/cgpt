@@ -251,6 +251,8 @@ Fix:
 pip install python-docx
 ```
 
+Note: if you request only DOCX output before installing this dependency, the command will fail.
+
 ## What Exists Today vs What Is Planned
 
 Implemented now:
