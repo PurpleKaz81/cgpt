@@ -2,7 +2,7 @@
 
 If you can copy and paste commands, you can use this tool.
 
-`cgpt` takes your ChatGPT export ZIP and turns it into clean text files you can work with.
+`cgpt` takes your ChatGPT export ZIP and compiles it into reusable context dossiers you can carry across sessions.
 
 If you want full technical details and every flag, go to [TECHNICAL.md](TECHNICAL.md).
 
@@ -12,6 +12,14 @@ If you want full technical details and every flag, go to [TECHNICAL.md](TECHNICA
 - Product posture: local-first, single-user CLI in `v0.x`.
 - Current hard constraint: supported ingestion is ChatGPT export ZIP data.
 - Product strategy and future horizons live in [`docs/roadmap/shared-roadmap.md`](docs/roadmap/shared-roadmap.md).
+
+## What cgpt Is Really For
+
+- Continuity first: keep reasoning continuity across sessions instead of restarting from zero each time.
+- Deterministic local build flow: run the same inputs and config to produce consistent context artifacts.
+- Reliable handoff: package context so a future you (or another person/model session) can resume work with less ambiguity.
+
+Coming next: roadmap initiative `R15` positions quality gates as a reliability layer for dossier readiness checks. See [`docs/roadmap/shared-roadmap.md`](docs/roadmap/shared-roadmap.md).
 
 ## What This Tool Is (In Plain English)
 

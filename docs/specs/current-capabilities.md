@@ -59,6 +59,7 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 - File-based CLI inputs (`--ids-file`, `--patterns-file`, `--used-links-file`) are expected to be UTF-8 family encoded.
 - `--patterns-file` and `--used-links-file` fail fast when explicitly provided but missing.
 - `--name` values must normalize to a non-empty safe slug.
+- Quality gates are planned roadmap scope and are not implemented in current behavior.
 
 ## Reliability and Validation
 

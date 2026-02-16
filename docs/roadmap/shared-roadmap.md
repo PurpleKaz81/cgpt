@@ -52,11 +52,24 @@ Planning horizon tags:
 | R7 | Date range filters (`--since`, `--until`) | `planned` | `target` | `2026-T2` | Deterministic time-window filtering beyond relative recency. |
 | R8 | Output control flags (`--out-dir`, `--output-prefix`) | `planned` | `target` | `2026-T2` | Better automation with deterministic paths and names. |
 | R9 | Config profiles (`--profile`) | `planned` | `target` | `2026-T3` | Reusable profile-based command defaults. |
+| R15 | Context Quality Gates (Reliability Layer) | `planned` | `committed` | `2026-T2` | Pass/fail dossier readiness checks with staged rollout. |
 | R10 | Write-command `--json` output + `--strict` mode | `experimental` | `exploratory` | `2026-T3` | Structured automation semantics and hard-fail workflows. |
 | R11 | Google (Gemini) provider ingestion path | `experimental` | `exploratory` | `2026-T3` | First non-ChatGPT expansion milestone. |
 | R12 | Perplexity provider ingestion path | `experimental` | `exploratory` | `2026-T4` | Second provider expansion milestone. |
 | R13 | Provider abstraction layer across AI ecosystems | `experimental` | `exploratory` | `backlog` | Normalize provider-specific exports into one internal model. |
 | R14 | Cloud-assisted sync/workflows | `experimental` | `exploratory` | `backlog` | Evaluate only after local-first baseline remains stable. |
+
+## R15 Initiative Breakdown
+
+Quality gates are planned as one coherent reliability feature family with phased rollout:
+
+1. Phase A (`v0.2.4` target): token budget, coverage, and noise checks.
+1. Phase B (`v0.2.5` target): freshness and provenance checks.
+1. Phase C (`v0.2.6` target): strict-gate mode plus a stable machine-readable gate report contract.
+
+Interface note:
+
+- Candidate flag family (`--quality-gates`, `--max-context-tokens`, `--min-coverage`, `--freshness-days`, `--max-noise-ratio`, `--require-provenance`, `--gate-report`) is reserved for the R15 implementation spec; final names are not yet committed.
 
 ## Non-Goals in Current Roadmap Window
 
