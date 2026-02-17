@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -68,14 +69,18 @@ class TestCliCriticalPaths(unittest.TestCase):
     def tearDown(self):
         self.tempdir.cleanup()
 
-    def run_cgpt(self, *args, input_text=None):
+    def run_cgpt(self, *args, input_text=None, env=None):
         cmd = [sys.executable, str(CGPT), "--home", str(self.home), *args]
+        run_env = os.environ.copy()
+        if env:
+            run_env.update(env)
         return subprocess.run(
             cmd,
             input=input_text,
             text=True,
             capture_output=True,
             cwd=REPO_ROOT,
+            env=run_env,
             check=False,
         )
 
@@ -288,6 +293,59 @@ class TestInitCommand(unittest.TestCase):
         result = self.run_cgpt("init")
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Expected directory but found file", result.stderr)
+
+
+class TestDoctorCommand(unittest.TestCase):
+    def setUp(self):
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.home = Path(self.tempdir.name) / "doctor_home"
+
+    def tearDown(self):
+        self.tempdir.cleanup()
+
+    def run_cgpt(self, *args, env=None):
+        cmd = [sys.executable, str(CGPT), "--home", str(self.home), *args]
+        run_env = os.environ.copy()
+        if env:
+            run_env.update(env)
+        return subprocess.run(
+            cmd,
+            text=True,
+            capture_output=True,
+            cwd=REPO_ROOT,
+            env=run_env,
+            check=False,
+        )
+
+    def test_doctor_fix_creates_required_layout(self):
+        result = self.run_cgpt("doctor", "--fix")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertTrue((self.home / "zips").is_dir())
+        self.assertTrue((self.home / "extracted").is_dir())
+        self.assertTrue((self.home / "dossiers").is_dir())
+        self.assertIn("[PASS] layout:", result.stdout)
+
+    def test_doctor_fails_when_layout_missing_without_fix(self):
+        result = self.run_cgpt("doctor")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("missing:", result.stdout)
+        self.assertIn("doctor checks failed", result.stderr)
+
+    def test_doctor_strict_fails_on_dev_warnings(self):
+        self.home.mkdir(parents=True, exist_ok=True)
+        (self.home / "zips").mkdir()
+        (self.home / "extracted").mkdir()
+        (self.home / "dossiers").mkdir()
+
+        result = self.run_cgpt(
+            "doctor",
+            "--dev",
+            "--strict",
+            env={"PATH": ""},
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("[WARN] dev:", result.stdout)
+        self.assertIn("doctor checks failed", result.stderr)
 
 
 if __name__ == "__main__":

@@ -77,7 +77,7 @@ Update:
 Then commit:
 
 ```bash
-git add cgpt.py config.json requirements.txt
+git add cgpt.py config.json requirements.txt pyproject.toml Makefile tox.ini
 git add README.md TECHNICAL.md SECURITY.md CHANGELOG.md RELEASING.md CONTRIBUTING.md LICENSE
 git add .github/CODEOWNERS .github/dependabot.yml
 git add .github/workflows/tests.yml .github/workflows/docs-guard.yml .github/workflows/lint.yml
@@ -111,9 +111,10 @@ python3 cgpt.py quick --help
 python3 cgpt.py build-dossier --help
 python3 cgpt.py make-dossiers --help
 python3 cgpt.py search --help
+python3 cgpt.py doctor
 python3 -m unittest discover -s tests -p "test_*.py"
-ruff check .
-markdownlint-cli2 "**/*.md" "#node_modules"
+python3 -m ruff check .
+npx --yes markdownlint-cli2@0.16.0 "**/*.md" "#node_modules" "#.venv" "#.tox"
 ```
 
 If any command fails, fix before tagging.

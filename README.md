@@ -53,6 +53,12 @@ cgpt/
 `- dossiers/   <- cgpt writes final output files here
 ```
 
+## Runtime Requirements (End Users)
+
+- Python `3.8+`
+- No mandatory third-party packages for `txt`/`md` output
+- Optional: `python-docx` only when you want `--format docx`
+
 ## 5-Minute First Setup
 
 1. Open Terminal (Warp is fine).
@@ -62,25 +68,24 @@ cgpt/
 cd /path/to/cgpt
 ```
 
-1. Check the tool works.
+1. Check runtime health and create required folders if missing.
 
 ```bash
+python3 cgpt.py doctor --fix
 python3 cgpt.py --help
 ```
 
-1. Optional quality-of-life alias (so you can type `cgpt`):
+1. Optional install as a command (no shell alias needed):
 
 ```bash
-echo 'alias cgpt="python3 /path/to/cgpt/cgpt.py"' >> ~/.zshrc
-source ~/.zshrc
+python3 -m pip install --user .
+cgpt --help
 ```
 
-Replace `/path/to/cgpt` with your actual folder path.
-
-1. Test alias:
+1. Optional DOCX support (only if you need `--format docx`):
 
 ```bash
-cgpt --help
+python3 -m pip install --user ".[docx]"
 ```
 
 ## First Real Use (Step by Step)
@@ -159,6 +164,7 @@ cgpt make-dossiers --ids <id1> <id2>
 Useful helpers:
 
 ```bash
+cgpt doctor
 cgpt init
 cgpt latest-zip
 cgpt extract
@@ -214,7 +220,7 @@ git pull origin main
 1. Stage only public files explicitly (never `git add .`):
 
 ```bash
-git add cgpt.py config.json requirements.txt
+git add cgpt.py config.json requirements.txt pyproject.toml Makefile tox.ini
 git add README.md TECHNICAL.md SECURITY.md CHANGELOG.md RELEASING.md CONTRIBUTING.md LICENSE
 git add .github/CODEOWNERS .github/dependabot.yml
 git add .github/workflows/tests.yml .github/workflows/docs-guard.yml .github/workflows/lint.yml
@@ -237,6 +243,14 @@ git push origin <branch>
 ```
 
 ## If Something Fails (No Panic)
+
+First, run:
+
+```bash
+cgpt doctor --fix
+```
+
+It validates Python/runtime setup and creates missing required folders.
 
 `ERROR: Missing folder: ... Expected: zips/, extracted/, dossiers/`
 
@@ -311,7 +325,9 @@ Fix: use a clean export source and retry.
 Fix:
 
 ```bash
-pip install python-docx
+python3 -m pip install --user ".[docx]"
+# or:
+python3 -m pip install --user python-docx
 ```
 
 Note: if you request only DOCX output before installing this dependency, the command will fail.

@@ -11,9 +11,20 @@ Maintenance note for markdown lint:
 
 ## [Unreleased]
 
+### Added
+
+- Added `doctor` command to validate runtime setup (`python`, home layout, optional DOCX dependency) with optional `--fix`, `--dev`, and `--strict` modes.
+- Added Python packaging metadata (`pyproject.toml`) with console entry point `cgpt` and optional extras: `docx`, `dev`.
+- Added contributor automation files: `Makefile` (`make check`) and `tox.ini` (`tox run -e py,lint`).
+- Added new CLI tests for `doctor` command behavior.
+
 ### Changed
 
-- Nothing yet.
+- Updated CI test matrix to include Python `3.12` and `3.13`, plus macOS/Windows smoke+unit runs.
+- Updated lint workflow to run pinned markdown lint via `npx` (no global install) and Python lint via `python -m ruff`.
+- Updated markdown lint commands to exclude `#.venv` and `#.tox` so local contributor checks do not fail on tool-managed markdown files.
+- Updated docs (`README.md`, `TECHNICAL.md`, `CONTRIBUTING.md`, `RELEASING.md`) to separate end-user runtime needs from contributor tooling requirements.
+- Clarified `requirements.txt` to reflect zero mandatory third-party runtime dependencies for base TXT/MD flows.
 
 ## [0.2.5] - 2026-02-17
 
