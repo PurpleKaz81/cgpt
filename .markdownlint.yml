@@ -1,0 +1,6 @@
+# Keep duplicate heading detection strict across the whole file.
+MD024:
+  siblings_only: false
+
+# Defer global line-length normalization to a dedicated cleanup pass.
+MD013: false

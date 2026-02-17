@@ -1,0 +1,6 @@
+target-version = "py38"
+exclude = ["zips", "extracted", "dossiers"]
+
+[lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
