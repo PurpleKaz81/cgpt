@@ -45,10 +45,27 @@ markdownlint-cli2 "**/*.md" "#node_modules"
 ./scripts/release_check.sh
 ```
 
+## Mandatory Git Workflow (All AI Agents)
+
+These rules are required for every AI-agent change in this repository:
+
+1. Never commit directly to `main`.
+1. Create a focused branch per change set (`<type>/<scope>` naming preferred).
+1. Keep commits scoped and reviewable; do not mix unrelated concerns.
+1. Run local checks before opening or updating a PR: `python3 -m unittest discover -s tests -p "test_*.py"`, `ruff check .`, `markdownlint-cli2 "**/*.md" "#node_modules"`, `./scripts/release_check.sh`.
+1. Open a PR to `main`; do not bypass required checks.
+1. Merge only after required checks pass and review conversations are resolved.
+1. After merge, sync local `main`, prune remotes, and delete merged local branches.
+1. Do not leave stale branches; keep only active PR branches and `main`.
+
 Safe git staging pattern (public files only):
 
 ```bash
-git add cgpt.py README.md TECHNICAL.md CHANGELOG.md SECURITY.md RELEASING.md config.json .gitignore .githooks/pre-commit
+git add cgpt.py config.json requirements.txt
+git add README.md TECHNICAL.md SECURITY.md CHANGELOG.md RELEASING.md CONTRIBUTING.md LICENSE
+git add .github/CODEOWNERS .github/dependabot.yml
+git add .github/workflows/tests.yml .github/workflows/docs-guard.yml .github/workflows/lint.yml
+git add .ruff.toml .markdownlint.yml .gitignore .githooks/pre-commit
 git add docs/INDEX.md docs/specs docs/adr docs/runbooks docs/roadmap
 ```
 
