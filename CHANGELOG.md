@@ -13,10 +13,17 @@ Maintenance note for markdown lint:
 
 ### Changed
 
+- Nothing yet.
+
+## [0.2.5] - 2026-02-17
+
+### Changed in 0.2.5
+
 - Hardened `.githooks/pre-commit` to block force-staged sensitive export/data artifacts under `zips/`, `extracted/`, and `dossiers/` (except tracked `.gitkeep` placeholders).
 - Extended pre-commit checks to block common secret/credential filename patterns (for example `.env*`, `*.key`, `*.pem`) as defense in depth.
 - Added local hygiene ignore patterns for common tooling artifacts in `.gitignore` (`.ruff_cache/`, `.pytest_cache/`, `.mypy_cache/`, `.coverage`, `coverage.xml`, `htmlcov/`).
 - Updated `README.md`, `SECURITY.md`, and `CONTRIBUTING.md` to reflect the stricter commit guardrails and hook activation guidance.
+- Added mandatory AI-agent workflow rules in `docs/runbooks/ai-agent-reference.md` so branch usage, PR flow, checks, and post-merge cleanup are always enforced.
 
 ## [0.2.4] - 2026-02-17
 
@@ -187,10 +194,11 @@ Maintenance note for markdown lint:
 - FAQ and troubleshooting section
 - Common mistakes and fixes guide
 
+[0.2.5]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.5
 [0.2.4]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.4
 [0.2.3]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.3
 [0.2.2]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.2
 [0.2.1]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.1
 [0.2.0]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.0
 [0.1.0]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.1.0
-[Unreleased]: https://github.com/PurpleKaz81/cgpt/compare/v0.2.4...HEAD
+[Unreleased]: https://github.com/PurpleKaz81/cgpt/compare/v0.2.5...HEAD
