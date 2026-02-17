@@ -13,6 +13,12 @@ Maintenance note for markdown lint:
 
 ### Changed
 
+- Nothing yet.
+
+## [0.2.4] - 2026-02-17
+
+### Changed in 0.2.4
+
 - Clarified product identity positioning in `README.md` and `docs/specs/product-vision.md` to emphasize continuity, deterministic context builds, and handoff reliability.
 - Added roadmap initiative `R15` in `docs/roadmap/shared-roadmap.md` to package Quality Gates as one planned, committed reliability feature family with phased scope.
 - Synced GitHub repository About description to the new one-line positioning: local-first context compiler for reusable AI working-memory dossiers.
@@ -178,9 +184,10 @@ Maintenance note for markdown lint:
 - FAQ and troubleshooting section
 - Common mistakes and fixes guide
 
+[0.2.4]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.4
 [0.2.3]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.3
 [0.2.2]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.2
 [0.2.1]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.1
 [0.2.0]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.0
 [0.1.0]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.1.0
-[Unreleased]: https://github.com/PurpleKaz81/cgpt/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/PurpleKaz81/cgpt/compare/v0.2.4...HEAD
