@@ -36,7 +36,7 @@ try:
 except Exception:
     pass
 
-__version__ = "0.2.6"
+__version__ = "0.2.7"
 
 SAO_PAULO_TZ = "America/Sao_Paulo"
 MIN_CONTEXT = 0
@@ -3481,6 +3481,16 @@ def _doctor_version(cmd: List[str]) -> Tuple[bool, str]:
     return True, first_line
 
 
+def _doctor_parse_major_version(text: str) -> Optional[int]:
+    match = re.search(r"(\d+)", text or "")
+    if not match:
+        return None
+    try:
+        return int(match.group(1))
+    except Exception:
+        return None
+
+
 def _doctor_validate_layout(home: Path, fix: bool) -> Tuple[str, str]:
     required = [home / "zips", home / "extracted", home / "dossiers"]
 
@@ -3576,7 +3586,23 @@ def cmd_doctor(args: argparse.Namespace) -> None:
 
         node_ok, node_detail = _doctor_version(["node", "--version"])
         if node_ok:
-            _doctor_add(checks, "PASS", "dev:node", node_detail)
+            node_major = _doctor_parse_major_version(node_detail)
+            if node_major is None:
+                _doctor_add(
+                    checks,
+                    "WARN",
+                    "dev:node",
+                    f"{node_detail}; could not parse version, requires Node.js 20+",
+                )
+            elif node_major >= 20:
+                _doctor_add(checks, "PASS", "dev:node", node_detail)
+            else:
+                _doctor_add(
+                    checks,
+                    "WARN",
+                    "dev:node",
+                    f"{node_detail}; requires Node.js 20+",
+                )
         else:
             _doctor_add(checks, "WARN", "dev:node", f"{node_detail}; requires Node.js 20+")
 

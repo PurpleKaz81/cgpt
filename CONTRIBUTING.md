@@ -48,6 +48,27 @@ tox run -e py,lint
 python3 cgpt.py doctor --dev
 ```
 
+## AI-Assisted Change Workflow
+
+When changes are made through AI assistance (for example Codex), use this default policy:
+
+1. Make the code/documentation change.
+2. Run `make check` after each meaningful change set.
+3. If checks fail, fix issues before continuing.
+4. Before opening/updating a PR, run `./scripts/release_check.sh`.
+
+This keeps local behavior aligned with CI and avoids late surprises.
+
+## What The New Tools Do
+
+- `pyproject.toml`: package metadata, install entry points, and optional dependency groups (`docx`, `dev`).
+- `python -m pip install -e ".[dev]"`: installs contributor-only tooling locally.
+- `make check`: one-command local quality gate (tests + Python lint + Markdown lint).
+- `ruff`: fast Python linting for correctness/style issues.
+- `npx --yes markdownlint-cli2@0.16.0 ...`: pinned markdown lint without global npm installs.
+- `tox run -e py,lint`: reproducible multi-environment check runner, close to CI behavior.
+- `python3 cgpt.py doctor --dev`: validates contributor prerequisites and explains what is missing.
+
 ## Documentation Policy
 
 This repo keeps a strict docs contract:

@@ -348,5 +348,15 @@ class TestDoctorCommand(unittest.TestCase):
         self.assertIn("doctor checks failed", result.stderr)
 
 
+class TestDoctorVersionHelpers(unittest.TestCase):
+    def test_parse_major_version(self):
+        import cgpt
+
+        self.assertEqual(cgpt._doctor_parse_major_version("v20.17.0"), 20)
+        self.assertEqual(cgpt._doctor_parse_major_version("20.17.0"), 20)
+        self.assertEqual(cgpt._doctor_parse_major_version("node 18"), 18)
+        self.assertIsNone(cgpt._doctor_parse_major_version("unknown"))
+
+
 if __name__ == "__main__":
     unittest.main()

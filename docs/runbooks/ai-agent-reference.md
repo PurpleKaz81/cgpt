@@ -38,10 +38,9 @@ When sources conflict, use this precedence:
 Core checks:
 
 ```bash
-python3 cgpt.py --help
-python3 -m unittest discover -s tests -p "test_*.py"
-ruff check .
-markdownlint-cli2 "**/*.md" "#node_modules"
+python3 cgpt.py doctor --dev
+make check
+tox run -e py,lint
 ./scripts/release_check.sh
 ```
 
@@ -52,7 +51,8 @@ These rules are required for every AI-agent change in this repository:
 1. Never commit directly to `main`.
 1. Create a focused branch per change set (`<type>/<scope>` naming preferred).
 1. Keep commits scoped and reviewable; do not mix unrelated concerns.
-1. Run local checks before opening or updating a PR: `python3 -m unittest discover -s tests -p "test_*.py"`, `ruff check .`, `markdownlint-cli2 "**/*.md" "#node_modules"`, `./scripts/release_check.sh`.
+1. Run `make check` after each meaningful code change.
+1. Run local checks before opening or updating a PR: `make check`, `./scripts/release_check.sh`.
 1. Open a PR to `main`; do not bypass required checks.
 1. Merge only after required checks pass and review conversations are resolved.
 1. After merge, sync local `main`, prune remotes, and delete merged local branches.
