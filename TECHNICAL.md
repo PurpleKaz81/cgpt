@@ -47,12 +47,13 @@ Index requirement:
 Global command:
 
 ```bash
-cgpt.py [global options] <subcommand> [subcommand options]
+cgpt [global options] <subcommand> [subcommand options]
 ```
 
 Subcommands (with aliases):
 
 - `init`
+- `doctor`
 - `latest-zip`
 - `extract`
 - `x` (alias for `extract`)
@@ -108,23 +109,25 @@ Operational notes:
 ## Requirements
 
 - Python 3.8+
-- CI-tested Python baseline: 3.8, 3.9, 3.10, 3.11
+- Base runtime has no mandatory third-party dependencies for TXT/MD flows
 - Optional dependency for DOCX output: `python-docx`
+- Contributor-only tooling (optional for end users): `ruff`, `tox`, Node.js 20+ (markdown lint)
 
 Install optional DOCX dependency:
 
 ```bash
-pip install python-docx
+python -m pip install ".[docx]"
 ```
 
 ## CI Checks
 
 Repository CI gates currently include:
 
-- `unit-matrix` in `.github/workflows/tests.yml`: runs unit tests across Python 3.8-3.11.
-- `unit` in `.github/workflows/tests.yml`: required summary gate that enforces full matrix success.
+- `unit-matrix` in `.github/workflows/tests.yml`: runs unit tests across Python 3.8-3.13 on Ubuntu.
+- `smoke-cross-platform` in `.github/workflows/tests.yml`: runs smoke + unit tests on macOS and Windows (Python 3.11 and 3.13).
+- `unit` in `.github/workflows/tests.yml`: required summary gate that enforces full matrix + cross-platform success.
 - `docs-guard` in `.github/workflows/docs-guard.yml`: enforces markdown scope/indexing and code-doc sync policy.
-- `lint` in `.github/workflows/lint.yml`: runs `markdownlint-cli2` and `ruff check .`.
+- `lint` in `.github/workflows/lint.yml`: runs pinned markdown lint via `npx` and Python lint via `ruff`.
 
 ## Setup
 
@@ -132,23 +135,23 @@ Repository CI gates currently include:
 
 ```bash
 cd /path/to/cgpt
+python3 cgpt.py doctor --fix
 python3 cgpt.py --help
 ```
 
-### Option B: Script-only install elsewhere
+### Option B: Install as a command from this repository
 
 ```bash
-mkdir -p ~/Documents/chatgpt_exports
-cp cgpt.py ~/Documents/chatgpt_exports/
-cd ~/Documents/chatgpt_exports
-mkdir -p zips extracted dossiers
+cd /path/to/cgpt
+python3 -m pip install --user .
+cgpt --help
 ```
 
-Optional alias:
+### Contributor setup (optional, not needed for end users)
 
 ```bash
-echo 'alias cgpt="python3 ~/Documents/chatgpt_exports/cgpt.py"' >> ~/.zshrc
-source ~/.zshrc
+python3 -m pip install -e ".[dev]"
+tox run -e py,lint
 ```
 
 ## Global Options
@@ -174,6 +177,21 @@ cgpt init
 
 Flags:
 
+- `-h`, `--help`
+
+### `doctor`
+
+Purpose: validate runtime prerequisites and home layout; optionally include contributor tooling checks.
+
+```bash
+cgpt doctor
+```
+
+Flags:
+
+- `--fix`: create missing `zips/`, `extracted/`, and `dossiers/` under resolved home
+- `--dev`: include contributor tooling checks (`ruff`, `node`, `npx`, `tox`, Python matrix interpreters)
+- `--strict`: treat warnings as failures (exit code 2)
 - `-h`, `--help`
 
 ### `latest-zip`
@@ -633,15 +651,32 @@ Cause: source export contains repeated IDs, so map resolution would be ambiguous
 Fix:
 
 ```bash
-pip install python-docx
+python -m pip install ".[docx]"
+# or:
+python -m pip install python-docx
 ```
 
 ## Validation and Tests
 
-Run critical-path tests:
+Run unit tests:
 
 ```bash
 python -m unittest discover -s tests -p "test_*.py" -v
+```
+
+Run lints:
+
+```bash
+python -m ruff check .
+npx --yes markdownlint-cli2@0.16.0 "**/*.md" "#node_modules" "#.venv" "#.tox"
+```
+
+One-command contributor check:
+
+```bash
+make check
+# or:
+tox run -e py,lint
 ```
 
 Current test coverage includes key generation flows around:
@@ -665,6 +700,7 @@ Current test coverage includes key generation flows around:
   - UTF-8-family input file decoding guarantees
   - conversations JSON discovery robustness and bounded candidate parsing
   - `--context`/`--name` input validation
+  - `doctor` runtime/dev preflight behavior
 
 ## Feature Roadmap Status
 
@@ -681,10 +717,7 @@ This technical reference intentionally does not maintain a second roadmap status
 ### Technical Planning Notes (Current)
 
 - Discovery `--json` should land before write-command `--json` to keep schemas aligned.
-- Optional dependency CI matrix should land before broad feature rollout to catch dependency-state regressions continuously.
-- `--strict` should be introduced only after warning surfaces and structured outputs are standardized.
 - `--dry-run` should precede output-path customization to validate no-write semantics independently.
-- `cgpt doctor` is high-leverage early because it reduces setup/debug support load.
 
 ## Security Notes
 

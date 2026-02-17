@@ -26,6 +26,8 @@ python3 cgpt.py quick --help >/dev/null || fail "quick --help failed"
 python3 cgpt.py build-dossier --help >/dev/null || fail "build-dossier --help failed"
 python3 cgpt.py make-dossiers --help >/dev/null || fail "make-dossiers --help failed"
 python3 cgpt.py search --help >/dev/null || fail "search --help failed"
+python3 cgpt.py doctor --help >/dev/null || fail "doctor --help failed"
+python3 cgpt.py doctor >/dev/null || fail "doctor failed"
 echo "✅ CLI smoke checks passed"
 
 # 3) Test suite

@@ -48,9 +48,13 @@ venv/
 .ruff_cache/
 .pytest_cache/
 .mypy_cache/
+.tox/
 .coverage
 coverage.xml
 htmlcov/
+build/
+dist/
+*.egg-info/
 
 # IDE
 .vscode/

@@ -2,33 +2,50 @@
 
 Thanks for contributing to `cgpt`.
 
-## Development Prerequisites
+## Runtime vs Contributor Requirements
 
-- Python `3.8` through `3.11` (CI-tested baseline)
-- `pip`
-- Node.js `20+` (for markdown lint tooling)
+- End-user runtime: Python `3.8+`, no required third-party runtime deps for TXT/MD flows.
+- Optional runtime feature: DOCX export requires `python-docx`.
+- Contributor tooling (only for development/PR checks): `ruff`, `tox`, Node.js `20+` for markdown lint.
 
-## Local Setup
+## Local Setup (Contributors)
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-python -m pip install ruff==0.9.10
-npm install --global markdownlint-cli2@0.16.0
+python -m pip install -e ".[dev]"
 git config --local core.hooksPath .githooks
+```
+
+Optional DOCX dependency for local feature testing:
+
+```bash
+python -m pip install -e ".[docx]"
 ```
 
 ## Required Local Checks
 
-Run these from the repository root before opening or updating a PR:
+Run these from repository root before opening/updating a PR:
 
 ```bash
-python3 -m unittest discover -s tests -p "test_*.py"
-ruff check .
-markdownlint-cli2 "**/*.md" "#node_modules"
+make check
 ./scripts/release_check.sh
+```
+
+Equivalent commands:
+
+```bash
+python3 -m unittest discover -s tests -p "test_*.py" -v
+python3 -m ruff check .
+npx --yes markdownlint-cli2@0.16.0 "**/*.md" "#node_modules" "#.venv" "#.tox"
+```
+
+Matrix/dev convenience:
+
+```bash
+tox run -e py,lint
+python3 cgpt.py doctor --dev
 ```
 
 ## Documentation Policy

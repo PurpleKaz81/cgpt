@@ -1,3 +1,6 @@
-# Optional dependencies
-# Only needed if you want to export to Word format (--format docx)
-python-docx>=0.8.11
+# Runtime dependencies for cgpt.
+# The base CLI currently has no mandatory third-party runtime dependencies.
+#
+# Optional DOCX support:
+#   python -m pip install "cgpt[docx]"
+#   # or: python -m pip install "python-docx>=0.8.11"
