@@ -13,7 +13,10 @@ Maintenance note for markdown lint:
 
 ### Changed
 
-- Nothing yet.
+- Hardened `.githooks/pre-commit` to block force-staged sensitive export/data artifacts under `zips/`, `extracted/`, and `dossiers/` (except tracked `.gitkeep` placeholders).
+- Extended pre-commit checks to block common secret/credential filename patterns (for example `.env*`, `*.key`, `*.pem`) as defense in depth.
+- Added local hygiene ignore patterns for common tooling artifacts in `.gitignore` (`.ruff_cache/`, `.pytest_cache/`, `.mypy_cache/`, `.coverage`, `coverage.xml`, `htmlcov/`).
+- Updated `README.md`, `SECURITY.md`, and `CONTRIBUTING.md` to reflect the stricter commit guardrails and hook activation guidance.
 
 ## [0.2.4] - 2026-02-17
 

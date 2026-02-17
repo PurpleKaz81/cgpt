@@ -45,6 +45,12 @@ __pycache__/
 *.pyo
 .venv/
 venv/
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
 
 # IDE
 .vscode/
