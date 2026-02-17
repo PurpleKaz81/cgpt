@@ -193,7 +193,7 @@ cgpt q --config config.personal.json "topic"
 Why this is safe:
 
 - `config.personal.json` is git-ignored.
-- Pre-commit hook blocks accidental commit of private config files.
+- Pre-commit hook blocks accidental commit of private config files, common secret/credential filenames, and sensitive files under `zips/`, `extracted/`, and `dossiers/` (except `.gitkeep` placeholders).
 
 ## Pull / Push / Merge Without Leaking Private Data
 

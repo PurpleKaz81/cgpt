@@ -17,6 +17,7 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 python -m pip install ruff==0.9.10
 npm install --global markdownlint-cli2@0.16.0
+git config --local core.hooksPath .githooks
 ```
 
 ## Required Local Checks
@@ -46,6 +47,7 @@ When behavior changes, update docs in the same PR.
 - Chat export data can contain sensitive personal information.
 - Never commit private local files (`config.personal.json`, `*.private.json`) or raw user export artifacts.
 - Keep generated/local export data in ignored folders (`zips/`, `extracted/`, `dossiers/`) unless explicitly asked otherwise.
+- Keep the pre-commit hook enabled to block accidental staging of private configs, secrets, and export artifacts.
 - Follow `SECURITY.md` for data handling practices.
 
 ## Pull Request Expectations

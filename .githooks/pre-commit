@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Block accidental commits of local/private config files.
+# Block accidental commits of sensitive/local-only files.
 staged_files="$(git diff --cached --name-only --diff-filter=ACMR)"
 
 if [ -z "${staged_files}" ]; then
@@ -12,17 +12,33 @@ blocked=()
 while IFS= read -r f; do
   [ -z "${f}" ] && continue
   case "${f}" in
+    # Private config patterns
     config.personal.json|config.personal.*.json|config.private.json|config.private.*.json|*.personal.json|*.private.json)
-      blocked+=("${f}")
+      blocked+=("${f} [private config]")
       ;;
+    # Explicit private folders
     .private/*|private/*)
-      blocked+=("${f}")
+      blocked+=("${f} [private directory]")
+      ;;
+    # Export/data artifacts are always sensitive; allow tracked placeholders only.
+    zips/*|extracted/*|dossiers/*)
+      case "${f}" in
+        zips/.gitkeep|extracted/.gitkeep|dossiers/.gitkeep)
+          ;;
+        *)
+          blocked+=("${f} [sensitive export/data artifact]")
+          ;;
+      esac
+      ;;
+    # Secret/credential naming patterns (defense in depth if force-staged).
+    .env|.env.*|*.env|*/.env|*/.env.*|*/.envrc|secret.txt|secrets.txt|secret.json|secrets.json|credentials.txt|credentials.json|*_secret.*|*_credential.*|*_password.*|*.key|*.pem|*.p12|*.pfx)
+      blocked+=("${f} [secret/credential pattern]")
       ;;
   esac
 done <<< "${staged_files}"
 
 if [ "${#blocked[@]}" -gt 0 ]; then
-  echo "ERROR: commit blocked. Private/local files were staged:" >&2
+  echo "ERROR: commit blocked. Sensitive/local-only files were staged:" >&2
   for f in "${blocked[@]}"; do
     echo "  - ${f}" >&2
   done
@@ -31,6 +47,7 @@ if [ "${#blocked[@]}" -gt 0 ]; then
   echo "  git restore --staged <file>" >&2
   echo >&2
   echo "Keep private settings in ignored files such as config.personal.json." >&2
+  echo "Never stage real artifacts from zips/, extracted/, or dossiers/." >&2
   exit 1
 fi
 

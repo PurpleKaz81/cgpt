@@ -49,7 +49,10 @@ Private config protection:
 Pre-commit safety net:
 
 - Hook file: `.githooks/pre-commit`
-- Purpose: block commits that include private config files (`config.personal.json`, `*.private.json`, etc.)
+- Purpose: block commits that include:
+  - private config files (`config.personal.json`, `*.private.json`, etc.)
+  - sensitive export/data artifacts under `zips/`, `extracted/`, and `dossiers/` (except tracked `.gitkeep` placeholders)
+  - common secret/credential filename patterns (`.env*`, `*.key`, `*.pem`, etc.)
 - Activation (local git setting): `git config --local core.hooksPath .githooks`
 
 ## Contributor Checklist (Before Every Commit)
