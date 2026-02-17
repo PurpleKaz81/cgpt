@@ -18,6 +18,7 @@ Canonical docs:
 - `SECURITY.md`: security and privacy handling
 - `CHANGELOG.md`: release history and unreleased changes
 - `RELEASING.md`: maintainer release workflow
+- `CONTRIBUTING.md`: contribution workflow and local quality checks
 
 Scoped supplemental docs are allowed only in:
 
@@ -103,6 +104,7 @@ Operational notes:
 ## Requirements
 
 - Python 3.8+
+- CI-tested Python baseline: 3.8, 3.9, 3.10, 3.11
 - Optional dependency for DOCX output: `python-docx`
 
 Install optional DOCX dependency:
@@ -110,6 +112,14 @@ Install optional DOCX dependency:
 ```bash
 pip install python-docx
 ```
+
+## CI Checks
+
+Repository CI gates currently include:
+
+- `unit` in `.github/workflows/tests.yml`: runs unit tests across Python 3.8-3.11.
+- `docs-guard` in `.github/workflows/docs-guard.yml`: enforces markdown scope/indexing and code-doc sync policy.
+- `lint` in `.github/workflows/lint.yml`: runs `markdownlint-cli2` and `ruff check .`.
 
 ## Setup
 

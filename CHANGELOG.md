@@ -16,6 +16,10 @@ Maintenance note for markdown lint:
 - Clarified product identity positioning in `README.md` and `docs/specs/product-vision.md` to emphasize continuity, deterministic context builds, and handoff reliability.
 - Added roadmap initiative `R15` in `docs/roadmap/shared-roadmap.md` to package Quality Gates as one planned, committed reliability feature family with phased scope.
 - Synced GitHub repository About description to the new one-line positioning: local-first context compiler for reusable AI working-memory dossiers.
+- Expanded `.github/workflows/tests.yml` to run the `unit` test job across Python `3.8`, `3.9`, `3.10`, and `3.11`.
+- Added `.github/workflows/lint.yml` with repository markdown lint (`markdownlint-cli2`) and Python lint (`ruff check .`) gates.
+- Added baseline governance and ownership surfaces: `LICENSE` (MIT), `CONTRIBUTING.md`, `.github/CODEOWNERS`, and `.github/dependabot.yml`.
+- Added `docs/runbooks/engineering-quality-backlog.md` and synchronized docs (`README.md`, `TECHNICAL.md`, `RELEASING.md`, `docs/INDEX.md`, `docs/runbooks/ai-agent-reference.md`, `docs/roadmap/shared-roadmap.md`) to keep quality-maintenance contracts durable.
 
 ## [0.2.3] - 2026-02-16
 

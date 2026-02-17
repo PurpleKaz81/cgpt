@@ -5,11 +5,11 @@ import json
 import os
 import re
 import shutil
+import sqlite3
 import stat
 import sys
-import zipfile
-import sqlite3
 import time
+import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -1873,7 +1873,6 @@ def generate_control_layer(config: Dict[str, Any]) -> str:
     ]
 
     control_sections = config.get("control_layer_sections", {})
-    op_constraints = config.get("op_v2_constraints", [])
 
     # Scope router
     if "scope_router" in control_sections:
@@ -2544,7 +2543,6 @@ def cmd_find(args: argparse.Namespace) -> None:
         die(f"No conversations JSON found under {root}")
     data = load_json(data_file)
     convs = normalize_conversations(data)
-    pat = re.compile(re.escape(query_raw), re.IGNORECASE)
     for c in convs:
         cid, title = conv_id_and_title(c)
         if cid and q in (title or "").lower():

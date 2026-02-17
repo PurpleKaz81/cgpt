@@ -1,12 +1,12 @@
 import json
 import os
+from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import time
 import unittest
 import zipfile
-from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]

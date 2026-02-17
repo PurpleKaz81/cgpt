@@ -21,7 +21,7 @@ jobs:
           set -euo pipefail
 
           core_md='^(README\.md|TECHNICAL\.md|SECURITY\.md|CHANGELOG\.md|RELEASING\.md)$'
-          allowed_md='^(README\.md|TECHNICAL\.md|SECURITY\.md|CHANGELOG\.md|RELEASING\.md|docs/INDEX\.md|docs/(specs|adr|runbooks|roadmap)/.+\.md)$'
+          allowed_md='^(README\.md|TECHNICAL\.md|SECURITY\.md|CHANGELOG\.md|RELEASING\.md|CONTRIBUTING\.md|docs/INDEX\.md|docs/(specs|adr|runbooks|roadmap)/.+\.md)$'
 
           # Keep markdown set minimal and explicit.
           disallowed_md="$(git ls-files '*.md' | rg -v "$allowed_md" || true)"
@@ -29,7 +29,7 @@ jobs:
             echo "Disallowed markdown files detected:"
             echo "$disallowed_md"
             echo "Allowed markdown paths:"
-            echo "- README.md, TECHNICAL.md, SECURITY.md, CHANGELOG.md, RELEASING.md"
+            echo "- README.md, TECHNICAL.md, SECURITY.md, CHANGELOG.md, RELEASING.md, CONTRIBUTING.md"
             echo "- docs/INDEX.md"
             echo "- docs/specs/**/*.md, docs/adr/**/*.md, docs/runbooks/**/*.md, docs/roadmap/**/*.md"
             exit 1
