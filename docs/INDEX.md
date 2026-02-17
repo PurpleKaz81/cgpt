@@ -6,14 +6,18 @@ Rule:
 
 - Every markdown file under `docs/specs/`, `docs/adr/`, `docs/runbooks/`, and `docs/roadmap/` must be linked in this file.
 
-Core canonical docs remain:
+Core behavior docs remain:
 
 - `README.md` (beginner-first usage)
 - `TECHNICAL.md` (canonical command/reference behavior)
 - `SECURITY.md`
 - `CHANGELOG.md`
 - `RELEASING.md`
+
+Governance docs:
+
 - `CONTRIBUTING.md`
+- `LICENSE`
 
 ## Specs
 

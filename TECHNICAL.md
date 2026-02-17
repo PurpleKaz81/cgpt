@@ -11,14 +11,18 @@ If you want the beginner walkthrough, use [README.md](README.md).
 
 ## Documentation Topology
 
-Canonical docs:
+Core behavior docs:
 
 - `README.md`: beginner-first usage and quick workflows
 - `TECHNICAL.md`: canonical command/flag/behavior reference
 - `SECURITY.md`: security and privacy handling
 - `CHANGELOG.md`: release history and unreleased changes
 - `RELEASING.md`: maintainer release workflow
+
+Governance docs:
+
 - `CONTRIBUTING.md`: contribution workflow and local quality checks
+- `LICENSE`: project license terms
 
 Scoped supplemental docs are allowed only in:
 
@@ -117,7 +121,8 @@ pip install python-docx
 
 Repository CI gates currently include:
 
-- `unit` in `.github/workflows/tests.yml`: runs unit tests across Python 3.8-3.11.
+- `unit-matrix` in `.github/workflows/tests.yml`: runs unit tests across Python 3.8-3.11.
+- `unit` in `.github/workflows/tests.yml`: required summary gate that enforces full matrix success.
 - `docs-guard` in `.github/workflows/docs-guard.yml`: enforces markdown scope/indexing and code-doc sync policy.
 - `lint` in `.github/workflows/lint.yml`: runs `markdownlint-cli2` and `ruff check .`.
 

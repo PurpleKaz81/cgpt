@@ -77,7 +77,11 @@ Update:
 Then commit:
 
 ```bash
-git add cgpt.py CHANGELOG.md README.md TECHNICAL.md SECURITY.md RELEASING.md .gitignore .githooks/pre-commit config.json
+git add cgpt.py config.json requirements.txt
+git add README.md TECHNICAL.md SECURITY.md CHANGELOG.md RELEASING.md CONTRIBUTING.md LICENSE
+git add .github/CODEOWNERS .github/dependabot.yml
+git add .github/workflows/tests.yml .github/workflows/docs-guard.yml .github/workflows/lint.yml
+git add .ruff.toml .markdownlint.yml .gitignore .githooks/pre-commit
 git add docs/INDEX.md docs/specs docs/adr docs/runbooks docs/roadmap
 git commit -m "Release vX.Y.Z"
 ```

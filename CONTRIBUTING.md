@@ -34,7 +34,8 @@ markdownlint-cli2 "**/*.md" "#node_modules"
 
 This repo keeps a strict docs contract:
 
-- Core docs are `README.md`, `TECHNICAL.md`, `SECURITY.md`, `CHANGELOG.md`, and `RELEASING.md`.
+- Core behavior docs are `README.md`, `TECHNICAL.md`, `SECURITY.md`, `CHANGELOG.md`, and `RELEASING.md`.
+- Governance docs are `CONTRIBUTING.md` and `LICENSE`.
 - Supplemental docs are scoped to `docs/specs/`, `docs/adr/`, `docs/runbooks/`, and `docs/roadmap/`.
 - Every scoped markdown file must be linked from `docs/INDEX.md`.
 

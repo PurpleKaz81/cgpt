@@ -20,6 +20,10 @@ Maintenance note for markdown lint:
 - Added `.github/workflows/lint.yml` with repository markdown lint (`markdownlint-cli2`) and Python lint (`ruff check .`) gates.
 - Added baseline governance and ownership surfaces: `LICENSE` (MIT), `CONTRIBUTING.md`, `.github/CODEOWNERS`, and `.github/dependabot.yml`.
 - Added `docs/runbooks/engineering-quality-backlog.md` and synchronized docs (`README.md`, `TECHNICAL.md`, `RELEASING.md`, `docs/INDEX.md`, `docs/runbooks/ai-agent-reference.md`, `docs/roadmap/shared-roadmap.md`) to keep quality-maintenance contracts durable.
+- Added a required `unit` summary gate in `.github/workflows/tests.yml` while keeping Python execution in `unit-matrix`, so branch protection can require a stable check name.
+- Cleaned up existing markdown lint blockers by making test-matrix headings unique in `docs/specs/v0.2.2-remainder-hardening.md` and `docs/specs/v0.2.3-hardening-followups.md`.
+- Applied Ruff follow-up remediation in `cgpt.py` (unused locals and import ordering), and scoped temporary `I001` per-file ignores to two legacy test files in `.ruff.toml`.
+- Synced docs terminology around behavior docs vs governance docs and refreshed explicit staging command examples in `README.md` and `RELEASING.md`.
 
 ## [0.2.3] - 2026-02-16
 
