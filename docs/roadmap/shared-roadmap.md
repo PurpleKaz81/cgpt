@@ -29,44 +29,65 @@ Planning horizon tags:
 - `YYYY-T4`: Oct-Dec
 - `backlog`: no assigned trimester yet
 
+## Necessity Ranking Model
+
+Necessity tags:
+
+- `critical`: required for safe sharing, privacy, or core workflow trust.
+- `high`: materially improves repeatability, automation, or output usability.
+- `medium`: meaningful improvement, but practical workarounds exist.
+- `exploratory`: discovery or expansion work; no immediate core-user requirement.
+
 ## Strategy Baseline
 
 - Product posture is local-first, single-user in `v0.x`.
 - Current hard ingestion constraint: ChatGPT export ZIP support.
 - First expansion lane beyond ChatGPT: Google (Gemini), then Perplexity.
 
-## Roadmap Table
+## Shipped Baseline (Implemented)
 
 | ID | Initiative | Status | Commitment | Horizon | Notes |
 | --- | --- | --- | --- | --- | --- |
-| R0 | Documented, reproducible CLI workflow | `implemented` | `committed` | `2026-T1` | Foundation complete via docs topology + release preflight + critical-path tests. |
-| R0.1 | Edge-case hardening patch (`v0.2.1`) | `implemented` | `committed` | `2026-T1` | Completed security/correctness bundle: ZIP extraction safety, quick AND-scope correctness, timestamp coercion, config hard-fail, and input-file decode policy. |
-| R0.2 | Remaining edge-case hardening patch (`v0.2.2`) | `implemented` | `committed` | `2026-T1` | Follow-up remediations completed for stale re-extraction state, strict conversations JSON discovery, message timestamp coercion, and validation for `--context`/`--name`. |
-| R0.3 | Additional hardening follow-up patch (`v0.2.3`) | `implemented` | `committed` | `2026-T1` | Added ZIP special-member and size/count limits, strict optional-file/config schema validation, duplicate ID detection, and bounded JSON discovery candidate parsing. |
-| R1 | Optional dependency CI matrix (`python-docx` present/missing) | `planned` | `target` | `2026-T1` | Prevent regressions in optional DOCX paths. |
-| R2 | `--redact` mode on dossier-producing commands | `planned` | `committed` | `2026-T1` | Privacy protection before sharing generated outputs. |
-| R3 | Discovery `--json` (`ids`, `find`, `search`) | `planned` | `committed` | `2026-T1` | Machine-readable discovery pipeline for automation. |
-| R4 | `cgpt doctor` health check command | `planned` | `target` | `2026-T2` | Deterministic setup/runtime diagnostics. |
-| R5 | Token-aware chunking (`--max-tokens`) | `planned` | `committed` | `2026-T2` | Upload-safe context segmentation with ordering guarantees. |
-| R6 | `--dry-run` for write commands | `planned` | `target` | `2026-T2` | Safe preview before file writes. |
-| R7 | Date range filters (`--since`, `--until`) | `planned` | `target` | `2026-T2` | Deterministic time-window filtering beyond relative recency. |
-| R8 | Output control flags (`--out-dir`, `--output-prefix`) | `planned` | `target` | `2026-T2` | Better automation with deterministic paths and names. |
-| R9 | Config profiles (`--profile`) | `planned` | `target` | `2026-T3` | Reusable profile-based command defaults. |
-| R15 | Context Quality Gates (Reliability Layer) | `planned` | `committed` | `2026-T2` | Pass/fail dossier readiness checks with staged rollout. |
-| R16 | Engineering Quality Baseline Hardening | `planned` | `committed` | `2026-T2` | Align CI Python support, add lint/static gates, and formalize governance + maintenance runbook contracts. |
-| R10 | Write-command `--json` output + `--strict` mode | `experimental` | `exploratory` | `2026-T3` | Structured automation semantics and hard-fail workflows. |
-| R11 | Google (Gemini) provider ingestion path | `experimental` | `exploratory` | `2026-T3` | First non-ChatGPT expansion milestone. |
-| R12 | Perplexity provider ingestion path | `experimental` | `exploratory` | `2026-T4` | Second provider expansion milestone. |
-| R13 | Provider abstraction layer across AI ecosystems | `experimental` | `exploratory` | `backlog` | Normalize provider-specific exports into one internal model. |
-| R14 | Cloud-assisted sync/workflows | `experimental` | `exploratory` | `backlog` | Evaluate only after local-first baseline remains stable. |
+| R0 | Documented, reproducible CLI workflow | `implemented` | `committed` | `2026-T1` | Foundation complete via docs topology, release preflight, and critical-path tests. |
+| R0.1 | Edge-case hardening patch (`v0.2.1`) | `implemented` | `committed` | `2026-T1` | Completed ZIP extraction safety, quick AND-scope correctness, timestamp coercion, config hard-fail, and input-file decode policy. |
+| R0.2 | Remaining edge-case hardening patch (`v0.2.2`) | `implemented` | `committed` | `2026-T1` | Completed stale re-extraction remediation, strict conversations JSON discovery, message timestamp coercion, and validation for `--context`/`--name`. |
+| R0.3 | Additional hardening follow-up patch (`v0.2.3`) | `implemented` | `committed` | `2026-T1` | Added ZIP special-member and archive-limit validation, strict optional-file/config schema validation, duplicate ID detection, and bounded JSON discovery candidate parsing. |
+| R4 | `cgpt doctor` health check command | `implemented` | `committed` | `2026-T1` | Runtime/developer diagnostics with `--fix`, `--dev`, and `--strict` are shipped. |
+| R16 | Engineering Quality Baseline Hardening | `implemented` | `committed` | `2026-T1` | CI Python matrix/cross-platform smoke, lint gates, governance baseline, and maintenance ledger contracts are in place. |
+
+## Active Queue (Ranked by Necessity)
+
+| Rank | ID | Initiative | Necessity | Status | Commitment | Horizon | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | R2 | `--redact` mode on dossier-producing commands | `critical` | `planned` | `committed` | `2026-T1` | Privacy protection before sharing generated outputs. |
+| 2 | R3 | Discovery `--json` (`ids`, `find`, `search`) | `high` | `planned` | `committed` | `2026-T1` | Machine-readable discovery pipeline for automation. |
+| 3 | R5 | Token-aware chunking (`--max-tokens`) | `high` | `planned` | `committed` | `2026-T2` | Upload-safe context segmentation with ordering guarantees. |
+| 4 | R15 | Context Quality Gates (Reliability Layer) | `high` | `planned` | `committed` | `2026-T2` | Pass/fail dossier readiness checks with staged rollout. |
+| 5 | R7 | Date range filters (`--since`, `--until`) | `medium` | `planned` | `target` | `2026-T2` | Deterministic time-window filtering beyond relative recency. |
+| 6 | R6 | `--dry-run` for write commands | `medium` | `planned` | `target` | `2026-T2` | Safe preview before file writes. |
+| 7 | R8 | Output control flags (`--out-dir`, `--output-prefix`) | `medium` | `planned` | `target` | `2026-T3` | Better automation with deterministic paths and names. |
+| 8 | R1 | Optional dependency CI matrix (`python-docx` present/missing) | `medium` | `planned` | `target` | `2026-T3` | Prevent regressions in optional DOCX paths. |
+| 9 | R9 | Config profiles (`--profile`) | `medium` | `planned` | `target` | `2026-T3` | Reusable profile-based command defaults. |
+| 10 | R10 | Write-command `--json` output + `--strict` mode | `medium` | `experimental` | `exploratory` | `2026-T3` | Structured automation semantics and hard-fail workflows. |
+| 11 | R11 | Google (Gemini) provider ingestion path | `exploratory` | `experimental` | `exploratory` | `2026-T4` | First non-ChatGPT expansion milestone. |
+| 12 | R12 | Perplexity provider ingestion path | `exploratory` | `experimental` | `exploratory` | `2026-T4` | Second provider expansion milestone. |
+| 13 | R13 | Provider abstraction layer across AI ecosystems | `exploratory` | `experimental` | `exploratory` | `backlog` | Normalize provider-specific exports into one internal model. |
+| 14 | R14 | Cloud-assisted sync/workflows | `exploratory` | `experimental` | `exploratory` | `backlog` | Evaluate only after local-first baseline remains stable. |
+
+## Trimester Plan (Derived from Necessity Ranking)
+
+- `2026-T1`: deliver ranks `1-2` (`R2`, `R3`) and keep scope tightly bounded to privacy + automation baseline.
+- `2026-T2`: deliver ranks `3-6` (`R5`, `R15`, `R7`, `R6`) in that order.
+- `2026-T3`: deliver ranks `7-10` (`R8`, `R1`, `R9`, `R10`) only after `2026-T2` committed items are complete.
+- `2026-T4` and later: evaluate ranks `11-14` (`R11`, `R12`, `R13`, `R14`) based on local-first stability and user pull.
 
 ## R15 Initiative Breakdown
 
 Quality gates are planned as one coherent reliability feature family with phased rollout:
 
-1. Phase A (`v0.2.4` target): token budget, coverage, and noise checks.
-1. Phase B (`v0.2.5` target): freshness and provenance checks.
-1. Phase C (`v0.2.6` target): strict-gate mode plus a stable machine-readable gate report contract.
+1. Phase A (`2026-T2` target): token budget, coverage, and noise checks.
+1. Phase B (`2026-T3` target): freshness and provenance checks.
+1. Phase C (`2026-T3` to `2026-T4` target): strict-gate mode plus a stable machine-readable gate report contract.
 
 Interface note:
 

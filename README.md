@@ -19,7 +19,7 @@ If you want full technical details and every flag, go to [TECHNICAL.md](TECHNICA
 - Deterministic local build flow: run the same inputs and config to produce consistent context artifacts.
 - Reliable handoff: package context so a future you (or another person/model session) can resume work with less ambiguity.
 
-Coming next: roadmap initiative `R15` positions quality gates as a reliability layer for dossier readiness checks. See [`docs/roadmap/shared-roadmap.md`](docs/roadmap/shared-roadmap.md).
+Near-term roadmap priorities are ranked by necessity: `R2` (`--redact` privacy mode), `R3` (discovery `--json`), then `R5` (token-aware chunking). See [`docs/roadmap/shared-roadmap.md`](docs/roadmap/shared-roadmap.md).
 
 ## What This Tool Is (In Plain English)
 
