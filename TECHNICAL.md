@@ -679,6 +679,13 @@ make check
 tox run -e py,lint
 ```
 
+Recommended contributor loop (including AI-assisted edits):
+
+1. Make a focused change set.
+2. Run `make check` immediately after the change set.
+3. Fix any failures before adding more scope.
+4. Run `./scripts/release_check.sh` before opening/updating a PR.
+
 Current test coverage includes key generation flows around:
 
 - `quick`
