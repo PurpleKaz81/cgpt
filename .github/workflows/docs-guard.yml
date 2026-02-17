@@ -20,7 +20,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          core_md='^(README\.md|TECHNICAL\.md|SECURITY\.md|CHANGELOG\.md|RELEASING\.md)$'
+          core_behavior_md='^(README\.md|TECHNICAL\.md|SECURITY\.md|CHANGELOG\.md|RELEASING\.md)$'
           allowed_md='^(README\.md|TECHNICAL\.md|SECURITY\.md|CHANGELOG\.md|RELEASING\.md|CONTRIBUTING\.md|docs/INDEX\.md|docs/(specs|adr|runbooks|roadmap)/.+\.md)$'
 
           # Keep markdown set minimal and explicit.
@@ -82,10 +82,10 @@ jobs:
             exit 0
           fi
 
-          docs_changed="$(echo "$changed" | rg "$core_md" || true)"
+          docs_changed="$(echo "$changed" | rg "$core_behavior_md" || true)"
           if [[ -z "$docs_changed" ]]; then
-            echo "Code/config changed, but no core markdown docs were updated."
-            echo "Update at least one core doc: README.md, TECHNICAL.md, SECURITY.md, CHANGELOG.md, RELEASING.md"
+            echo "Code/config changed, but no core behavior docs were updated."
+            echo "Update at least one core behavior doc: README.md, TECHNICAL.md, SECURITY.md, CHANGELOG.md, RELEASING.md"
             exit 1
           fi
 

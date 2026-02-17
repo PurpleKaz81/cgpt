@@ -214,7 +214,11 @@ git pull origin main
 1. Stage only public files explicitly (never `git add .`):
 
 ```bash
-git add cgpt.py README.md TECHNICAL.md CHANGELOG.md SECURITY.md RELEASING.md config.json .gitignore .githooks/pre-commit
+git add cgpt.py config.json requirements.txt
+git add README.md TECHNICAL.md SECURITY.md CHANGELOG.md RELEASING.md CONTRIBUTING.md LICENSE
+git add .github/CODEOWNERS .github/dependabot.yml
+git add .github/workflows/tests.yml .github/workflows/docs-guard.yml .github/workflows/lint.yml
+git add .ruff.toml .markdownlint.yml .gitignore .githooks/pre-commit
 # if scoped docs changed, add them explicitly too:
 git add docs/INDEX.md docs/specs docs/adr docs/runbooks docs/roadmap
 ```
