@@ -1,6 +1,6 @@
 # Shared Roadmap
 
-Last updated: 2026-02-16
+Last updated: 2026-02-17
 
 ## Purpose
 
@@ -53,6 +53,7 @@ Planning horizon tags:
 | R8 | Output control flags (`--out-dir`, `--output-prefix`) | `planned` | `target` | `2026-T2` | Better automation with deterministic paths and names. |
 | R9 | Config profiles (`--profile`) | `planned` | `target` | `2026-T3` | Reusable profile-based command defaults. |
 | R15 | Context Quality Gates (Reliability Layer) | `planned` | `committed` | `2026-T2` | Pass/fail dossier readiness checks with staged rollout. |
+| R16 | Engineering Quality Baseline Hardening | `planned` | `committed` | `2026-T2` | Align CI Python support, add lint/static gates, and formalize governance + maintenance runbook contracts. |
 | R10 | Write-command `--json` output + `--strict` mode | `experimental` | `exploratory` | `2026-T3` | Structured automation semantics and hard-fail workflows. |
 | R11 | Google (Gemini) provider ingestion path | `experimental` | `exploratory` | `2026-T3` | First non-ChatGPT expansion milestone. |
 | R12 | Perplexity provider ingestion path | `experimental` | `exploratory` | `2026-T4` | Second provider expansion milestone. |

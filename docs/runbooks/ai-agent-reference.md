@@ -1,6 +1,6 @@
 # AI Agent Reference
 
-Last updated: 2026-02-16
+Last updated: 2026-02-17
 
 ## Purpose
 
@@ -13,6 +13,7 @@ When sources conflict, use this precedence:
 1. `TECHNICAL.md` for CLI/runtime behavior and command contracts.
 1. `docs/specs/current-capabilities.md` for what is currently shipped.
 1. `docs/roadmap/shared-roadmap.md` for future direction and commitment levels.
+1. `docs/runbooks/engineering-quality-backlog.md` for quality baseline status and follow-up hardening priorities.
 1. `README.md` for user-facing workflows and onboarding framing.
 1. `RELEASING.md` for release process and required checks.
 
@@ -30,6 +31,7 @@ When sources conflict, use this precedence:
 - `tests/`: unit tests and critical-path coverage.
 - `scripts/release_check.sh`: release preflight gate.
 - `docs/INDEX.md`: required index for scoped docs under `docs/`.
+- `docs/runbooks/engineering-quality-backlog.md`: canonical quality-improvement ledger.
 
 ## Operational Commands
 
@@ -38,6 +40,8 @@ Core checks:
 ```bash
 python3 cgpt.py --help
 python3 -m unittest discover -s tests -p "test_*.py"
+ruff check .
+markdownlint-cli2 "**/*.md" "#node_modules"
 ./scripts/release_check.sh
 ```
 

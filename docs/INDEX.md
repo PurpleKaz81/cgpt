@@ -13,6 +13,7 @@ Core canonical docs remain:
 - `SECURITY.md`
 - `CHANGELOG.md`
 - `RELEASING.md`
+- `CONTRIBUTING.md`
 
 ## Specs
 
@@ -29,6 +30,7 @@ No entries yet.
 ## Runbooks
 
 - [`docs/runbooks/ai-agent-reference.md`](runbooks/ai-agent-reference.md): deterministic repository and workflow reference for AI agents and automation.
+- [`docs/runbooks/engineering-quality-backlog.md`](runbooks/engineering-quality-backlog.md): canonical optimization ledger for CI, lint, governance, and follow-up quality work.
 
 ## Roadmap Notes
 

@@ -330,6 +330,12 @@ Agent reference:
 
 - [`docs/runbooks/ai-agent-reference.md`](docs/runbooks/ai-agent-reference.md)
 
+## Project Governance
+
+- Contribution workflow and local quality checks: [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- Project license: [`LICENSE`](LICENSE)
+- Ongoing engineering quality optimization ledger: [`docs/runbooks/engineering-quality-backlog.md`](docs/runbooks/engineering-quality-backlog.md)
+
 ## Where To Go Next
 
 - Complete command and flag reference: [TECHNICAL.md](TECHNICAL.md)

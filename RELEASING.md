@@ -14,6 +14,10 @@ Core markdown files (canonical):
 - `CHANGELOG.md`
 - `RELEASING.md`
 
+Governance markdown files (allowed root-level docs):
+
+- `CONTRIBUTING.md`
+
 Scoped supplemental markdown files (allowed):
 
 - `docs/INDEX.md`
@@ -42,8 +46,10 @@ Enforcement:
 - [ ] `CHANGELOG.md` numbered release subsections use unique version-qualified H3 headings (`Added/Changed/Fixed in X.Y.Z`) to satisfy markdown lint.
 - [ ] `docs/specs/current-capabilities.md` is reviewed and reflects shipped behavior.
 - [ ] `docs/roadmap/shared-roadmap.md` status/commitment/horizon tags are reviewed for this release.
+- [ ] `docs/runbooks/engineering-quality-backlog.md` baseline/backlog status is reviewed for this release.
 - [ ] `README.md` high-level positioning still matches current scope and constraints.
 - [ ] Core smoke tests pass (see below).
+- [ ] CI `lint` workflow is green for the release commit/PR.
 - [ ] Release commit is on `main`.
 - [ ] Annotated git tag is created and pushed.
 - [ ] GitHub release is created from that tag.
@@ -62,6 +68,7 @@ Update:
 - Any docs changed by the release
 - `docs/specs/current-capabilities.md` (current-state sync)
 - `docs/roadmap/shared-roadmap.md` (status/priority sync)
+- `docs/runbooks/engineering-quality-backlog.md` (quality baseline/backlog sync)
 - `README.md` (if user-facing positioning changed)
 - `CHANGELOG.md` subsection heading convention for lint compliance:
   - use `### Added in X.Y.Z`, `### Changed in X.Y.Z`, and `### Fixed in X.Y.Z` under the numbered release heading.
@@ -101,6 +108,8 @@ python3 cgpt.py build-dossier --help
 python3 cgpt.py make-dossiers --help
 python3 cgpt.py search --help
 python3 -m unittest discover -s tests -p "test_*.py"
+ruff check .
+markdownlint-cli2 "**/*.md" "#node_modules"
 ```
 
 If any command fails, fix before tagging.
