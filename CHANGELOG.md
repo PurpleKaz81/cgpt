@@ -15,6 +15,18 @@ Maintenance note for markdown lint:
 
 - Nothing yet.
 
+## [0.2.8] - 2026-02-17
+
+### Changed in 0.2.8
+
+- Tightened roadmap structure in `docs/roadmap/shared-roadmap.md` by separating shipped baseline initiatives from not-yet-shipped work.
+- Corrected roadmap status drift by marking shipped initiatives `R4` (`doctor`) and `R16` (engineering quality baseline) as `implemented`.
+- Added necessity-ranked roadmap ordering for active initiatives and derived trimester execution plan by rank.
+- Updated `R15` phase timing from past version placeholders to active trimester targets.
+- Synced `docs/specs/current-capabilities.md` with shipped `doctor` workflow coverage and current CI validation baseline.
+- Synced `docs/runbooks/engineering-quality-backlog.md` baseline details with current CI/docs-guard/lint/governance state and reprioritized remaining quality tasks.
+- Updated `README.md` near-term roadmap note to reflect ranked delivery priorities (`R2`, `R3`, `R5`).
+
 ## [0.2.7] - 2026-02-17
 
 ### Changed in 0.2.7
@@ -219,6 +231,7 @@ Maintenance note for markdown lint:
 - FAQ and troubleshooting section
 - Common mistakes and fixes guide
 
+[0.2.8]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.8
 [0.2.7]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.7
 [0.2.6]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.6
 [0.2.5]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.5
@@ -228,4 +241,4 @@ Maintenance note for markdown lint:
 [0.2.1]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.1
 [0.2.0]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.0
 [0.1.0]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.1.0
-[Unreleased]: https://github.com/PurpleKaz81/cgpt/compare/v0.2.7...HEAD
+[Unreleased]: https://github.com/PurpleKaz81/cgpt/compare/v0.2.8...HEAD

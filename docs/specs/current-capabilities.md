@@ -1,6 +1,6 @@
 # Current Capabilities
 
-Last updated: 2026-02-16
+Last updated: 2026-02-17
 
 ## Scope Snapshot
 
@@ -19,8 +19,9 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
   - `cgpt ids`, `cgpt find`, `cgpt search`
 - Selection and dossier generation:
   - `cgpt build-dossier`, `cgpt quick`, `cgpt recent`, `cgpt make-dossiers`
-- Workspace bootstrap:
+- Workspace bootstrap and health checks:
   - `cgpt init` creates/verifies required folders.
+  - `cgpt doctor` validates runtime/layout state with optional `--fix`, `--dev`, and `--strict`.
 
 ## Selection Features Implemented
 
@@ -63,8 +64,11 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 
 ## Reliability and Validation
 
+- `cgpt doctor` provides local runtime/dependency/layout diagnostics.
 - Critical-path unit tests are in `tests/`.
 - One-command release preflight is available at `scripts/release_check.sh`.
+- CI test coverage includes Python `3.8` through `3.13` plus macOS/Windows smoke coverage.
+- CI includes required `unit` summary gating, `lint` (`ruff` + markdown lint), and docs policy enforcement (`docs-guard`).
 - Edge-case hardening tests cover ZIP path safety, timestamp coercion, strict config handling, and input-file decoding behavior.
 - Extraction rejects unsafe ZIP member paths before writing files.
 - Extraction rejects ZIP symlink/special members and enforces bounded member-count/uncompressed-size limits.
