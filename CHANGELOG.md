@@ -11,14 +11,20 @@ Maintenance note for markdown lint:
 
 ## [Unreleased]
 
-### Added
+### Changed
+
+- Nothing yet.
+
+## [0.2.6] - 2026-02-17
+
+### Added in 0.2.6
 
 - Added `doctor` command to validate runtime setup (`python`, home layout, optional DOCX dependency) with optional `--fix`, `--dev`, and `--strict` modes.
 - Added Python packaging metadata (`pyproject.toml`) with console entry point `cgpt` and optional extras: `docx`, `dev`.
 - Added contributor automation files: `Makefile` (`make check`) and `tox.ini` (`tox run -e py,lint`).
 - Added new CLI tests for `doctor` command behavior.
 
-### Changed
+### Changed in 0.2.6
 
 - Updated CI test matrix to include Python `3.12` and `3.13`, plus macOS/Windows smoke+unit runs.
 - Updated lint workflow to run pinned markdown lint via `npx` (no global install) and Python lint via `python -m ruff`.
@@ -205,6 +211,7 @@ Maintenance note for markdown lint:
 - FAQ and troubleshooting section
 - Common mistakes and fixes guide
 
+[0.2.6]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.6
 [0.2.5]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.5
 [0.2.4]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.4
 [0.2.3]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.3
@@ -212,4 +219,4 @@ Maintenance note for markdown lint:
 [0.2.1]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.1
 [0.2.0]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.0
 [0.1.0]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.1.0
-[Unreleased]: https://github.com/PurpleKaz81/cgpt/compare/v0.2.5...HEAD
+[Unreleased]: https://github.com/PurpleKaz81/cgpt/compare/v0.2.6...HEAD
