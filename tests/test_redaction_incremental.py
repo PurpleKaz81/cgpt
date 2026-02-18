@@ -158,6 +158,42 @@ class TestRedactionIncremental(unittest.TestCase):
         self.assertIn("jane@example.com", txt)
         self.assertFalse(self.state_path().exists())
 
+    def test_ui_phrase_not_classified_as_person_name(self):
+        now = time.time()
+        self.write_conversations(
+            [
+                _conv(
+                    "conv-a",
+                    "Alpha",
+                    now,
+                    "Data Controls -> Export Data (or via the Privacy Portal).",
+                    "ok",
+                )
+            ]
+        )
+        result = self.run_cgpt(
+            "build-dossier",
+            "--root",
+            str(self.root),
+            "--ids",
+            "conv-a",
+            "--mode",
+            "full",
+            "--format",
+            "txt",
+            "--no-split",
+        )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        txt = self.latest_dossier_txt().read_text(encoding="utf-8")
+        self.assertIn("Privacy Portal", txt)
+        report = json.loads(self.latest_report().read_text(encoding="utf-8"))
+        categories = {
+            item.get("category")
+            for state_name in ("resolved", "new_pending", "auto_high_conf", "kept")
+            for item in report.get("states", {}).get(state_name, [])
+        }
+        self.assertNotIn("person_name", categories)
+
     def test_second_run_same_input_adds_no_new_pending(self):
         now = time.time()
         self.write_conversations(

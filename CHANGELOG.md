@@ -19,6 +19,13 @@ Maintenance note for markdown lint:
 
 - Nothing yet.
 
+## [0.2.11] - 2026-02-18
+
+### Fixed in 0.2.11
+
+- Reduced false-positive `person_name` redaction matches by filtering title-cased UI/product noun phrases (for example `Privacy Portal`) from ambiguous-name detection.
+- Added regression coverage in `tests/test_redaction_incremental.py` to ensure non-person UI phrases are not queued as `person_name` candidates.
+
 ## [0.2.10] - 2026-02-18
 
 ### Added in 0.2.10
