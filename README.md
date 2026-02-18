@@ -1,5 +1,9 @@
 # cgpt: Beginner Guide (Idiot-Proof)
 
+`cgpt` is a local build system for AI context artifacts.
+It compiles ChatGPT export data plus selection/config into reusable dossiers.
+Those dossiers are handoff packages that let a new AI session resume with context instead of starting from zero.
+
 If you can copy and paste commands, you can use this tool.
 
 `cgpt` takes your ChatGPT export ZIP and compiles it into reusable context dossiers you can carry across sessions.
@@ -15,7 +19,7 @@ If you want full technical details and every flag, go to [TECHNICAL.md](TECHNICA
 
 ## What cgpt Is Really For
 
-- Continuity first: keep reasoning continuity across sessions instead of restarting from zero each time.
+- Context continuity over transcript cleanup: preserve reasoning and decisions across sessions instead of treating exports as one-off archives.
 - Deterministic local build flow: run the same inputs and config to produce consistent context artifacts.
 - Reliable handoff: package context so a future you (or another person/model session) can resume work with less ambiguity.
 

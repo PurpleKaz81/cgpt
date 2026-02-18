@@ -15,6 +15,14 @@ Maintenance note for markdown lint:
 
 - Nothing yet.
 
+## [0.2.9] - 2026-02-18
+
+### Changed in 0.2.9
+
+- Strengthened `README.md` opening to a concise three-line public-facing pitch that frames `cgpt` as a local build system for reusable AI context artifacts.
+- Elevated "context continuity over transcript cleanup" language in `README.md` to make product differentiation explicit.
+- Rewrote the problem statement in `docs/specs/product-vision.md` to explicitly describe the long-term memory gap in current AI chat products.
+
 ## [0.2.8] - 2026-02-17
 
 ### Changed in 0.2.8
@@ -231,6 +239,7 @@ Maintenance note for markdown lint:
 - FAQ and troubleshooting section
 - Common mistakes and fixes guide
 
+[0.2.9]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.9
 [0.2.8]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.8
 [0.2.7]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.7
 [0.2.6]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.6
@@ -241,4 +250,4 @@ Maintenance note for markdown lint:
 [0.2.1]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.1
 [0.2.0]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.0
 [0.1.0]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.1.0
-[Unreleased]: https://github.com/PurpleKaz81/cgpt/compare/v0.2.8...HEAD
+[Unreleased]: https://github.com/PurpleKaz81/cgpt/compare/v0.2.9...HEAD

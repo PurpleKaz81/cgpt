@@ -1,6 +1,6 @@
 # Product Vision
 
-Last updated: 2026-02-16
+Last updated: 2026-02-18
 
 ## Purpose
 
@@ -12,11 +12,11 @@ Define what `cgpt` is, who it serves, and what it is intentionally not trying to
 
 ## Problem Statement
 
-Users with long AI chat histories often cannot quickly recover the context they need for a new session. Manual rereading is slow, and chat UIs are not optimized for assembling cross-conversation context packets.
+Current AI chat products do not provide usable long-term working memory across sessions. A new session usually starts near zero context, so users must manually reconstruct prior decisions and reasoning from long chat histories. That reconstruction is slow, lossy, and poorly supported by chat UIs.
 
 ## Core Product Identity
 
-- Context continuity over transcript cleanup: the primary value is preserving reasoning and decisions across sessions.
+- Context continuity over transcript cleanup: the primary value and main differentiator is preserving reasoning and decisions across sessions.
 - Deterministic local context builds: treat conversation exports + selection + config as reproducible inputs that generate reusable artifacts.
 - Handoff reliability: produced dossiers should help another work cycle, another user, or another model session resume with less ambiguity.
 
