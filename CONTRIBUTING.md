@@ -48,6 +48,12 @@ tox run -e py,lint
 python3 cgpt.py doctor --dev
 ```
 
+If `gh` commands intermittently fail with `api.github.com` connectivity errors, use:
+
+```bash
+./scripts/gh_retry.sh gh <subcommand> ...
+```
+
 ## AI-Assisted Change Workflow
 
 When changes are made through AI assistance (for example Codex), use this default policy:

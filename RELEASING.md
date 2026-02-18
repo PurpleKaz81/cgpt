@@ -119,6 +119,22 @@ npx --yes markdownlint-cli2@0.16.0 "**/*.md" "#node_modules" "#.venv" "#.tox"
 
 If any command fails, fix before tagging.
 
+## GitHub CLI Resilience
+
+When running `gh` commands locally (for example PR checks or release creation), use the retry wrapper to tolerate transient `api.github.com` connectivity failures:
+
+```bash
+./scripts/gh_retry.sh gh pr checks <PR_NUMBER>
+./scripts/gh_retry.sh gh release create vX.Y.Z --title "cgpt vX.Y.Z" --notes-file /tmp/notes.md
+```
+
+You can tune retry behavior with:
+
+- `GH_RETRY_ATTEMPTS` (default: `5`)
+- `GH_RETRY_INITIAL_DELAY` (default: `2`)
+- `GH_RETRY_MAX_DELAY` (default: `30`)
+- `GH_RETRY_BACKOFF` (default: `2`)
+
 ## 3. Tag and push
 
 Replace `X.Y.Z` with the release version:
