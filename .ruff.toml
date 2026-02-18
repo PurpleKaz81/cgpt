@@ -4,7 +4,3 @@ exclude = ["zips", "extracted", "dossiers"]
 [lint]
 select = ["E", "F", "W", "I"]
 ignore = ["E501"]
-
-[lint.per-file-ignores]
-"tests/test_cli_critical_paths.py" = ["I001"]
-"tests/test_edge_case_hardening.py" = ["I001"]
