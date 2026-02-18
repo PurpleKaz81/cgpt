@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 import argparse
-import hashlib
 import heapq
-import hmac
 import importlib.util
 import json
 import os
 import re
-import secrets
 import shutil
 import sqlite3
 import stat
@@ -39,7 +36,7 @@ try:
 except Exception:
     pass
 
-__version__ = "0.2.11"
+__version__ = "0.2.12"
 
 SAO_PAULO_TZ = "America/Sao_Paulo"
 MIN_CONTEXT = 0
@@ -288,811 +285,6 @@ def warn_invalid_create_time(invalid_count: int, command_name: str) -> None:
             f"WARNING: Encountered {invalid_count} invalid create_time value(s) in {command_name}; coerced to 0.0.",
             file=sys.stderr,
         )
-
-
-def _now_iso_utc() -> str:
-    return datetime.now(tz=timezone.utc).isoformat()
-
-
-def _normalize_redaction_value(value: str) -> str:
-    s = re.sub(r"\s+", " ", (value or "").strip())
-    return s.casefold()
-
-
-def _normalize_redaction_string_list(values: Any, *, field: str) -> List[str]:
-    if not isinstance(values, list) or any(not isinstance(v, str) for v in values):
-        die(f"Invalid redaction profile schema for '{field}': expected a list of strings")
-    return [_normalize_redaction_value(v) for v in values if v.strip()]
-
-
-def load_redaction_profile(path_value: Optional[str]) -> Dict[str, Set[str]]:
-    if not path_value:
-        return {
-            "always_redact": set(),
-            "always_keep": set(),
-            "public_entities": set(),
-            "family_terms": set(),
-            "sensitive_terms": set(),
-        }
-    path = require_existing_file(path_value, label="redaction profile")
-    try:
-        raw = json.loads(read_text_utf8(path, label="redaction profile"))
-    except Exception as e:
-        die(f"Error loading redaction profile: {e}")
-    if not isinstance(raw, dict):
-        die("Invalid redaction profile schema: root must be an object")
-    allowed = {
-        "always_redact",
-        "always_keep",
-        "public_entities",
-        "family_terms",
-        "sensitive_terms",
-    }
-    unknown = sorted(k for k in raw.keys() if k not in allowed)
-    if unknown:
-        die(
-            "Invalid redaction profile schema: unknown key(s): "
-            + ", ".join(unknown)
-        )
-    profile: Dict[str, Set[str]] = {}
-    for key in allowed:
-        vals = raw.get(key, [])
-        profile[key] = set(_normalize_redaction_string_list(vals, field=key))
-    return profile
-
-
-def _validate_redaction_state(state: Any) -> Dict[str, Any]:
-    if not isinstance(state, dict):
-        die("Invalid redaction state: root must be an object")
-    allowed = {"schema_version", "salt_hex", "decisions", "pending", "stats"}
-    unknown = sorted(k for k in state.keys() if k not in allowed)
-    if unknown:
-        die(
-            "Invalid redaction state schema: unknown key(s): "
-            + ", ".join(unknown)
-        )
-    if state.get("schema_version") != 1:
-        die("Invalid redaction state schema: schema_version must be 1")
-    salt_hex = state.get("salt_hex")
-    if not isinstance(salt_hex, str) or not re.match(r"^[0-9a-f]{32,128}$", salt_hex):
-        die("Invalid redaction state schema: salt_hex must be lowercase hex")
-    decisions = state.get("decisions")
-    if not isinstance(decisions, dict):
-        die("Invalid redaction state schema: decisions must be an object")
-    pending = state.get("pending")
-    if not isinstance(pending, dict):
-        die("Invalid redaction state schema: pending must be an object")
-    stats = state.get("stats")
-    if not isinstance(stats, dict):
-        die("Invalid redaction state schema: stats must be an object")
-    if not isinstance(stats.get("runs"), int) or stats["runs"] < 0:
-        die("Invalid redaction state schema: stats.runs must be >= 0 integer")
-    if not isinstance(stats.get("updated_at"), str):
-        die("Invalid redaction state schema: stats.updated_at must be a string")
-
-    def _validate_entry(entry: Any, *, field: str, decision_required: bool) -> None:
-        if not isinstance(entry, dict):
-            die(f"Invalid redaction state schema: {field} entry must be an object")
-        required = {"category", "first_seen", "last_seen", "seen_count"}
-        if decision_required:
-            required = required | {"decision", "source"}
-        missing = sorted(k for k in required if k not in entry)
-        if missing:
-            die(
-                f"Invalid redaction state schema: {field} entry missing key(s): "
-                + ", ".join(missing)
-            )
-        allowed_entry = set(required)
-        unknown_entry = sorted(k for k in entry.keys() if k not in allowed_entry)
-        if unknown_entry:
-            die(
-                f"Invalid redaction state schema: {field} entry unknown key(s): "
-                + ", ".join(unknown_entry)
-            )
-        if not isinstance(entry.get("category"), str) or not entry["category"].strip():
-            die(f"Invalid redaction state schema: {field}.category must be a string")
-        if not isinstance(entry.get("first_seen"), str):
-            die(f"Invalid redaction state schema: {field}.first_seen must be a string")
-        if not isinstance(entry.get("last_seen"), str):
-            die(f"Invalid redaction state schema: {field}.last_seen must be a string")
-        if not isinstance(entry.get("seen_count"), int) or entry["seen_count"] < 1:
-            die(
-                f"Invalid redaction state schema: {field}.seen_count must be >= 1 integer"
-            )
-        if decision_required:
-            if entry.get("decision") not in {"redact", "keep"}:
-                die(
-                    f"Invalid redaction state schema: {field}.decision must be redact|keep"
-                )
-            if entry.get("source") not in {"manual", "auto_high_conf", "auto_default"}:
-                die(
-                    "Invalid redaction state schema: "
-                    f"{field}.source must be manual|auto_high_conf|auto_default"
-                )
-
-    for fid, entry in decisions.items():
-        if not isinstance(fid, str) or not re.match(r"^[0-9a-f]{64}$", fid):
-            die("Invalid redaction state schema: decisions key must be sha256 hex")
-        _validate_entry(entry, field="decisions", decision_required=True)
-    for fid, entry in pending.items():
-        if not isinstance(fid, str) or not re.match(r"^[0-9a-f]{64}$", fid):
-            die("Invalid redaction state schema: pending key must be sha256 hex")
-        _validate_entry(entry, field="pending", decision_required=False)
-    return state
-
-
-def _new_redaction_state() -> Dict[str, Any]:
-    return {
-        "schema_version": 1,
-        "salt_hex": secrets.token_hex(32),
-        "decisions": {},
-        "pending": {},
-        "stats": {"runs": 0, "updated_at": _now_iso_utc()},
-    }
-
-
-def load_redaction_state(store_dir: Path) -> Tuple[Path, Dict[str, Any]]:
-    store_dir.mkdir(parents=True, exist_ok=True)
-    state_path = store_dir / "state.v1.json"
-    if not state_path.exists():
-        state = _new_redaction_state()
-        state_path.write_text(
-            json.dumps(state, ensure_ascii=True, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
-        return state_path, state
-    try:
-        raw = json.loads(read_text_utf8(state_path, label="redaction state"))
-    except Exception as e:
-        die(f"Error loading redaction state: {e}")
-    return state_path, _validate_redaction_state(raw)
-
-
-def _fingerprint_redaction_value(value: str, salt_hex: str) -> str:
-    normalized = _normalize_redaction_value(value)
-    digest = hmac.new(
-        bytes.fromhex(salt_hex), normalized.encode("utf-8"), hashlib.sha256
-    ).hexdigest()
-    return digest
-
-
-def _redaction_context_snippet(text: str, start: int, end: int, radius: int = 45) -> str:
-    a = max(0, start - radius)
-    b = min(len(text), end + radius)
-    snippet = text[a:b].replace("\n", " ")
-    return re.sub(r"\s+", " ", snippet).strip()
-
-
-@dataclass
-class RedactionOptions:
-    enabled: bool
-    review: bool = False
-    profile_path: Optional[str] = None
-    store_dir: Optional[Path] = None
-
-
-@dataclass
-class RedactionCandidate:
-    start: int
-    end: int
-    text: str
-    category: str
-    high_confidence: bool
-    context: str
-
-
-HIGH_CONFIDENCE_CATEGORIES = {"email", "phone", "token", "account_id"}
-DEFAULT_FAMILY_TERMS = {
-    "sister",
-    "brother",
-    "mom",
-    "mother",
-    "dad",
-    "father",
-    "wife",
-    "husband",
-    "partner",
-    "child",
-    "son",
-    "daughter",
-    "family",
-    "my name is",
-}
-DEFAULT_SENSITIVE_TERMS = {
-    "my",
-    "mine",
-    "contact",
-    "address",
-    "phone",
-    "email",
-    "account",
-    "private",
-}
-DEFAULT_PUBLIC_CONTEXT_TERMS = {
-    "president",
-    "prime minister",
-    "ceo",
-    "public figure",
-    "senator",
-    "journalist",
-    "historian",
-    "actor",
-    "author",
-    "company",
-}
-NAME_STOPWORDS = {
-    "The",
-    "And",
-    "For",
-    "With",
-    "From",
-    "This",
-    "That",
-    "These",
-    "Those",
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday",
-}
-NON_PERSON_NAME_NOUNS = {
-    "account",
-    "analytics",
-    "api",
-    "app",
-    "center",
-    "console",
-    "control",
-    "controls",
-    "dashboard",
-    "data",
-    "docs",
-    "documentation",
-    "export",
-    "guide",
-    "help",
-    "home",
-    "hub",
-    "menu",
-    "page",
-    "panel",
-    "policy",
-    "portal",
-    "privacy",
-    "profile",
-    "report",
-    "reports",
-    "security",
-    "service",
-    "services",
-    "settings",
-    "support",
-    "system",
-    "terms",
-    "tools",
-}
-
-EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b")
-PHONE_RE = re.compile(
-    r"(?<!\w)(?:\+?\d{1,3}[\s.\-]?)?(?:\(?\d{2,4}\)?[\s.\-]?){2,4}\d{2,4}(?!\w)"
-)
-TOKEN_RE = re.compile(
-    r"\b(?:sk-[A-Za-z0-9]{16,}|ghp_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9\-]{12,}|AIza[0-9A-Za-z\-_]{20,})\b"
-)
-SECRET_ASSIGN_RE = re.compile(
-    r"\b(?:api[_-]?key|token|secret|password|passcode|pwd)\b\s*[:=]\s*([^\s,;]+)",
-    re.IGNORECASE,
-)
-ACCOUNT_RE = re.compile(
-    r"\b(?:account|acct|iban|swift|routing|ssn|cpf|cnpj|passport|license|customer|member|client)\s*(?:number|no|id|#)?\s*[:#-]?\s*[A-Za-z0-9][A-Za-z0-9\-]{4,}\b",
-    re.IGNORECASE,
-)
-ADDRESS_RE = re.compile(
-    r"\b\d{1,5}\s+[A-Za-z0-9][A-Za-z0-9.\- ]{2,60}\s(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Lane|Ln|Drive|Dr|Way|Court|Ct)\b\.?",
-    re.IGNORECASE,
-)
-NAME_RE = re.compile(r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2}\b")
-OTHER_SENSITIVE_RE = re.compile(
-    r"\b(?:passport|driver(?:'s)? license|medical record|tax id)\s*[:#-]?\s*[A-Za-z0-9\-]{4,}\b",
-    re.IGNORECASE,
-)
-
-
-def _category_placeholder_label(category: str) -> str:
-    label = re.sub(r"[^A-Za-z0-9]+", "_", category.upper()).strip("_")
-    return label or "VALUE"
-
-
-def _is_probable_person_name(value: str) -> bool:
-    parts = value.split()
-    if len(parts) < 2 or len(parts) > 3:
-        return False
-    if any(p in NAME_STOPWORDS for p in parts):
-        return False
-    # Filter obvious UI/product noun phrases such as "Privacy Portal".
-    if all(p.casefold() in NON_PERSON_NAME_NOUNS for p in parts):
-        return False
-    if any(len(p) < 2 for p in parts):
-        return False
-    return True
-
-
-def _candidate_overlaps(a: RedactionCandidate, b: RedactionCandidate) -> bool:
-    return not (a.end <= b.start or b.end <= a.start)
-
-
-def _dedupe_redaction_candidates(
-    candidates: List[RedactionCandidate],
-) -> List[RedactionCandidate]:
-    ordered = sorted(
-        candidates,
-        key=lambda c: (int(c.high_confidence), c.end - c.start, -c.start),
-        reverse=True,
-    )
-    kept: List[RedactionCandidate] = []
-    for cand in ordered:
-        if any(_candidate_overlaps(cand, existing) for existing in kept):
-            continue
-        kept.append(cand)
-    kept.sort(key=lambda c: c.start)
-    return kept
-
-
-def _collect_redaction_candidates(
-    text: str, profile: Dict[str, Set[str]]
-) -> List[RedactionCandidate]:
-    candidates: List[RedactionCandidate] = []
-
-    def _append(start: int, end: int, category: str, high_conf: bool) -> None:
-        if start < 0 or end <= start:
-            return
-        raw = text[start:end]
-        if not raw.strip():
-            return
-        if raw.startswith("[REDACTED_"):
-            return
-        candidates.append(
-            RedactionCandidate(
-                start=start,
-                end=end,
-                text=raw,
-                category=category,
-                high_confidence=high_conf,
-                context=_redaction_context_snippet(text, start, end),
-            )
-        )
-
-    for m in EMAIL_RE.finditer(text):
-        _append(m.start(), m.end(), "email", True)
-    for m in PHONE_RE.finditer(text):
-        digits = re.sub(r"\D", "", m.group(0))
-        if len(digits) >= 10:
-            _append(m.start(), m.end(), "phone", True)
-    for m in TOKEN_RE.finditer(text):
-        _append(m.start(), m.end(), "token", True)
-    for m in SECRET_ASSIGN_RE.finditer(text):
-        _append(m.start(1), m.end(1), "token", True)
-    for m in ACCOUNT_RE.finditer(text):
-        _append(m.start(), m.end(), "account_id", True)
-    for m in ADDRESS_RE.finditer(text):
-        _append(m.start(), m.end(), "address_like", False)
-    for m in OTHER_SENSITIVE_RE.finditer(text):
-        _append(m.start(), m.end(), "other_sensitive", False)
-    for m in NAME_RE.finditer(text):
-        value = m.group(0)
-        if not _is_probable_person_name(value):
-            continue
-        normalized = _normalize_redaction_value(value)
-        if normalized in profile.get("public_entities", set()):
-            continue
-        context = _redaction_context_snippet(text, m.start(), m.end()).casefold()
-        redact_terms = DEFAULT_FAMILY_TERMS | DEFAULT_SENSITIVE_TERMS
-        redact_terms |= profile.get("family_terms", set())
-        redact_terms |= profile.get("sensitive_terms", set())
-        if any(term in context for term in DEFAULT_PUBLIC_CONTEXT_TERMS) and not any(
-            term in context for term in redact_terms
-        ):
-            continue
-        _append(m.start(), m.end(), "person_name", False)
-    return _dedupe_redaction_candidates(candidates)
-
-
-class RedactionSession:
-    def __init__(self, options: RedactionOptions) -> None:
-        self.options = options
-        if not self.options.store_dir:
-            die("Internal error: redaction store directory was not resolved")
-        if self.options.review and not sys.stdin.isatty():
-            die(
-                "--redact-review requires an interactive terminal. "
-                "Run without --redact-review in non-interactive mode."
-            )
-        self.state_path, self.state = load_redaction_state(self.options.store_dir)
-        self.profile = load_redaction_profile(self.options.profile_path)
-        self._placeholder_by_fid: Dict[str, str] = {}
-        self._placeholder_counters: Dict[str, int] = {}
-        self._session_choice: Dict[str, str] = {}
-        self._output_stats: Dict[str, Dict[str, int]] = {}
-        self._output_fingerprints: Dict[str, Set[str]] = {}
-        self._fid_category: Dict[str, str] = {}
-        self._resolved_fids: Set[str] = set()
-        self._new_pending_fids: Set[str] = set()
-        self._auto_high_conf_fids: Set[str] = set()
-        self._kept_fids: Set[str] = set()
-
-    def _upsert_decision(
-        self, fingerprint: str, *, decision: str, category: str, source: str
-    ) -> None:
-        now = _now_iso_utc()
-        entry = self.state["decisions"].get(fingerprint)
-        if entry:
-            entry["decision"] = decision
-            entry["category"] = category
-            entry["source"] = source
-            entry["last_seen"] = now
-            entry["seen_count"] = int(entry.get("seen_count", 0)) + 1
-        else:
-            self.state["decisions"][fingerprint] = {
-                "decision": decision,
-                "category": category,
-                "source": source,
-                "first_seen": now,
-                "last_seen": now,
-                "seen_count": 1,
-            }
-
-    def _touch_existing_decision(self, fingerprint: str, category: str) -> None:
-        entry = self.state["decisions"].get(fingerprint)
-        if not entry:
-            return
-        entry["category"] = category
-        entry["last_seen"] = _now_iso_utc()
-        entry["seen_count"] = int(entry.get("seen_count", 0)) + 1
-
-    def _upsert_pending(self, fingerprint: str, *, category: str) -> bool:
-        now = _now_iso_utc()
-        existing = self.state["pending"].get(fingerprint)
-        if existing:
-            existing["category"] = category
-            existing["last_seen"] = now
-            existing["seen_count"] = int(existing.get("seen_count", 0)) + 1
-            return False
-        self.state["pending"][fingerprint] = {
-            "category": category,
-            "first_seen": now,
-            "last_seen": now,
-            "seen_count": 1,
-        }
-        return True
-
-    def _remove_pending(self, fingerprint: str) -> None:
-        self.state["pending"].pop(fingerprint, None)
-
-    def _placeholder_for(self, fingerprint: str, category: str) -> str:
-        existing = self._placeholder_by_fid.get(fingerprint)
-        if existing:
-            return existing
-        label = _category_placeholder_label(category)
-        count = self._placeholder_counters.get(label, 0) + 1
-        self._placeholder_counters[label] = count
-        placeholder = f"[REDACTED_{label}_{count:03d}]"
-        self._placeholder_by_fid[fingerprint] = placeholder
-        return placeholder
-
-    def _profile_decision(
-        self, *, normalized_value: str, category: str, context_lower: str
-    ) -> Optional[str]:
-        always_redact = self.profile.get("always_redact", set())
-        always_keep = self.profile.get("always_keep", set())
-        if normalized_value in always_keep:
-            return "keep"
-        if normalized_value in always_redact:
-            return "redact"
-
-        if category == "person_name":
-            public_entities = self.profile.get("public_entities", set())
-            if normalized_value in public_entities:
-                return "keep"
-        return None
-
-    def _prompt_decision(
-        self, *, fingerprint: str, candidate: RedactionCandidate
-    ) -> str:
-        if fingerprint in self._session_choice:
-            return self._session_choice[fingerprint]
-
-        while True:
-            print("\nRedaction review candidate:")
-            print(f"- category: {candidate.category}")
-            print(f"- value: {candidate.text}")
-            print(f"- context: {candidate.context}")
-            print("Choose: [r]edact, [k]eep, [ar] always redact, [ak] always keep, [s]kip")
-            try:
-                choice = input("> ").strip().lower()
-            except (KeyboardInterrupt, EOFError):
-                print("\nReview cancelled.")
-                die("Redaction review cancelled by user.")
-            if choice in {"r", "redact", "ar", "always redact"}:
-                self._session_choice[fingerprint] = "redact"
-                return "redact"
-            if choice in {"k", "keep", "ak", "always keep"}:
-                self._session_choice[fingerprint] = "keep"
-                return "keep"
-            if choice in {"s", "skip"}:
-                self._session_choice[fingerprint] = "skip"
-                return "skip"
-            print("Invalid choice. Use r, k, ar, ak, or s.", file=sys.stderr)
-
-    def _resolve_candidate(
-        self, candidate: RedactionCandidate
-    ) -> Tuple[str, str, str, bool]:
-        fingerprint = _fingerprint_redaction_value(candidate.text, self.state["salt_hex"])
-        category = candidate.category
-        self._fid_category[fingerprint] = category
-        normalized_value = _normalize_redaction_value(candidate.text)
-        context_lower = candidate.context.casefold()
-
-        if fingerprint in self._session_choice:
-            session_choice = self._session_choice[fingerprint]
-            if session_choice == "keep":
-                self._kept_fids.add(fingerprint)
-                self._upsert_decision(
-                    fingerprint,
-                    decision="keep",
-                    category=category,
-                    source="manual",
-                )
-                self._remove_pending(fingerprint)
-                return "keep", fingerprint, "manual", False
-            if session_choice == "redact":
-                self._upsert_decision(
-                    fingerprint,
-                    decision="redact",
-                    category=category,
-                    source="manual",
-                )
-                self._remove_pending(fingerprint)
-                return "redact", fingerprint, "manual", False
-            is_new = self._upsert_pending(fingerprint, category=category)
-            if is_new:
-                self._new_pending_fids.add(fingerprint)
-            return "redact", fingerprint, "auto_default", True
-
-        decided_entry = self.state["decisions"].get(fingerprint)
-        if decided_entry:
-            self._touch_existing_decision(fingerprint, category)
-            if decided_entry.get("decision") == "keep":
-                self._kept_fids.add(fingerprint)
-                return "keep", fingerprint, str(decided_entry.get("source", "manual")), False
-            return "redact", fingerprint, str(decided_entry.get("source", "manual")), False
-
-        profile_decision = self._profile_decision(
-            normalized_value=normalized_value,
-            category=category,
-            context_lower=context_lower,
-        )
-        if profile_decision == "keep":
-            self._kept_fids.add(fingerprint)
-            self._upsert_decision(
-                fingerprint,
-                decision="keep",
-                category=category,
-                source="manual",
-            )
-            self._remove_pending(fingerprint)
-            return "keep", fingerprint, "manual", False
-        if profile_decision == "redact":
-            self._upsert_decision(
-                fingerprint,
-                decision="redact",
-                category=category,
-                source="manual",
-            )
-            self._remove_pending(fingerprint)
-            return "redact", fingerprint, "manual", False
-
-        if category in HIGH_CONFIDENCE_CATEGORIES or candidate.high_confidence:
-            self._upsert_decision(
-                fingerprint,
-                decision="redact",
-                category=category,
-                source="auto_high_conf",
-            )
-            self._remove_pending(fingerprint)
-            self._auto_high_conf_fids.add(fingerprint)
-            return "redact", fingerprint, "auto_high_conf", False
-
-        if self.options.review:
-            decision = self._prompt_decision(fingerprint=fingerprint, candidate=candidate)
-            if decision == "keep":
-                self._kept_fids.add(fingerprint)
-                self._upsert_decision(
-                    fingerprint,
-                    decision="keep",
-                    category=category,
-                    source="manual",
-                )
-                self._remove_pending(fingerprint)
-                self._resolved_fids.add(fingerprint)
-                return "keep", fingerprint, "manual", False
-            if decision == "redact":
-                self._upsert_decision(
-                    fingerprint,
-                    decision="redact",
-                    category=category,
-                    source="manual",
-                )
-                self._remove_pending(fingerprint)
-                self._resolved_fids.add(fingerprint)
-                return "redact", fingerprint, "manual", False
-            is_new = self._upsert_pending(fingerprint, category=category)
-            if is_new:
-                self._new_pending_fids.add(fingerprint)
-            return "redact", fingerprint, "auto_default", True
-
-        is_new = self._upsert_pending(fingerprint, category=category)
-        if is_new:
-            self._new_pending_fids.add(fingerprint)
-        return "redact", fingerprint, "auto_default", True
-
-    def apply_text(self, text: str, *, output_label: str) -> str:
-        if not text:
-            return text
-        candidates = _collect_redaction_candidates(text, self.profile)
-        if not candidates:
-            return text
-
-        self._output_stats.setdefault(
-            output_label, {"total_candidates": 0, "redacted": 0, "kept": 0, "pending": 0}
-        )
-        self._output_fingerprints.setdefault(output_label, set())
-
-        replaced = text
-        for cand in sorted(candidates, key=lambda c: c.start, reverse=True):
-            decision, fingerprint, _source, is_pending = self._resolve_candidate(cand)
-            self._output_stats[output_label]["total_candidates"] += 1
-            self._output_fingerprints[output_label].add(fingerprint)
-            if decision == "keep":
-                self._output_stats[output_label]["kept"] += 1
-                continue
-            placeholder = self._placeholder_for(fingerprint, cand.category)
-            replaced = replaced[: cand.start] + placeholder + replaced[cand.end :]
-            self._output_stats[output_label]["redacted"] += 1
-            if is_pending:
-                self._output_stats[output_label]["pending"] += 1
-        return replaced
-
-    def _collect_report_entries(
-        self, fingerprints: Set[str], *, source_set: Set[str], include_decision: bool = False
-    ) -> List[Dict[str, Any]]:
-        out: List[Dict[str, Any]] = []
-        for fid in sorted(source_set):
-            if fid not in fingerprints:
-                continue
-            category = self._fid_category.get(fid, "")
-            item: Dict[str, Any] = {"fingerprint": fid, "category": category}
-            decision_entry = self.state["decisions"].get(fid)
-            if include_decision and decision_entry:
-                item["decision"] = decision_entry.get("decision")
-                item["source"] = decision_entry.get("source")
-            out.append(item)
-        return out
-
-    def build_report(self, *, output_labels: Optional[Set[str]] = None) -> Dict[str, Any]:
-        if output_labels is None:
-            output_labels = set(self._output_stats.keys())
-        fingerprints: Set[str] = set()
-        summary = {"total_candidates": 0, "redacted": 0, "kept": 0, "pending": 0}
-        outputs: Dict[str, Dict[str, int]] = {}
-        for label in sorted(output_labels):
-            stats = self._output_stats.get(label)
-            if not stats:
-                continue
-            outputs[label] = dict(stats)
-            summary["total_candidates"] += int(stats.get("total_candidates", 0))
-            summary["redacted"] += int(stats.get("redacted", 0))
-            summary["kept"] += int(stats.get("kept", 0))
-            summary["pending"] += int(stats.get("pending", 0))
-            fingerprints |= self._output_fingerprints.get(label, set())
-
-        new_pending_entries: List[Dict[str, Any]] = []
-        for fid in sorted(self._new_pending_fids):
-            if fid not in fingerprints:
-                continue
-            pending_entry = self.state["pending"].get(fid, {})
-            new_pending_entries.append(
-                {
-                    "fingerprint": fid,
-                    "category": self._fid_category.get(
-                        fid, str(pending_entry.get("category", ""))
-                    ),
-                }
-            )
-
-        return {
-            "schema_version": 1,
-            "generated_at": _now_iso_utc(),
-            "store_path": str(self.state_path),
-            "summary": summary,
-            "states": {
-                "resolved": self._collect_report_entries(
-                    fingerprints,
-                    source_set=self._resolved_fids,
-                    include_decision=True,
-                ),
-                "new_pending": new_pending_entries,
-                "auto_high_conf": self._collect_report_entries(
-                    fingerprints,
-                    source_set=self._auto_high_conf_fids,
-                    include_decision=True,
-                ),
-                "kept": self._collect_report_entries(
-                    fingerprints,
-                    source_set=self._kept_fids,
-                    include_decision=True,
-                ),
-            },
-            "outputs": outputs,
-        }
-
-    def write_report(self, report_path: Path, *, output_labels: Optional[Set[str]] = None) -> None:
-        report = self.build_report(output_labels=output_labels)
-        report_path.parent.mkdir(parents=True, exist_ok=True)
-        report_path.write_text(
-            json.dumps(report, ensure_ascii=True, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
-
-    def finalize(self) -> None:
-        self.state["stats"]["runs"] = int(self.state["stats"].get("runs", 0)) + 1
-        self.state["stats"]["updated_at"] = _now_iso_utc()
-        self.state_path.write_text(
-            json.dumps(self.state, ensure_ascii=True, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
-
-
-def _resolve_redaction_store_dir(
-    *, dossiers_dir: Path, store_value: Optional[str]
-) -> Path:
-    if store_value:
-        return Path(store_value).expanduser().resolve()
-    return dossiers_dir / ".redaction"
-
-
-def resolve_redaction_options(args: argparse.Namespace, dossiers_dir: Path) -> RedactionOptions:
-    enabled = bool(getattr(args, "redact", False))
-    review = bool(getattr(args, "redact_review", False))
-    if review and not enabled:
-        die("--redact-review cannot be used with --no-redact")
-    profile_path = getattr(args, "redact_profile", None)
-    if profile_path:
-        require_existing_file(profile_path, label="redaction profile")
-    store_dir = _resolve_redaction_store_dir(
-        dossiers_dir=dossiers_dir,
-        store_value=getattr(args, "redact_store", None),
-    )
-    return RedactionOptions(
-        enabled=enabled,
-        review=review,
-        profile_path=profile_path,
-        store_dir=store_dir,
-    )
 
 
 def is_unsafe_zip_member(member_name: str, dest_dir: Path) -> bool:
@@ -2933,7 +2125,6 @@ def build_combined_dossier(
     used_links_file: Optional[str] = None,
     config_file: Optional[str] = None,
     name: Optional[str] = None,
-    redaction_options: Optional[RedactionOptions] = None,
 ) -> Path:
     if not wanted_ids:
         die("No valid selections provided; cannot build dossier.")
@@ -3195,37 +2386,6 @@ def build_combined_dossier(
             print(f"WARNING: Working TXT processing failed: {e}", file=sys.stderr)
             working_txt = None
 
-    # Apply redaction stage before writing any output files.
-    redaction_session: Optional[RedactionSession] = None
-    redaction_output_labels: Set[str] = set()
-    txt_path = out_path.with_suffix(".txt")
-    working_path = txt_path.parent / (txt_path.stem + "__working" + txt_path.suffix)
-    md_path = out_path
-    docx_path = out_path.with_suffix(".docx")
-    if redaction_options and redaction_options.enabled:
-        redaction_session = RedactionSession(redaction_options)
-        if "md" in req_formats or "docx" in req_formats:
-            md_content = redaction_session.apply_text(
-                md_content,
-                output_label=str(md_path),
-            )
-            if "md" in req_formats:
-                redaction_output_labels.add(str(md_path))
-            if "docx" in req_formats:
-                redaction_output_labels.add(str(docx_path))
-        if "txt" in req_formats and raw_txt:
-            raw_txt = redaction_session.apply_text(
-                raw_txt,
-                output_label=str(txt_path),
-            )
-            redaction_output_labels.add(str(txt_path))
-        if "txt" in req_formats and split and working_txt:
-            working_txt = redaction_session.apply_text(
-                working_txt,
-                output_label=str(working_path),
-            )
-            redaction_output_labels.add(str(working_path))
-
     # Write MD if requested
     if "md" in req_formats:
         try:
@@ -3237,6 +2397,7 @@ def build_combined_dossier(
     # Write TXT files
     if "txt" in req_formats:
         try:
+            txt_path = out_path.with_suffix(".txt")
             if raw_txt:
                 txt_path.write_text(raw_txt, encoding="utf-8")
                 if created_primary is None:
@@ -3244,6 +2405,10 @@ def build_combined_dossier(
 
             # Write working variant if split enabled
             if split and working_txt:
+                working_path = txt_path.parent / (
+                    txt_path.stem + "__working" + txt_path.suffix
+                )
+
                 # HARD GUARDS: Verify appendix header appears exactly once (only if appended)
                 if append_expected:
                     appendix_header_count = working_txt.count(
@@ -3273,6 +2438,7 @@ def build_combined_dossier(
         try:
             from docx import Document  # type: ignore
 
+            docx_path = out_path.with_suffix(".docx")
             docx_doc = Document()
             plain = _markdown_to_plain(md_content)
             for para in [p for p in plain.split("\n\n") if p.strip()]:
@@ -3288,17 +2454,6 @@ def build_combined_dossier(
             "No dossier output files were created. "
             "Check requested formats and dependencies (for DOCX, install python-docx)."
         )
-    if redaction_session:
-        redaction_session.finalize()
-        report_base = out_path.with_suffix("")
-        report_path = report_base.parent / f"{report_base.name}__redaction_report.json"
-        try:
-            redaction_session.write_report(
-                report_path,
-                output_labels=redaction_output_labels,
-            )
-        except Exception as e:
-            print(f"WARNING: Failed to write redaction report: {e}", file=sys.stderr)
     return created_primary
 
 
@@ -3508,33 +2663,11 @@ def cmd_make_dossiers(args: argparse.Namespace) -> None:
     if missing:
         die("Some IDs not found in export:\n" + "\n".join(missing))
 
-    # normalize requested formats (default to txt)
-    req_formats = [f.lower() for f in (getattr(args, "format", None) or [])]
-    if not req_formats:
-        req_formats = ["txt"]
-
-    redaction_options = resolve_redaction_options(args, dossiers_dir)
-    redaction_session = (
-        RedactionSession(redaction_options) if redaction_options.enabled else None
-    )
-
-    # helper: convert markdown -> plain text
-    def _markdown_to_plain(md: str) -> str:
-        s = re.sub(r"\r\n?", "\n", md)
-        s = re.sub(r"(?m)^#{1,6}\s*", "", s)
-        s = re.sub(r"\*\*(.*?)\*\*", r"\1", s)
-        s = re.sub(r"\*(.*?)\*", r"\1", s)
-        s = re.sub(r"```.*?```", "", s, flags=re.S)
-        s = re.sub(r"`([^`]+)`", r"\1", s)
-        s = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", s)
-        s = re.sub(r"\n{3,}", "\n\n", s)
-        return s.strip() + "\n"
-
-    items: List[Dict[str, Any]] = []
     for cid in wanted:
         c = by_id[cid]
         _, title = conv_id_and_title(c)
         base = dossiers_dir / f"{cid}__{safe_slug(title or 'untitled')}"
+        md_path = base.with_suffix(".md")
 
         msgs = extract_messages_best_effort(c)
         header = f"# {title or 'Untitled'}\n\n- id: {cid}\n"
@@ -3547,86 +2680,27 @@ def cmd_make_dossiers(args: argparse.Namespace) -> None:
         for m in msgs:
             role_name = m.role.capitalize()
             parts.append(f"## {role_name} ({ts_to_local_str(m.t)})\n\n{m.text}\n\n")
+
         md_content = "".join(parts)
 
-        txt_content = None
-        if "txt" in req_formats:
-            clean_txt_lines: List[str] = []
-            clean_txt_lines.append(f"{title or 'Untitled'}\n")
-            clean_txt_lines.append(
-                f"Generated: {ts_to_local_str(datetime.now(tz=timezone.utc).timestamp())}\n"
-            )
-            clean_txt_lines.append(f"Source: {root}\n\n")
+        # normalize requested formats (default to txt)
+        req_formats = [f.lower() for f in (getattr(args, "format", None) or [])]
+        if not req_formats:
+            req_formats = ["txt"]
 
-            sources: List[Tuple[str, str]] = []
-            for msg in msgs:
-                sources.extend(_extract_sources(msg.text))
+        # helper: convert markdown -> plain text
+        def _markdown_to_plain(md: str) -> str:
+            s = re.sub(r"\r\n?", "\n", md)
+            s = re.sub(r"(?m)^#{1,6}\s*", "", s)
+            s = re.sub(r"\*\*(.*?)\*\*", r"\1", s)
+            s = re.sub(r"\*(.*?)\*", r"\1", s)
+            s = re.sub(r"```.*?```", "", s, flags=re.S)
+            s = re.sub(r"`([^`]+)`", r"\1", s)
+            s = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", s)
+            s = re.sub(r"\n{3,}", "\n\n", s)
+            return s.strip() + "\n"
 
-            clean_txt_lines.append("=" * 70 + "\n")
-            for msg in msgs:
-                role = msg.role.capitalize()
-                clean_txt_lines.append(f"{role}:\n\n{msg.text}\n\n")
-
-            if sources:
-                sources_dict: Dict[str, str] = {}
-                for url, label in sources:
-                    if url not in sources_dict:
-                        sources_dict[url] = label
-
-                clean_txt_lines.append("\n" + "=" * 70 + "\n")
-                clean_txt_lines.append("SOURCES REGISTRY\n")
-                clean_txt_lines.append("=" * 70 + "\n\n")
-                for i, (url, label) in enumerate(sorted(sources_dict.items()), start=1):
-                    clean_txt_lines.append(f"[{i}] {label}\n    {url}\n\n")
-            txt_content = "".join(clean_txt_lines)
-
-        items.append(
-            {
-                "cid": cid,
-                "base": base,
-                "md_content": md_content,
-                "txt_content": txt_content,
-                "report_labels": set(),
-            }
-        )
-
-    if redaction_session:
-        for item in items:
-            base = item["base"]
-            md_label = str(base.with_suffix(".md"))
-            docx_label = str(base.with_suffix(".docx"))
-            txt_label = str(base.with_suffix(".txt"))
-
-            if "md" in req_formats:
-                item["md_content"] = redaction_session.apply_text(
-                    item["md_content"],
-                    output_label=md_label,
-                )
-                item["report_labels"].add(md_label)
-            elif "docx" in req_formats:
-                item["md_content"] = redaction_session.apply_text(
-                    item["md_content"],
-                    output_label=docx_label,
-                )
-                item["report_labels"].add(docx_label)
-
-            if "txt" in req_formats and item["txt_content"]:
-                item["txt_content"] = redaction_session.apply_text(
-                    item["txt_content"],
-                    output_label=txt_label,
-                )
-                item["report_labels"].add(txt_label)
-
-    report_requests: List[Tuple[Path, Set[str]]] = []
-    for item in items:
-        cid = item["cid"]
-        base = item["base"]
-        md_content = item["md_content"]
-        txt_content = item["txt_content"]
         created_paths: List[Path] = []
-        md_path = base.with_suffix(".md")
-        txt_path = base.with_suffix(".txt")
-        docx_path = base.with_suffix(".docx")
 
         if "md" in req_formats:
             try:
@@ -3638,9 +2712,44 @@ def cmd_make_dossiers(args: argparse.Namespace) -> None:
                     file=sys.stderr,
                 )
 
-        if "txt" in req_formats and txt_content is not None:
+        if "txt" in req_formats:
             try:
-                txt_path.write_text(txt_content, encoding="utf-8")
+                # Use clean TXT format for per-conversation dossiers as well
+                clean_txt_lines: List[str] = []
+                clean_txt_lines.append(f"{title or 'Untitled'}\n")
+                clean_txt_lines.append(
+                    f"Generated: {ts_to_local_str(datetime.now(tz=timezone.utc).timestamp())}\n"
+                )
+                clean_txt_lines.append(f"Source: {root}\n\n")
+
+                # Extract sources from this conversation
+                sources: List[Tuple[str, str]] = []
+                for msg in msgs:
+                    sources.extend(_extract_sources(msg.text))
+
+                # Main content
+                clean_txt_lines.append("=" * 70 + "\n")
+                for msg in msgs:
+                    role = msg.role.capitalize()
+                    clean_txt_lines.append(f"{role}:\n\n{msg.text}\n\n")
+
+                # Sources registry
+                if sources:
+                    sources_dict: Dict[str, str] = {}
+                    for url, label in sources:
+                        if url not in sources_dict:
+                            sources_dict[url] = label
+
+                    clean_txt_lines.append("\n" + "=" * 70 + "\n")
+                    clean_txt_lines.append("SOURCES REGISTRY\n")
+                    clean_txt_lines.append("=" * 70 + "\n\n")
+                    for i, (url, label) in enumerate(
+                        sorted(sources_dict.items()), start=1
+                    ):
+                        clean_txt_lines.append(f"[{i}] {label}\n    {url}\n\n")
+
+                txt_path = base.with_suffix(".txt")
+                txt_path.write_text("".join(clean_txt_lines), encoding="utf-8")
                 created_paths.append(txt_path)
             except Exception as e:
                 print(
@@ -3652,6 +2761,7 @@ def cmd_make_dossiers(args: argparse.Namespace) -> None:
             try:
                 from docx import Document  # type: ignore
 
+                docx_path = base.with_suffix(".docx")
                 docx_doc = Document()
                 plain = _markdown_to_plain(md_content)
                 for para in [p for p in plain.split("\n\n") if p.strip()]:
@@ -3664,7 +2774,9 @@ def cmd_make_dossiers(args: argparse.Namespace) -> None:
                     file=sys.stderr,
                 )
 
+        # Print whichever primary file was created (prefer txt then md then docx)
         if created_paths:
+            # choose preferred ordering
             for ext in (".txt", ".md", ".docx"):
                 for p in created_paths:
                     if p.suffix == ext:
@@ -3678,21 +2790,6 @@ def cmd_make_dossiers(args: argparse.Namespace) -> None:
                 f"WARNING: No output files created for conversation {cid}",
                 file=sys.stderr,
             )
-
-        if redaction_session and item["report_labels"]:
-            report_path = base.parent / f"{base.name}__redaction_report.json"
-            report_requests.append((report_path, set(item["report_labels"])))
-
-    if redaction_session:
-        redaction_session.finalize()
-        for report_path, labels in report_requests:
-            try:
-                redaction_session.write_report(report_path, output_labels=labels)
-            except Exception as e:
-                print(
-                    f"WARNING: Failed to write redaction report {report_path}: {e}",
-                    file=sys.stderr,
-                )
 
 
 def cmd_build_dossier(args: argparse.Namespace) -> None:
@@ -3761,7 +2858,6 @@ def cmd_build_dossier(args: argparse.Namespace) -> None:
         )
     config_file = getattr(args, "config", None)
     name = getattr(args, "name", None)
-    redaction_options = resolve_redaction_options(args, dossiers_dir)
 
     out_path = build_combined_dossier(
         topics=topics,
@@ -3778,7 +2874,6 @@ def cmd_build_dossier(args: argparse.Namespace) -> None:
         used_links_file=used_links_file,
         config_file=config_file,
         name=name,
-        redaction_options=redaction_options,
     )
     print(out_path)
 
@@ -3983,7 +3078,6 @@ def cmd_recent(args: argparse.Namespace) -> None:
     mode = getattr(args, "mode", None) or "full"
     context = int(getattr(args, "context", 2))
     name = getattr(args, "name", None)
-    redaction_options = resolve_redaction_options(args, dossiers_dir)
 
     out_path = build_combined_dossier(
         topics=[f"recent-{count}"],
@@ -4000,7 +3094,6 @@ def cmd_recent(args: argparse.Namespace) -> None:
         used_links_file=used_links_file,
         config_file=config_file,
         name=name,
-        redaction_options=redaction_options,
     )
     print(f"\nWrote dossier: {out_path}")
 
@@ -4306,7 +3399,6 @@ def cmd_quick(args: argparse.Namespace) -> None:
         )
     config_file = getattr(args, "config", None)
     name = getattr(args, "name", None)
-    redaction_options = resolve_redaction_options(args, dossiers_dir)
 
     out_path = build_combined_dossier(
         topics=topics,
@@ -4323,7 +3415,6 @@ def cmd_quick(args: argparse.Namespace) -> None:
         used_links_file=used_links_file,
         config_file=config_file,
         name=name,
-        redaction_options=redaction_options,
     )
     print(f"\nWrote dossier: {out_path}")
 
@@ -4589,36 +3680,6 @@ def _add_split_flags(parser: argparse.ArgumentParser, split_help: str) -> None:
     )
 
 
-def _add_redaction_flags(parser: argparse.ArgumentParser) -> None:
-    grp = parser.add_mutually_exclusive_group()
-    grp.add_argument(
-        "--redact",
-        dest="redact",
-        action="store_true",
-        default=None,
-        help="Enable redaction on generated outputs.",
-    )
-    grp.add_argument(
-        "--no-redact",
-        dest="redact",
-        action="store_false",
-        help="Disable redaction on generated outputs.",
-    )
-    parser.add_argument(
-        "--redact-review",
-        action="store_true",
-        help="Interactively review unresolved ambiguous redaction candidates.",
-    )
-    parser.add_argument(
-        "--redact-profile",
-        help="Path to redaction profile JSON (always_redact/always_keep/public_entities/family_terms/sensitive_terms).",
-    )
-    parser.add_argument(
-        "--redact-store",
-        help="Directory for private redaction memory store (default: dossiers/.redaction).",
-    )
-
-
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="cgpt",
@@ -4826,7 +3887,6 @@ def build_parser() -> argparse.ArgumentParser:
             "--format txt md docx  # produce all three"
         ),
     )
-    _add_redaction_flags(a)
     a.set_defaults(func=cmd_make_dossiers)
 
     a = sub.add_parser(
@@ -4896,7 +3956,6 @@ def build_parser() -> argparse.ArgumentParser:
         "--name",
         help="Project name for organizing output. Creates dossiers/{name}/ subfolder.",
     )
-    _add_redaction_flags(a)
     a.set_defaults(func=cmd_build_dossier)
 
     # Short alias
@@ -4950,7 +4009,6 @@ def build_parser() -> argparse.ArgumentParser:
         "--name",
         help="Project name for organizing output. Creates dossiers/{name}/ subfolder.",
     )
-    _add_redaction_flags(a)
     a.set_defaults(func=cmd_build_dossier)
 
     # One-shot command for minimal typing
@@ -5039,7 +4097,6 @@ def build_parser() -> argparse.ArgumentParser:
         "--name",
         help="Project name for organizing output. Creates dossiers/{name}/ subfolder.",
     )
-    _add_redaction_flags(a)
     a.set_defaults(func=cmd_quick)
 
     # Very short alias
@@ -5112,7 +4169,6 @@ def build_parser() -> argparse.ArgumentParser:
         "--name",
         help="Project name for organizing output. Creates dossiers/{name}/ subfolder.",
     )
-    _add_redaction_flags(a)
     a.set_defaults(func=cmd_quick)
 
     # Recent command: browse N most recent conversations interactively
@@ -5167,7 +4223,6 @@ def build_parser() -> argparse.ArgumentParser:
         "--name",
         help="Project name for organizing output. Creates dossiers/{name}/ subfolder.",
     )
-    _add_redaction_flags(a)
     a.add_argument("--mode", choices=["full", "excerpts"], default=None)
     a.add_argument("--context", type=parse_context, default=2)
     a.set_defaults(func=cmd_recent)
@@ -5187,7 +4242,6 @@ def build_parser() -> argparse.ArgumentParser:
     a.add_argument("--used-links-file")
     a.add_argument("--config")
     a.add_argument("--name", help="Project name for organizing output.")
-    _add_redaction_flags(a)
     a.add_argument("--mode", choices=["full", "excerpts"], default=None)
     a.add_argument("--context", type=parse_context, default=2)
     a.set_defaults(func=cmd_recent)
@@ -5235,11 +4289,6 @@ def main() -> None:
     if hasattr(args, "split") and getattr(args, "split") is None:
         env_split = _parse_env_bool("CGPT_DEFAULT_SPLIT")
         setattr(args, "split", env_split if env_split is not None else False)
-    # Resolve redaction default from env when supported and CLI did not set it.
-    # Priority: CLI --redact/--no-redact > CGPT_DEFAULT_REDACT > builtin True.
-    if hasattr(args, "redact") and getattr(args, "redact") is None:
-        env_redact = _parse_env_bool("CGPT_DEFAULT_REDACT")
-        setattr(args, "redact", env_redact if env_redact is not None else True)
     args.func(args)
 
 
