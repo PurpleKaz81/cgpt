@@ -23,7 +23,14 @@ If you want full technical details and every flag, go to [TECHNICAL.md](TECHNICA
 - Deterministic local build flow: run the same inputs and config to produce consistent context artifacts.
 - Reliable handoff: package context so a future you (or another person/model session) can resume work with less ambiguity.
 
-Near-term roadmap priorities are ranked by necessity: `R2` (`--redact` privacy mode), `R3` (discovery `--json`), then `R5` (token-aware chunking). See [`docs/roadmap/shared-roadmap.md`](docs/roadmap/shared-roadmap.md).
+Near-term roadmap priorities are ranked by necessity: `R3` (discovery `--json`), then `R5` (token-aware chunking). See [`docs/roadmap/shared-roadmap.md`](docs/roadmap/shared-roadmap.md).
+
+## Redaction Defaults
+
+- Dossier-producing commands now run with redaction enabled by default.
+- Use `--no-redact` when you intentionally need raw output.
+- Optional `--redact-review` lets you review unresolved ambiguous candidates during dossier generation.
+- Private redaction memory is stored at `dossiers/.redaction/state.v1.json` and is ignored by git under the existing `dossiers/` ignore rules.
 
 ## What This Tool Is (In Plain English)
 
@@ -162,6 +169,7 @@ cgpt q "topic"
 cgpt q --recent 25 "topic"
 cgpt q --days 7 "topic"
 cgpt build-dossier --ids <id1> <id2> --split
+cgpt build-dossier --ids <id1> <id2> --redact-review
 cgpt make-dossiers --ids <id1> <id2>
 ```
 

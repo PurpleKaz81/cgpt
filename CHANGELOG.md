@@ -11,9 +11,28 @@ Maintenance note for markdown lint:
 
 ## [Unreleased]
 
+### Added
+
+- Nothing yet.
+
 ### Changed
 
 - Nothing yet.
+
+## [0.2.10] - 2026-02-18
+
+### Added in 0.2.10
+
+- Added safe-by-default redaction for dossier-producing commands with new flags: `--redact`, `--no-redact`, `--redact-review`, `--redact-profile`, and `--redact-store`.
+- Added incremental private redaction memory at `dossiers/.redaction/state.v1.json` with strict schema validation and fingerprint-only persistence.
+- Added machine-readable redaction report emission as `<base>__redaction_report.json`.
+- Added `CGPT_DEFAULT_REDACT` environment default support.
+- Added `tests/test_redaction_incremental.py` for incremental-memory, non-interactive review guard, and cross-conversation placeholder consistency coverage.
+
+### Changed in 0.2.10
+
+- Refactored `make-dossiers` into build -> shared-redaction-session -> write flow so repeated sensitive values across selected conversations map to consistent placeholders in one run.
+- Updated docs (`README.md`, `TECHNICAL.md`, `SECURITY.md`, `docs/specs/current-capabilities.md`, `docs/roadmap/shared-roadmap.md`) to reflect shipped redaction behavior and roadmap status.
 
 ## [0.2.9] - 2026-02-18
 

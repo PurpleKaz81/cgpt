@@ -472,6 +472,7 @@ Format behavior for combined dossier commands:
 - `--format txt` (default) generates TXT output
 - `--format md` and/or `--format docx` generate additional formats
 - `__working.txt` exists only when TXT output is generated with split enabled
+- when redaction is enabled, a redaction report is emitted as `<base>__redaction_report.json`
 - if all requested outputs fail to generate, the command exits with an error
 
 ### Per-conversation command (`make-dossiers`)
@@ -489,6 +490,31 @@ Format behavior for `make-dossiers`:
 
 - only the formats explicitly requested with `--format` are written
 - no implicit sidecar format is created
+- with redaction enabled, each conversation base also writes `<conversation_id>__<title_slug>__redaction_report.json`
+
+## Redaction Semantics
+
+Supported on dossier-producing commands: `make-dossiers`, `build-dossier`/`d`, `quick`/`q`, `recent`/`r`.
+
+Flags:
+
+- `--redact` / `--no-redact`: enable/disable redaction
+- `--redact-review`: interactively review unresolved ambiguous candidates (TTY only)
+- `--redact-profile <file>`: optional strict JSON profile (`always_redact`, `always_keep`, `public_entities`, `family_terms`, `sensitive_terms`)
+- `--redact-store <dir>`: override private redaction state directory
+
+Defaults:
+
+- default redaction is enabled (`True`)
+- precedence: CLI flag -> `CGPT_DEFAULT_REDACT` -> builtin `True`
+- default state location: `dossiers/.redaction/state.v1.json`
+
+State model:
+
+- strict versioned schema (`schema_version=1`)
+- HMAC-SHA256 fingerprints only; raw sensitive values are not persisted
+- stores decisions (`redact|keep`) and unresolved pending fingerprints
+- later runs reuse decisions and only log/process unseen candidates as new
 
 ## Split and Dedup Semantics
 
@@ -537,6 +563,7 @@ Environment variables:
 - `CGPT_HOME`: set explicit home path
 - `CGPT_DEFAULT_MODE`: `full` or `excerpts`
 - `CGPT_DEFAULT_SPLIT`: `1/true/yes/on` or `0/false/no/off`
+- `CGPT_DEFAULT_REDACT`: `1/true/yes/on` or `0/false/no/off`
 - `CGPT_FORCE_COLOR`: force-enable or force-disable color (`1/true/yes/on` or `0/false/no/off`)
 - `CGPT_MAX_ZIP_MEMBERS`: override extraction ZIP member-count limit
 - `CGPT_MAX_ZIP_UNCOMPRESSED_BYTES`: override extraction ZIP total-uncompressed-size limit

@@ -1,6 +1,6 @@
 # Current Capabilities
 
-Last updated: 2026-02-17
+Last updated: 2026-02-18
 
 ## Scope Snapshot
 
@@ -38,14 +38,19 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 - Output formats: `txt`, `md`, and `docx` (DOCX requires optional `python-docx` dependency).
 - Combined dossier workflows support split output (`--split`) and dedup controls.
 - Strict format behavior for `make-dossiers --format` (only requested formats are emitted).
+- Redaction is enabled by default on dossier-producing commands with `--no-redact` opt-out.
+- Incremental redaction memory persists private fingerprinted decisions in `dossiers/.redaction/state.v1.json`.
+- `--redact-review` supports interactive review of unresolved ambiguous candidates in TTY sessions.
+- Redaction runs emit machine-readable report artifacts (`<base>__redaction_report.json`).
 
 ## Configuration Features Implemented
 
 - Tracked public defaults via `config.json`.
 - Local private overrides via untracked `config.personal.json`.
-- Environment defaults including `CGPT_DEFAULT_MODE` and `CGPT_DEFAULT_SPLIT`.
+- Environment defaults including `CGPT_DEFAULT_MODE`, `CGPT_DEFAULT_SPLIT`, and `CGPT_DEFAULT_REDACT`.
 - Explicit `--config` errors fail fast (missing file or invalid JSON).
 - Config schema validation rejects unknown keys and wrong-typed values.
+- Redaction profile schema validation rejects unknown keys and wrong-typed values.
 
 ## Operating Model
 
@@ -60,6 +65,7 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 - File-based CLI inputs (`--ids-file`, `--patterns-file`, `--used-links-file`) are expected to be UTF-8 family encoded.
 - `--patterns-file` and `--used-links-file` fail fast when explicitly provided but missing.
 - `--name` values must normalize to a non-empty safe slug.
+- `--redact-review` requires an interactive terminal.
 - Quality gates are planned roadmap scope and are not implemented in current behavior.
 
 ## Reliability and Validation
