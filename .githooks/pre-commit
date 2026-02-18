@@ -31,7 +31,7 @@ while IFS= read -r f; do
       esac
       ;;
     # Secret/credential naming patterns (defense in depth if force-staged).
-    .env|.env.*|*.env|*/.env|*/.env.*|*/.envrc|secret.txt|secrets.txt|secret.json|secrets.json|credentials.txt|credentials.json|*_secret.*|*_credential.*|*_password.*|*.key|*.pem|*.p12|*.pfx)
+    .env|.env.*|*.env|*/.env.*|*/.envrc|secret.txt|secrets.txt|secret.json|secrets.json|credentials.txt|credentials.json|*_secret.*|*_credential.*|*_password.*|*.key|*.pem|*.p12|*.pfx)
       blocked+=("${f} [secret/credential pattern]")
       ;;
   esac
