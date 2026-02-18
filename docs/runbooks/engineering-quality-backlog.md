@@ -1,6 +1,6 @@
 # Engineering Quality Backlog
 
-Last updated: 2026-02-17
+Last updated: 2026-02-18
 
 ## Purpose
 
@@ -24,6 +24,7 @@ Implemented in this baseline hardening pass:
 - Governance essentials are in place (`LICENSE`, `CONTRIBUTING.md`, `CODEOWNERS`).
 - Dependency automation baseline is active (`.github/dependabot.yml`).
 - `doctor --dev` preflight checks runtime/developer toolchain health and minimum Node.js major expectations.
+- Internal runtime modularization baseline is implemented with package-layer split and `cgpt.py` compatibility shim.
 - Temporary Ruff import-order exceptions remain scoped to two legacy test files pending cleanup.
 
 Pending / next-phase quality work remains below.

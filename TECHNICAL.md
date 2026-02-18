@@ -119,7 +119,7 @@ Operational notes:
 - `quick` performs topic discovery + selection + dossier generation in one flow.
 - `recent` is recency-first selection.
 - `build-dossier` is explicit-ID-first generation.
-- Redaction flags are not part of current CLI behavior; privacy redaction is tracked as roadmap item `R2` for a later modular implementation.
+- Redaction flags are not part of current CLI behavior; privacy redaction is tracked as roadmap item `R2` and is currently planned as the next post-modular feature lane.
 
 ## Requirements
 
