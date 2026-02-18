@@ -6,7 +6,7 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "09:00"
-      timezone: "UTC"
+      timezone: "Etc/UTC"
     groups:
       github-actions:
         patterns:
@@ -18,7 +18,7 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "09:00"
-      timezone: "UTC"
+      timezone: "Etc/UTC"
     groups:
       pip-dependencies:
         patterns:
