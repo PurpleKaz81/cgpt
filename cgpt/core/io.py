@@ -60,8 +60,8 @@ def require_existing_file(path_value: str, *, label: str) -> Path:
 def parse_context(value: Any) -> int:
     try:
         n = int(value)
-    except (TypeError, ValueError):
-        raise argparse.ArgumentTypeError("--context must be an integer")
+    except (TypeError, ValueError) as err:
+        raise argparse.ArgumentTypeError("--context must be an integer") from err
     if n < MIN_CONTEXT or n > MAX_CONTEXT:
         raise argparse.ArgumentTypeError(
             f"--context must be between {MIN_CONTEXT} and {MAX_CONTEXT}"

@@ -95,7 +95,7 @@ def build_combined_dossier(
             item
         )
 
-    for k in groups.keys():
+    for k in groups:
         groups[k].sort(key=lambda x: x["ctime"])
 
     group_order = sorted(

@@ -126,15 +126,7 @@ def cmd_doctor(args: argparse.Namespace) -> None:
     fix = bool(getattr(args, "fix", False))
 
     py_detail = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-    if sys.version_info >= (3, 8):
-        _doctor_add(checks, "PASS", "python", f"{py_detail} (runtime supported)")
-    else:
-        _doctor_add(
-            checks,
-            "FAIL",
-            "python",
-            f"{py_detail} (requires Python 3.8+)",
-        )
+    _doctor_add(checks, "PASS", "python", f"{py_detail} (runtime supported)")
 
     home = home_dir(args.home)
     layout_status, layout_detail = _doctor_validate_layout(home, fix=fix)
@@ -238,4 +230,3 @@ def cmd_doctor(args: argparse.Namespace) -> None:
 
     if fails > 0 or (strict and warns > 0):
         die("doctor checks failed", code=2)
-

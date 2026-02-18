@@ -1,4 +1,5 @@
 import os
+from contextlib import suppress
 
 from cgpt.cli.parser import build_parser
 from cgpt.commands.extract_index import cmd_extract
@@ -7,15 +8,11 @@ from cgpt.core.env import _parse_env_bool
 
 # Enable line-editing for interactive `input()` (arrow keys, history, tab completion).
 # On macOS this typically wraps libedit; ignore failures if module/bindings differ.
-try:
+with suppress(Exception):
     import readline  # noqa: F401
 
-    try:
+    with suppress(Exception):
         readline.parse_and_bind("tab: complete")
-    except Exception:
-        pass
-except Exception:
-    pass
 
 
 def main() -> None:
@@ -31,10 +28,10 @@ def main() -> None:
     if not getattr(args, "cmd", None):
         # Ensure args has a `zip` attribute for cmd_extract (it expects args.zip)
         if not hasattr(args, "zip"):
-            setattr(args, "zip", None)
+            args.zip = None
         # Respect global quiet flag when default-extract
         if getattr(args, "quiet", False):
-            setattr(args, "quiet", True)
+            args.quiet = True
         cmd_extract(args)
         return
 
@@ -51,13 +48,13 @@ def main() -> None:
 
     # If the chosen subcommand has a `mode` attribute that wasn't explicitly provided
     # (we set subparser defaults to None), fill it from the effective default.
-    if hasattr(args, "mode") and getattr(args, "mode") is None:
-        setattr(args, "mode", effective_default_mode)
+    if hasattr(args, "mode") and args.mode is None:
+        args.mode = effective_default_mode
 
     # Resolve split default from env when subcommand supports split and CLI did not set it.
     # Priority: CLI --split/--no-split > CGPT_DEFAULT_SPLIT > builtin False.
-    if hasattr(args, "split") and getattr(args, "split") is None:
+    if hasattr(args, "split") and args.split is None:
         env_split = _parse_env_bool("CGPT_DEFAULT_SPLIT")
-        setattr(args, "split", env_split if env_split is not None else False)
+        args.split = env_split if env_split is not None else False
 
     args.func(args)

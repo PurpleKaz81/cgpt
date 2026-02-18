@@ -9,12 +9,12 @@ JSON_DISCOVERY_BUCKET_LIMIT = _conversations.JSON_DISCOVERY_BUCKET_LIMIT
 load_json_loose = _conversations.load_json_loose
 
 __all__ = [
-    "__version__",
-    "main",
-    "_doctor_parse_major_version",
     "JSON_DISCOVERY_BUCKET_LIMIT",
-    "load_json_loose",
+    "__version__",
+    "_doctor_parse_major_version",
     "find_conversations_json",
+    "load_json_loose",
+    "main",
 ]
 
 def find_conversations_json(root):

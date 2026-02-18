@@ -39,7 +39,7 @@ def _generate_toc(groups: Dict[str, List[Dict[str, Any]]]) -> List[str]:
     toc.append("## TABLE OF CONTENTS\n")
     line_num = 10  # rough estimate (header + metadata takes ~10 lines)
 
-    for group_name, items in groups.items():
+    for _group_name, items in groups.items():
         root = items[0]
         root_title = root["title"] or "Untitled"
         branch_count = len(items) - 1
@@ -53,7 +53,7 @@ def _generate_toc(groups: Dict[str, List[Dict[str, Any]]]) -> List[str]:
         section_label += f" — {ts_to_local_str(create_time)[:10]}"
         toc.append(f"  {section_label}\n")
 
-        # estimate lines per conversation: ~20–30 lines per branch, messages vary
+        # estimate lines per conversation: ~20-30 lines per branch, messages vary
         msg_count = len(root.get("msgs", []))
         est_lines = max(10, msg_count // 3)
         for _ in items[1:]:
@@ -99,11 +99,9 @@ def _build_clean_txt(
     out.extend(toc)
 
     # === CONVERSATIONS ===
-    conv_num = 0
     all_sources: List[Tuple[str, str]] = []
 
-    for _, items in group_order:
-        conv_num += 1
+    for conv_num, (_, items) in enumerate(group_order, start=1):
         root_item = items[0]
         root_title = root_item["title"] or "Untitled"
         root_msgs = root_item["msgs"]
@@ -656,7 +654,7 @@ def _generate_working_index(
 
         # Sort by score and show top 5
         scored_convs.sort(reverse=True, key=lambda x: x[0])
-        for i, (score, cid, title, ctime) in enumerate(scored_convs[:5], 1):
+        for i, (_score, _cid, title, ctime) in enumerate(scored_convs[:5], 1):
             date_str = ts_to_local_str(ctime).split()[0] if ctime else "Unknown"
             index_lines.append(f"  {i}. [{date_str}] {title}\n")
         index_lines.append("\n")
@@ -668,7 +666,7 @@ def _generate_working_index(
     # Find all section headers (##, ===, etc.)
     lines = text.split("\n")
     for i, line in enumerate(lines):
-        if line.startswith("##") or line.startswith("===") or re.match(r"^\d+\.", line):
+        if line.startswith(("##", "===")) or re.match(r"^\d+\.", line):
             section_num += 1
             header = line.strip().lstrip("#").strip().lstrip("=").strip()
             if header and header != "WORKING INDEX":  # Don't index ourselves
@@ -744,7 +742,7 @@ def extract_research_artifacts(text: str) -> Tuple[str, List[str]]:
     ]
 
     lines = text.split("\n")
-    for i, line in enumerate(lines):
+    for _i, line in enumerate(lines):
         normalized_line = re.sub(r"[\u200b-\u200f\u2060\ufeff]", "", line)
         # Skip lines that are stray appendix headers
         if _is_appendix_header_line(normalized_line):
@@ -785,8 +783,8 @@ def extract_research_artifacts(text: str) -> Tuple[str, List[str]]:
 
 def _generate_working_index_with_tags(
     txt: str,
-    conversations: List[Dict[str, Any]] = None,
-    topics: List[str] = None,
+    conversations: Optional[List[Dict[str, Any]]] = None,
+    topics: Optional[List[str]] = None,
     config: Optional[Dict[str, Any]] = None,
 ) -> Tuple[List[str], List[str]]:
     """

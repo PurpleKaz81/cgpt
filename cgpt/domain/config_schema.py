@@ -14,7 +14,7 @@ def _config_schema_error(field: str, detail: str) -> None:
 def _config_require_keys(
     obj: Dict[str, Any], *, allowed: Set[str], field: str
 ) -> None:
-    unknown = sorted(k for k in obj.keys() if k not in allowed)
+    unknown = sorted(k for k in obj if k not in allowed)
     if unknown:
         _config_schema_error(field, f"unknown key(s): {', '.join(unknown)}")
 
@@ -146,7 +146,7 @@ def load_column_config(config_file: str) -> Dict[str, Any]:
     if not config_path.exists():
         die(f"Config file not found: {config_file}")
     try:
-        with open(config_path, "r", encoding="utf-8") as f:
+        with open(config_path, encoding="utf-8") as f:
             data = json.load(f)
     except Exception as e:
         die(f"Error loading config: {e}")
