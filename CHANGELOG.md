@@ -17,7 +17,7 @@ Maintenance note for markdown lint:
 
 ### Changed
 
-- Nothing yet.
+- Added `scripts/gh_retry.sh` and documented its usage for resilient `gh` command retries during transient `api.github.com` connectivity errors.
 
 ## [0.2.14] - 2026-02-18
 
