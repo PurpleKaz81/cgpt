@@ -17,7 +17,24 @@ Maintenance note for markdown lint:
 
 ### Changed
 
-- Added `scripts/gh_retry.sh` and documented its usage for resilient `gh` command retries during transient `api.github.com` connectivity errors.
+- Nothing yet.
+
+## [0.2.15] - 2026-02-18
+
+### Added in 0.2.15
+
+- Added `scripts/gh_retry.sh` to retry transient `gh`/GitHub API failures with bounded exponential backoff.
+
+### Changed in 0.2.15
+
+- Hardened lint consistency by removing temporary test-file import-order ignores and aligning CI lint tooling install with `.[dev]`.
+- Applied behavior-preserving quality cleanups across modular package code (exception/context handling, minor typing/loop simplifications, and import/export normalization) while keeping CLI behavior unchanged.
+- Documented resilient `gh` command usage in maintainer/contributor docs (`RELEASING.md`, `CONTRIBUTING.md`).
+
+### Fixed in 0.2.15
+
+- Fixed Dependabot schema validation by switching schedule timezone values from `UTC` to valid IANA `Etc/UTC`.
+- Fixed overlapping `.env` glob patterns in `.githooks/pre-commit` that triggered ShellCheck warnings (`SC2221`, `SC2222`) without changing block behavior.
 
 ## [0.2.14] - 2026-02-18
 
