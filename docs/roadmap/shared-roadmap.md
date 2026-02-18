@@ -52,6 +52,7 @@ Necessity tags:
 | R0.1 | Edge-case hardening patch (`v0.2.1`) | `implemented` | `committed` | `2026-T1` | Completed ZIP extraction safety, quick AND-scope correctness, timestamp coercion, config hard-fail, and input-file decode policy. |
 | R0.2 | Remaining edge-case hardening patch (`v0.2.2`) | `implemented` | `committed` | `2026-T1` | Completed stale re-extraction remediation, strict conversations JSON discovery, message timestamp coercion, and validation for `--context`/`--name`. |
 | R0.3 | Additional hardening follow-up patch (`v0.2.3`) | `implemented` | `committed` | `2026-T1` | Added ZIP special-member and archive-limit validation, strict optional-file/config schema validation, duplicate ID detection, and bounded JSON discovery candidate parsing. |
+| R0.4 | Internal modularization baseline (`v0.2.13`) | `implemented` | `committed` | `2026-T1` | Split runtime into package layers (`core`, `domain`, `commands`, `cli`) with compatibility-preserving `cgpt.py` shim and stable CLI behavior. |
 | R4 | `cgpt doctor` health check command | `implemented` | `committed` | `2026-T1` | Runtime/developer diagnostics with `--fix`, `--dev`, and `--strict` are shipped. |
 | R16 | Engineering Quality Baseline Hardening | `implemented` | `committed` | `2026-T1` | CI Python matrix/cross-platform smoke, lint gates, governance baseline, and maintenance ledger contracts are in place. |
 
@@ -59,7 +60,7 @@ Necessity tags:
 
 | Rank | ID | Initiative | Necessity | Status | Commitment | Horizon | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | R2 | `--redact` mode on dossier-producing commands | `critical` | `planned` | `committed` | `2026-T2` | Privacy protection before sharing generated outputs; re-planned for post-modular implementation. |
+| 1 | R2 | `--redact` mode on dossier-producing commands | `critical` | `planned` | `committed` | `2026-T2` | Privacy protection before sharing generated outputs; modularization baseline dependency was completed in `v0.2.13`. |
 | 2 | R3 | Discovery `--json` (`ids`, `find`, `search`) | `high` | `planned` | `committed` | `2026-T1` | Machine-readable discovery pipeline for automation. |
 | 3 | R5 | Token-aware chunking (`--max-tokens`) | `high` | `planned` | `committed` | `2026-T2` | Upload-safe context segmentation with ordering guarantees. |
 | 4 | R15 | Context Quality Gates (Reliability Layer) | `high` | `planned` | `committed` | `2026-T2` | Pass/fail dossier readiness checks with staged rollout. |
@@ -77,7 +78,7 @@ Necessity tags:
 ## Trimester Plan (Derived from Necessity Ranking)
 
 - `2026-T1`: deliver rank `2` (`R3`) and complete automation baseline work.
-- `2026-T2`: deliver ranks `1, 3-6` (`R2`, `R5`, `R15`, `R7`, `R6`) in that order after modularization work.
+- `2026-T2`: deliver ranks `1, 3-6` (`R2`, `R5`, `R15`, `R7`, `R6`) in that order.
 - `2026-T3`: deliver ranks `7-10` (`R8`, `R1`, `R9`, `R10`) only after `2026-T2` committed items are complete.
 - `2026-T4` and later: evaluate ranks `11-14` (`R11`, `R12`, `R13`, `R14`) based on local-first stability and user pull.
 

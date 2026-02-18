@@ -52,6 +52,7 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 
 - Single-user, local CLI workflow.
 - Local files are the system of record; no required hosted service integration.
+- Internal implementation is package-modularized (`cgpt/core`, `cgpt/domain`, `cgpt/commands`, `cgpt/cli`) while preserving `cgpt.py` compatibility invocation.
 
 ## Known Constraints
 

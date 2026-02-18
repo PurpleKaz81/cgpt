@@ -30,10 +30,10 @@ docx = ["python-docx>=0.8.11"]
 dev = ["ruff==0.9.10", "tox>=4.24.1"]
 
 [project.scripts]
-cgpt = "cgpt:main"
+cgpt = "cgpt.cli:main"
 
-[tool.setuptools]
-py-modules = ["cgpt"]
+[tool.setuptools.packages.find]
+include = ["cgpt*"]
 
 [tool.setuptools.dynamic]
-version = { attr = "cgpt.__version__" }
+version = { attr = "cgpt.core.constants.__version__" }

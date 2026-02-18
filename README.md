@@ -24,7 +24,7 @@ If you want full technical details and every flag, go to [TECHNICAL.md](TECHNICA
 - Reliable handoff: package context so a future you (or another person/model session) can resume work with less ambiguity.
 
 Near-term roadmap priorities are ranked by necessity: `R2` (`--redact` privacy mode), `R3` (discovery `--json`), then `R5` (token-aware chunking). See [`docs/roadmap/shared-roadmap.md`](docs/roadmap/shared-roadmap.md).
-As of `0.2.12`, `R2` redaction is planned but not shipped in CLI behavior.
+As of `0.2.13`, `R2` redaction is planned but not shipped in CLI behavior.
 
 ## What This Tool Is (In Plain English)
 
