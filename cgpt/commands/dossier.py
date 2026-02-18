@@ -1,20 +1,9 @@
 import argparse
-import heapq
-import importlib.util
-import json
-import os
 import re
-import shutil
-import sqlite3
-import stat
-import subprocess
 import sys
-import time
-import zipfile
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Tuple
 
 from cgpt.core.color import _colorize_title_with_topics
 from cgpt.core.io import (
@@ -28,19 +17,19 @@ from cgpt.core.io import (
 )
 from cgpt.core.layout import (
     default_root,
+    die,
     ensure_layout,
     home_dir,
     newest_extracted,
     newest_zip,
     refresh_latest_symlink,
-    die,
 )
 from cgpt.core.zip_safety import extract_zip_safely
 from cgpt.domain.config_schema import load_column_config
 from cgpt.domain.conversations import (
     build_conversation_map_by_id,
-    conversation_messages_blob,
     conv_id_and_title,
+    conversation_messages_blob,
     extract_messages_best_effort,
     find_conversations_json,
     load_json,
@@ -48,6 +37,7 @@ from cgpt.domain.conversations import (
 )
 from cgpt.domain.dossier_builder import build_combined_dossier
 from cgpt.domain.dossier_cleaning import _extract_sources
+
 
 def cmd_make_dossiers(args: argparse.Namespace) -> None:
     home = home_dir(args.home)

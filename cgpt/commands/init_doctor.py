@@ -1,22 +1,16 @@
 import argparse
-import heapq
 import importlib.util
-import json
 import os
 import re
 import shutil
-import sqlite3
-import stat
 import subprocess
 import sys
-import time
-import zipfile
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import List, Optional, Tuple
 
-from cgpt.core.layout import home_dir, init_layout, die
+from cgpt.core.layout import die, home_dir, init_layout
+
 
 def cmd_init(args: argparse.Namespace) -> None:
     home = home_dir(args.home)

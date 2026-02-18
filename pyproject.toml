@@ -36,4 +36,4 @@ cgpt = "cgpt.cli:main"
 include = ["cgpt*"]
 
 [tool.setuptools.dynamic]
-version = { attr = "cgpt.__version__" }
+version = { attr = "cgpt.core.constants.__version__" }

@@ -1,24 +1,22 @@
-import argparse
-import heapq
-import importlib.util
-import json
-import os
 import re
-import shutil
-import sqlite3
-import stat
-import subprocess
 import sys
-import time
-import zipfile
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set
 
-from cgpt.core.io import coerce_create_time, read_text_utf8, require_existing_file, safe_slug, ts_to_local_str
+from cgpt.core.io import (
+    coerce_create_time,
+    read_text_utf8,
+    require_existing_file,
+    safe_slug,
+    ts_to_local_str,
+)
 from cgpt.core.layout import die
-from cgpt.domain.config_schema import load_column_config
+from cgpt.domain.config_schema import (
+    generate_completeness_check,
+    generate_control_layer,
+    load_column_config,
+)
 from cgpt.domain.conversations import (
     base_title,
     build_conversation_map_by_id,
@@ -30,8 +28,8 @@ from cgpt.domain.conversations import (
 )
 from cgpt.domain.dossier_cleaning import (
     _build_clean_txt,
-    _deduplicate_blocks,
     _dedupe_appendix_header,
+    _deduplicate_blocks,
     _extract_deliverables,
     _generate_working_index,
     _generate_working_index_with_tags,
@@ -44,6 +42,7 @@ from cgpt.domain.dossier_cleaning import (
     _strip_tool_noise,
     extract_research_artifacts,
 )
+
 
 def build_combined_dossier(
     *,
@@ -391,4 +390,3 @@ def build_combined_dossier(
             "Check requested formats and dependencies (for DOCX, install python-docx)."
         )
     return created_primary
-

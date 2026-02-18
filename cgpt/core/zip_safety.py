@@ -1,23 +1,14 @@
-import argparse
-import heapq
-import importlib.util
-import json
 import os
 import re
 import shutil
-import sqlite3
 import stat
-import subprocess
-import sys
 import time
 import zipfile
-from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
 
 from cgpt.core.constants import MAX_ZIP_MEMBERS, MAX_ZIP_UNCOMPRESSED_BYTES
 from cgpt.core.layout import die
+
 
 def is_unsafe_zip_member(member_name: str, dest_dir: Path) -> bool:
     """Return True when a ZIP member path is unsafe for extraction."""

@@ -1,23 +1,18 @@
-import argparse
-import heapq
-import importlib.util
-import json
-import os
-import re
-import shutil
 import sqlite3
-import stat
-import subprocess
 import sys
 import time
-import zipfile
-from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import List, Tuple
 
 from cgpt.core.io import coerce_create_time
-from cgpt.domain.conversations import conv_id_and_title, extract_messages_best_effort, render_content
+from cgpt.domain.conversations import (
+    conv_id_and_title,
+    extract_messages_best_effort,
+    find_conversations_json,
+    load_json,
+    normalize_conversations,
+)
+
 
 def _init_index(db_path: Path) -> None:
     conn = sqlite3.connect(str(db_path))
@@ -186,4 +181,3 @@ def build_fts_query(terms: List[str], and_terms: bool) -> str:
     if not parts:
         return ""
     return (" AND ".join(parts)) if and_terms else (" OR ".join(parts))
-

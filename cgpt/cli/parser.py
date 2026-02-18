@@ -1,27 +1,17 @@
 import argparse
-import heapq
-import importlib.util
-import json
-import os
-import re
-import shutil
-import sqlite3
-import stat
-import subprocess
-import sys
-import time
-import zipfile
-from dataclasses import dataclass
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
 
 from cgpt.commands.discovery import cmd_find, cmd_ids, cmd_search
-from cgpt.commands.dossier import cmd_build_dossier, cmd_make_dossiers, cmd_quick, cmd_recent
+from cgpt.commands.dossier import (
+    cmd_build_dossier,
+    cmd_make_dossiers,
+    cmd_quick,
+    cmd_recent,
+)
 from cgpt.commands.extract_index import cmd_extract, cmd_index, cmd_latest_zip
 from cgpt.commands.init_doctor import cmd_doctor, cmd_init
 from cgpt.core.constants import __version__
 from cgpt.core.io import parse_context
+
 
 def _add_split_flags(parser: argparse.ArgumentParser, split_help: str) -> None:
     """Add --split/--no-split flags with tri-state default for env fallback."""

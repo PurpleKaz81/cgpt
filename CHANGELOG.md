@@ -19,6 +19,18 @@ Maintenance note for markdown lint:
 
 - Nothing yet.
 
+## [0.2.14] - 2026-02-18
+
+### Changed in 0.2.14
+
+- Cleaned up modular package imports and symbol wiring so Ruff lint passes across `cgpt/` modules with no CLI behavior change.
+- Tightened package export surface in `cgpt/__init__.py` with explicit re-exports and `__all__`.
+
+### Fixed in 0.2.14
+
+- Fixed modular cross-module references that caused undefined-name lint failures in indexing and dossier builders.
+- Fixed packaging dynamic-version resolution to read from `cgpt.core.constants.__version__`, avoiding build backend import collisions between `cgpt.py` and the `cgpt` package.
+
 ## [0.2.13] - 2026-02-18
 
 ### Changed in 0.2.13

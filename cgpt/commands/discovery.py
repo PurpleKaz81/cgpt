@@ -1,32 +1,20 @@
 import argparse
-import heapq
-import importlib.util
-import json
-import os
 import re
-import shutil
-import sqlite3
-import stat
-import subprocess
-import sys
-import time
-import zipfile
-from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import List
 
 from cgpt.core.color import _colorize_title_with_topic, _colorize_title_with_topics
-from cgpt.core.layout import default_root, ensure_layout, home_dir, die
+from cgpt.core.layout import default_root, die, ensure_layout, home_dir
 from cgpt.domain.conversations import (
     compile_topic_pattern,
-    conversation_matches_text,
     conv_id_and_title,
+    conversation_matches_text,
     find_conversations_json,
     load_json,
     normalize_conversations,
 )
 from cgpt.domain.indexing import build_fts_query, query_index
+
 
 def cmd_ids(args: argparse.Namespace) -> None:
     home = home_dir(args.home)
