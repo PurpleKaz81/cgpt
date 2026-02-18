@@ -36,7 +36,7 @@ try:
 except Exception:
     pass
 
-__version__ = "0.2.8"
+__version__ = "0.2.9"
 
 SAO_PAULO_TZ = "America/Sao_Paulo"
 MIN_CONTEXT = 0
