@@ -15,7 +15,7 @@ def is_unsafe_zip_member(member_name: str, dest_dir: Path) -> bool:
     normalized = member_name.replace("\\", "/")
     if not normalized or normalized == ".":
         return True
-    if normalized.startswith("/") or normalized == ".." or normalized.startswith("../"):
+    if normalized == ".." or normalized.startswith(("/", "../")):
         return True
     if "/../" in normalized:
         return True
@@ -80,4 +80,3 @@ def extract_zip_safely(zpath: Path, out_dir: Path) -> None:
         if temp_dir.exists():
             shutil.rmtree(temp_dir, ignore_errors=True)
         raise
-

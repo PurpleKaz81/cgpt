@@ -1,6 +1,7 @@
 import os
 import shutil
 import sys
+from contextlib import suppress
 from pathlib import Path
 from typing import List, Optional, Tuple
 
@@ -24,14 +25,10 @@ def discover_home() -> Path:
         - the directory containing cgpt.py
     """
     candidates = []
-    try:
+    with suppress(Exception):
         candidates.append(Path.cwd().resolve())
-    except Exception:
-        pass
-    try:
+    with suppress(Exception):
         candidates.append(Path(__file__).resolve().parent)
-    except Exception:
-        pass
 
     seen = set()
     for base in candidates:
@@ -134,4 +131,3 @@ def default_root(extracted_dir: Path) -> Path:
                 return p.resolve()
 
     return newest_extracted(extracted_dir)
-

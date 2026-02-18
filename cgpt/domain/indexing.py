@@ -1,6 +1,7 @@
 import sqlite3
 import sys
 import time
+from contextlib import suppress
 from pathlib import Path
 from typing import List, Tuple
 
@@ -56,14 +57,10 @@ def index_export(
     try:
         cur = conn.cursor()
         if reindex:
-            try:
+            with suppress(Exception):
                 cur.execute("DELETE FROM conv_meta")
-            except Exception:
-                pass
-            try:
+            with suppress(Exception):
                 cur.execute("DELETE FROM conv_search")
-            except Exception:
-                pass
 
         conn.execute("BEGIN")
         total = len(convs)

@@ -182,7 +182,7 @@ def extract_messages_best_effort(c: Dict[str, Any]) -> List[Msg]:
                     continue
                 t = coerce_create_time(m.get("create_time"))
                 role = (m.get("author") or {}).get("role") or "unknown"
-                text = render_content((m.get("content") or {})).strip()
+                text = render_content(m.get("content") or {}).strip()
                 if text:
                     msgs.append(Msg(t=t, role=role, text=text))
         msgs.sort(key=lambda x: x.t)
