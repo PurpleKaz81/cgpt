@@ -42,6 +42,20 @@ Index requirement:
 
 - every markdown file under the scoped `docs/` folders must be linked from `docs/INDEX.md`
 
+## Code Architecture (Current)
+
+`cgpt` now uses a package-based internal architecture:
+
+- `cgpt/core/`: environment, layout, IO, zip-safety, and color helpers
+- `cgpt/domain/`: conversation, indexing, config, and dossier processing services
+- `cgpt/commands/`: command handlers grouped by workflow
+- `cgpt/cli/`: parser and CLI entrypoint orchestration
+
+Compatibility:
+
+- `cgpt.py` remains as a thin shim so `python3 cgpt.py ...` keeps working.
+- Installed command entrypoint resolves to `cgpt.cli:main`.
+
 ## CLI Surface (Current)
 
 Global command:
