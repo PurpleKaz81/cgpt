@@ -515,6 +515,7 @@ State model:
 - HMAC-SHA256 fingerprints only; raw sensitive values are not persisted
 - stores decisions (`redact|keep`) and unresolved pending fingerprints
 - later runs reuse decisions and only log/process unseen candidates as new
+- `person_name` detection includes non-person noun filtering so title-cased UI/product phrases (for example `Privacy Portal`) are not queued for review
 
 ## Split and Dedup Semantics
 

@@ -39,7 +39,7 @@ try:
 except Exception:
     pass
 
-__version__ = "0.2.10"
+__version__ = "0.2.11"
 
 SAO_PAULO_TZ = "America/Sao_Paulo"
 MIN_CONTEXT = 0
@@ -550,6 +550,42 @@ NAME_STOPWORDS = {
     "Saturday",
     "Sunday",
 }
+NON_PERSON_NAME_NOUNS = {
+    "account",
+    "analytics",
+    "api",
+    "app",
+    "center",
+    "console",
+    "control",
+    "controls",
+    "dashboard",
+    "data",
+    "docs",
+    "documentation",
+    "export",
+    "guide",
+    "help",
+    "home",
+    "hub",
+    "menu",
+    "page",
+    "panel",
+    "policy",
+    "portal",
+    "privacy",
+    "profile",
+    "report",
+    "reports",
+    "security",
+    "service",
+    "services",
+    "settings",
+    "support",
+    "system",
+    "terms",
+    "tools",
+}
 
 EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b")
 PHONE_RE = re.compile(
@@ -587,6 +623,9 @@ def _is_probable_person_name(value: str) -> bool:
     if len(parts) < 2 or len(parts) > 3:
         return False
     if any(p in NAME_STOPWORDS for p in parts):
+        return False
+    # Filter obvious UI/product noun phrases such as "Privacy Portal".
+    if all(p.casefold() in NON_PERSON_NAME_NOUNS for p in parts):
         return False
     if any(len(p) < 2 for p in parts):
         return False
