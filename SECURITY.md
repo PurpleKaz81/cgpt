@@ -13,15 +13,8 @@ This repository does not require API keys, credentials, or cloud accounts.
 - `zips/`: original ChatGPT export ZIP files.
 - `extracted/`: extracted export data and search index (`cgpt_index.db`).
 - `dossiers/`: generated dossier outputs.
-- `dossiers/.redaction/`: private incremental redaction memory (`state.v1.json`) when redaction is enabled.
 
 These directories can contain sensitive personal data from your conversations.
-
-Redaction memory model:
-
-- Stores only salted HMAC-SHA256 fingerprints and metadata.
-- Does not store raw sensitive values detected in dossier content.
-- Is local-only by default and ignored by git under the existing `dossiers/**` ignore rules.
 
 ## Git Protection Rules
 
@@ -89,6 +82,7 @@ rg -n "(api[_-]?key|token|secret|password|BEGIN (RSA|EC|OPENSSH) PRIVATE KEY)" .
 
 - Treat all data in `zips/`, `extracted/`, and `dossiers/` as sensitive by default.
 - Review generated dossiers before sharing externally.
+- Current CLI behavior does not include built-in redaction; remove personal identifiers manually before external sharing.
 - Remove personal identifiers if you plan to publish outputs.
 
 ## Environment Variables

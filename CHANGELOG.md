@@ -19,6 +19,17 @@ Maintenance note for markdown lint:
 
 - Nothing yet.
 
+## [0.2.12] - 2026-02-18
+
+### Changed in 0.2.12
+
+- Rolled dossier-generation behavior back to the pre-redaction baseline from `0.2.9` (removed `--redact`/`--no-redact`/`--redact-review` and redaction-stage processing from write commands).
+- Updated product documentation to reflect that privacy redaction is not currently shipped and is tracked again as planned critical roadmap scope (`R2`) for post-modular implementation.
+
+### Fixed in 0.2.12
+
+- Eliminated redaction-review false-positive prompt path by removing the shipped redaction pipeline pending modular redesign.
+
 ## [0.2.11] - 2026-02-18
 
 ### Fixed in 0.2.11
