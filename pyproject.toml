@@ -27,7 +27,7 @@ dependencies = []
 
 [project.optional-dependencies]
 docx = ["python-docx>=0.8.11"]
-dev = ["ruff==0.9.10", "tox>=4.24.1"]
+dev = ["ruff==0.15.1", "tox>=4.24.1"]
 
 [project.scripts]
 cgpt = "cgpt.cli:main"
