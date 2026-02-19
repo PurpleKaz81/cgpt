@@ -64,6 +64,7 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 - `--patterns-file` and `--used-links-file` fail fast when explicitly provided but missing.
 - `--name` values must normalize to a non-empty safe slug.
 - Privacy redaction remains planned roadmap scope (`R2`) and is not currently available in CLI commands.
+- Split-output integrity auditing (`split-audit`) remains planned roadmap scope (`R17`) and is not currently available as a built-in CLI command.
 - Context quality gates (`R15`) remain planned roadmap scope and are not currently available as CLI gate flags.
 
 ## Reliability and Validation

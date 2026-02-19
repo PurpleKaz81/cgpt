@@ -122,6 +122,7 @@ Operational notes:
 - `recent` is recency-first selection.
 - `build-dossier` is explicit-ID-first generation.
 - Redaction flags are not part of current CLI behavior; privacy redaction is tracked as roadmap item `R2` and is currently planned as the next post-modular feature lane.
+- Split-output integrity auditing is not part of current CLI behavior; planned command contract is tracked as roadmap item `R17` in `docs/specs/v0.2.20-split-audit.md`.
 
 ## Requirements
 
@@ -632,6 +633,39 @@ cgpt extract
 
 Cause: extracted root does not contain a valid conversations JSON payload.
 
+### Temporary split verification workflow (until `R17` ships)
+
+This is an interim fallback for reviewing `raw.txt` vs `__working.txt` before the planned `split-audit` command exists.
+
+Temporary status:
+
+- Applies only until `R17` (`split-audit`) is implemented.
+- Reference spec: `docs/specs/v0.2.20-split-audit.md`
+- Intended outcome: quick triage in minutes, not full manual review.
+
+```bash
+raw="dossiers/my-project/2026-02-19_193422.txt"
+wrk="${raw%.txt}__working.txt"
+
+# 1) Size of change
+git diff --no-index --shortstat "$raw" "$wrk" || true
+
+# 2) Extract only lines removed by cleaning
+git diff --no-index -U0 "$raw" "$wrk" \
+  | awk '/^-[^-]/ {print substr($0,2)}' > /tmp/cgpt_removed_lines.txt
+
+echo "Removed lines: $(wc -l < /tmp/cgpt_removed_lines.txt)"
+
+# 3) Show suspicious removals (URLs, JSON/code-ish, key deliverable terms)
+rg -n -i 'https?://|[{}]|```|`|decision|constraint|draft|result|output|api|schema' \
+  /tmp/cgpt_removed_lines.txt | head -n 80
+```
+
+Interpretation guideline:
+
+- No meaningful hits in step 3: low-risk cleaning run.
+- Meaningful hits in step 3: review those lines before relying on `__working.txt`.
+
 ### `ERROR: Provide --topic and/or --topics`
 
 Cause: `excerpts` mode without topic terms.
@@ -753,6 +787,8 @@ This technical reference intentionally does not maintain a second roadmap status
 
 ### Technical Planning Notes (Current)
 
+- `R17` split-audit should ship as a standalone command first so existing dossiers can be validated without regeneration.
+- `R17` should support both human-readable summaries and strict exit semantics for automation (`PASS`/`WARN` + `--strict`).
 - Discovery `--json` should land before write-command `--json` to keep schemas aligned.
 - `--dry-run` should precede output-path customization to validate no-write semantics independently.
 
