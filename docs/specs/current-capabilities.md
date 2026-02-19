@@ -1,6 +1,6 @@
 # Current Capabilities
 
-Last updated: 2026-02-18
+Last updated: 2026-02-19
 
 ## Scope Snapshot
 
@@ -63,7 +63,7 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 - `--patterns-file` and `--used-links-file` fail fast when explicitly provided but missing.
 - `--name` values must normalize to a non-empty safe slug.
 - Privacy redaction remains planned roadmap scope (`R2`) and is not currently available in CLI commands.
-- Quality gates are planned roadmap scope and are not implemented in current behavior.
+- Context quality gates (`R15`) remain planned roadmap scope and are not currently available as CLI gate flags.
 
 ## Reliability and Validation
 

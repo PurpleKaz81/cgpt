@@ -281,6 +281,29 @@ class TestTimestampRobustness(EdgeCaseBase):
         self.assertIn("warning", result.stderr.lower())
         self.assertIn("create_time", result.stderr.lower())
 
+    def test_recent_stdin_treats_at_file_token_as_raw_id(self):
+        ids_file = self.home / "ids_for_recent.txt"
+        ids_file.write_text("conv-old\n", encoding="utf-8")
+
+        result = self.run_cgpt(
+            "recent",
+            "3",
+            "--root",
+            str(self.root),
+            "--format",
+            "txt",
+            input_text=f"1 @{ids_file}\n",
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn("Unknown ID in selection", result.stderr)
+        selected_file = self.dossiers / "selected_ids__recent_3.txt"
+        self.assertTrue(selected_file.exists())
+        self.assertEqual(
+            selected_file.read_text(encoding="utf-8").strip().splitlines(),
+            ["conv-recent"],
+        )
+
     def test_quick_recent_invalid_create_time_does_not_crash(self):
         result = self.run_cgpt(
             "quick",

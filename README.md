@@ -225,7 +225,8 @@ git pull origin main
 1. Stage only public files explicitly (never `git add .`):
 
 ```bash
-git add cgpt.py config.json requirements.txt pyproject.toml Makefile tox.ini
+git add cgpt.py cgpt/
+git add config.json requirements.txt pyproject.toml Makefile tox.ini
 git add README.md TECHNICAL.md SECURITY.md CHANGELOG.md RELEASING.md CONTRIBUTING.md LICENSE
 git add .github/CODEOWNERS .github/dependabot.yml
 git add .github/workflows/tests.yml .github/workflows/docs-guard.yml .github/workflows/lint.yml

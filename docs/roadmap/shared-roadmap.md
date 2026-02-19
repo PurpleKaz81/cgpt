@@ -1,6 +1,6 @@
 # Shared Roadmap
 
-Last updated: 2026-02-18
+Last updated: 2026-02-19
 
 ## Purpose
 
@@ -63,7 +63,7 @@ Necessity tags:
 | 1 | R2 | `--redact` mode on dossier-producing commands | `critical` | `planned` | `committed` | `2026-T2` | Privacy protection before sharing generated outputs; modularization baseline dependency was completed in `v0.2.13`. |
 | 2 | R3 | Discovery `--json` (`ids`, `find`, `search`) | `high` | `planned` | `committed` | `2026-T1` | Machine-readable discovery pipeline for automation. |
 | 3 | R5 | Token-aware chunking (`--max-tokens`) | `high` | `planned` | `committed` | `2026-T2` | Upload-safe context segmentation with ordering guarantees. |
-| 4 | R15 | Context Quality Gates (Reliability Layer) | `high` | `planned` | `committed` | `2026-T2` | Pass/fail dossier readiness checks with staged rollout. |
+| 4 | R15 | Context Quality Gates (Reliability Layer) | `high` | `planned` | `committed` | `2026-T2` | Pass/fail dossier readiness checks with staged rollout; distinct from already-shipped repository CI gates in `R16`. |
 | 5 | R7 | Date range filters (`--since`, `--until`) | `medium` | `planned` | `target` | `2026-T2` | Deterministic time-window filtering beyond relative recency. |
 | 6 | R6 | `--dry-run` for write commands | `medium` | `planned` | `target` | `2026-T2` | Safe preview before file writes. |
 | 7 | R8 | Output control flags (`--out-dir`, `--output-prefix`) | `medium` | `planned` | `target` | `2026-T3` | Better automation with deterministic paths and names. |
@@ -84,7 +84,7 @@ Necessity tags:
 
 ## R15 Initiative Breakdown
 
-Quality gates are planned as one coherent reliability feature family with phased rollout:
+Context quality gates are planned as one coherent reliability feature family with phased rollout. These are dossier-readiness checks and are distinct from repository CI quality gates already shipped in `R16`:
 
 1. Phase A (`2026-T2` target): token budget, coverage, and noise checks.
 1. Phase B (`2026-T3` target): freshness and provenance checks.

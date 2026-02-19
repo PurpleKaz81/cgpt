@@ -1,6 +1,6 @@
 # Engineering Quality Backlog
 
-Last updated: 2026-02-18
+Last updated: 2026-02-19
 
 ## Purpose
 
@@ -25,7 +25,7 @@ Implemented in this baseline hardening pass:
 - Dependency automation baseline is active (`.github/dependabot.yml`).
 - `doctor --dev` preflight checks runtime/developer toolchain health and minimum Node.js major expectations.
 - Internal runtime modularization baseline is implemented with package-layer split and `cgpt.py` compatibility shim.
-- Temporary Ruff import-order exceptions remain scoped to two legacy test files pending cleanup.
+- Ruff baseline has no temporary per-file import-order exceptions (`.ruff.toml` has no `per-file-ignores` section).
 
 Pending / next-phase quality work remains below.
 
@@ -33,7 +33,6 @@ Pending / next-phase quality work remains below.
 
 | Priority | Item | Status | Acceptance Criteria |
 | --- | --- | --- | --- |
-| P0 | Remove temporary Ruff per-file ignores | `planned` | Eliminate `.ruff.toml` `I001` per-file ignores by bringing affected legacy tests into import-order compliance. |
 | P0 | Security scanning baseline | `planned` | Add lightweight security scan workflow (dependency and secret scanning) with documented triage policy. |
 | P1 | Optional dependency CI split for DOCX paths | `planned` | CI has explicit legs that validate behavior with and without `python-docx`, and docx-only command expectations are covered. |
 | P1 | Release automation hardening | `planned` | Add release/tag validation automation and document failure handling in `RELEASING.md`. |

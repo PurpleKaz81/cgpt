@@ -44,6 +44,19 @@ from cgpt.domain.dossier_cleaning import (
 )
 
 
+def markdown_to_plain_text(md: str) -> str:
+    """Convert markdown to plain text for DOCX paragraph emission."""
+    s = re.sub(r"\r\n?", "\n", md)
+    s = re.sub(r"(?m)^#{1,6}\s*", "", s)
+    s = re.sub(r"\*\*(.*?)\*\*", r"\1", s)
+    s = re.sub(r"\*(.*?)\*", r"\1", s)
+    s = re.sub(r"```.*?```", "", s, flags=re.S)
+    s = re.sub(r"`([^`]+)`", r"\1", s)
+    s = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", s)
+    s = re.sub(r"\n{3,}", "\n\n", s)
+    return s.strip() + "\n"
+
+
 def build_combined_dossier(
     *,
     topics: List[str],
@@ -185,18 +198,6 @@ def build_combined_dossier(
     req_formats = [f.lower() for f in (formats or [])]
     if not req_formats:
         req_formats = ["txt"]
-
-    # Utility to convert markdown -> plain text
-    def _markdown_to_plain(md: str) -> str:
-        s = re.sub(r"\r\n?", "\n", md)
-        s = re.sub(r"(?m)^#{1,6}\s*", "", s)
-        s = re.sub(r"\*\*(.*?)\*\*", r"\1", s)
-        s = re.sub(r"\*(.*?)\*", r"\1", s)
-        s = re.sub(r"```.*?```", "", s, flags=re.S)
-        s = re.sub(r"`([^`]+)`", r"\1", s)
-        s = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", s)
-        s = re.sub(r"\n{3,}", "\n\n", s)
-        return s.strip() + "\n"
 
     md_path = out_path
     created_primary: Optional[Path] = None
@@ -375,7 +376,7 @@ def build_combined_dossier(
 
             docx_path = out_path.with_suffix(".docx")
             docx_doc = Document()
-            plain = _markdown_to_plain(md_content)
+            plain = markdown_to_plain_text(md_content)
             for para in [p for p in plain.split("\n\n") if p.strip()]:
                 docx_doc.add_paragraph(para)
             docx_doc.save(str(docx_path))

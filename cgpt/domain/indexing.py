@@ -56,13 +56,12 @@ def index_export(
     conn = sqlite3.connect(str(db_path))
     try:
         cur = conn.cursor()
+        conn.execute("BEGIN")
         if reindex:
             with suppress(Exception):
                 cur.execute("DELETE FROM conv_meta")
             with suppress(Exception):
                 cur.execute("DELETE FROM conv_search")
-
-        conn.execute("BEGIN")
         total = len(convs)
         i = 0
         start = time.time()

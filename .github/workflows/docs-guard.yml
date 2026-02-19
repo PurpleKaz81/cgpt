@@ -75,8 +75,9 @@ jobs:
           echo "Changed files:"
           echo "$changed"
 
-          # Define what counts as code/config behavior changes.
-          code_changed="$(echo "$changed" | rg '^(cgpt\.py|config\.json|requirements\.txt)$' || true)"
+          # Define what counts as runtime/config behavior changes.
+          # The runtime is modularized under cgpt/, with cgpt.py kept as a compatibility shim.
+          code_changed="$(echo "$changed" | rg '^(cgpt\.py|cgpt/.+\.py|config\.json|requirements\.txt)$' || true)"
           if [[ -z "$code_changed" ]]; then
             echo "No code/config files changed; docs sync check skipped."
             exit 0

@@ -19,6 +19,27 @@ Maintenance note for markdown lint:
 
 - Nothing yet.
 
+## [0.2.16] - 2026-02-19
+
+### Added in 0.2.16
+
+- Added CLI critical-path regression tests covering `find`, `search`, `index`, `latest-zip`, default no-subcommand extract behavior, and default mode/split environment handling.
+- Added edge-case coverage confirming `recent` treats `@file` tokens from stdin as raw IDs (matching existing non-include semantics).
+
+### Changed in 0.2.16
+
+- Refactored shared `quick`/`recent` setup and selection flows in `cgpt/commands/dossier.py` to reduce duplication while preserving CLI behavior.
+- Centralized markdown-to-plain-text conversion in `cgpt/domain/dossier_builder.py` and reused it in dossier generation paths.
+- Updated staging/release documentation commands to stage modular package files (`cgpt/`) explicitly alongside `cgpt.py`.
+- Synced capability/roadmap/quality-backlog documentation language with the current CI quality-gate baseline and planned context-quality initiative scope.
+- Clarified maintainer docs policy text to treat behavior changes under `cgpt/**/*.py` (including `cgpt.py`) as docs-impacting changes.
+
+### Fixed in 0.2.16
+
+- Fixed docs-guard workflow behavior-change matching to include `cgpt/**/*.py` runtime files instead of only `cgpt.py`.
+- Fixed release-process version-source guidance to use `cgpt/core/constants.py` (`__version__`) with `pyproject.toml` dynamic mapping.
+- Fixed explicit transaction ordering in `index --reindex` so table clears run inside one opened transaction.
+
 ## [0.2.15] - 2026-02-18
 
 ### Added in 0.2.15

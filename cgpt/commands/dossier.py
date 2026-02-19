@@ -3,7 +3,7 @@ import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from cgpt.core.color import _colorize_title_with_topics
 from cgpt.core.io import (
@@ -35,8 +35,196 @@ from cgpt.domain.conversations import (
     load_json,
     normalize_conversations,
 )
-from cgpt.domain.dossier_builder import build_combined_dossier
+from cgpt.domain.dossier_builder import build_combined_dossier, markdown_to_plain_text
 from cgpt.domain.dossier_cleaning import _extract_sources
+
+
+def _ensure_root_with_latest(home: Path, root_arg: Optional[str]) -> Tuple[Path, Path]:
+    """Ensure extracted/latest points to newest extracted data and resolve root."""
+    zips_dir, extracted_dir, dossiers_dir = ensure_layout(home)
+    has_any_extracted = any(
+        p.is_dir() and p.name != "latest" for p in extracted_dir.iterdir()
+    )
+    if not has_any_extracted:
+        zpath = newest_zip(zips_dir)
+        out_dir = extracted_dir / zpath.stem
+        extract_zip_safely(zpath, out_dir)
+        refresh_latest_symlink(extracted_dir, out_dir)
+    else:
+        refresh_latest_symlink(extracted_dir, newest_extracted(extracted_dir))
+
+    root = (
+        Path(root_arg).expanduser().resolve()
+        if root_arg
+        else default_root(extracted_dir)
+    )
+    return root, dossiers_dir
+
+
+def _parse_selection_text(
+    raw_text: str,
+    matches: List[Tuple[str, str, float]],
+    *,
+    allow_ids_file_include: bool,
+) -> Tuple[List[int], List[str]]:
+    tokens = [t for t in re.split(r"[,\s]+", raw_text) if t]
+    picked_local: List[int] = []
+    warnings: List[str] = []
+    id_to_index = {cid: idx for idx, (cid, _, _) in enumerate(matches, start=1)}
+
+    for tok in tokens:
+        if allow_ids_file_include and tok.startswith("@"):
+            path = Path(tok[1:]).expanduser()
+            if not path.exists():
+                warnings.append(f"IDs file not found: {path}")
+                continue
+            for ln in read_text_utf8(path, label="IDs").splitlines():
+                ln = ln.strip()
+                if not ln:
+                    continue
+                if ln in id_to_index:
+                    picked_local.append(id_to_index[ln])
+                    continue
+                if ln.isdigit():
+                    n = int(ln)
+                    if 1 <= n <= len(matches):
+                        picked_local.append(n)
+                    else:
+                        warnings.append(f"Selection number out of range in file: {n}")
+                    continue
+                warnings.append(f"Unknown ID in file: {ln}")
+            continue
+
+        if re.match(r"^\d+-\d+$", tok):
+            a, b = tok.split("-", 1)
+            a_i, b_i = int(a), int(b)
+            if a_i > b_i:
+                a_i, b_i = b_i, a_i
+            a_i = max(1, a_i)
+            b_i = min(len(matches), b_i)
+            if a_i > len(matches) or b_i < 1:
+                warnings.append(f"Range out of bounds: {tok}")
+                continue
+            for n in range(a_i, b_i + 1):
+                picked_local.append(n)
+            continue
+
+        if tok.isdigit():
+            n = int(tok)
+            if 1 <= n <= len(matches):
+                picked_local.append(n)
+            else:
+                warnings.append(f"Selection number out of range: {n}")
+            continue
+
+        if tok in id_to_index:
+            picked_local.append(id_to_index[tok])
+        else:
+            warnings.append(f"Unknown ID in selection: {tok}")
+
+    return picked_local, warnings
+
+
+def _print_selection_warnings(warnings: List[str]) -> None:
+    for warning in warnings:
+        print(f"WARNING: {warning}", file=sys.stderr)
+
+
+def _collect_selection_indices(
+    *,
+    matches: List[Tuple[str, str, float]],
+    select_all: bool,
+    ids_file: Optional[str],
+    allow_ids_file_include: bool,
+    pick_prompt: str,
+    correction_prompt: str,
+    no_valid_warning: str,
+    no_valid_error: str,
+) -> Optional[List[int]]:
+    if ids_file:
+        p = Path(ids_file).expanduser().resolve()
+        if not p.exists():
+            die(f"IDs file not found: {p}")
+        raw = "\n".join(read_nonempty_lines_utf8(p, label="IDs"))
+        picked, warnings = _parse_selection_text(
+            raw, matches, allow_ids_file_include=allow_ids_file_include
+        )
+        if warnings:
+            _print_selection_warnings(warnings)
+    elif select_all:
+        picked = list(range(1, len(matches) + 1))
+    else:
+        stdin_is_tty = sys.stdin.isatty()
+        if not stdin_is_tty:
+            try:
+                raw = sys.stdin.read()
+            except Exception:
+                die("Failed to read stdin for selection.")
+            if not raw or not raw.strip():
+                die("No selection provided on stdin.")
+            picked, warnings = _parse_selection_text(
+                raw, matches, allow_ids_file_include=allow_ids_file_include
+            )
+            if warnings:
+                _print_selection_warnings(warnings)
+        else:
+            picked = []
+            while True:
+                try:
+                    raw = input(pick_prompt).strip()
+                except (KeyboardInterrupt, EOFError):
+                    print("\nSelection cancelled.")
+                    return None
+                if not raw:
+                    die("No selection provided.")
+                if raw.lower() == "all":
+                    picked = list(range(1, len(matches) + 1))
+                    break
+
+                picked, warnings = _parse_selection_text(
+                    raw, matches, allow_ids_file_include=allow_ids_file_include
+                )
+                if not warnings:
+                    break
+                _print_selection_warnings(warnings)
+                try:
+                    correction = input(correction_prompt)
+                except (KeyboardInterrupt, EOFError):
+                    print("\nSelection cancelled.")
+                    return None
+                if correction is None:
+                    print("\nSelection cancelled.")
+                    return None
+                correction = correction.strip()
+                if correction == "":
+                    if not picked:
+                        print(no_valid_warning, file=sys.stderr)
+                        continue
+                    break
+                raw = correction
+                if raw.lower() == "all":
+                    picked = list(range(1, len(matches) + 1))
+                    break
+                picked, warnings = _parse_selection_text(
+                    raw, matches, allow_ids_file_include=allow_ids_file_include
+                )
+                if not warnings:
+                    break
+
+    picked = sorted(set(picked))
+    if not picked:
+        die(no_valid_error)
+    return picked
+
+
+def _write_ids_tsv(
+    dossiers_dir: Path, slug: str, matches: List[Tuple[str, str, float]]
+) -> Tuple[Path, Path]:
+    all_ids_path = dossiers_dir / f"ids__{slug}.tsv"
+    selected_ids_path = dossiers_dir / f"selected_ids__{slug}.txt"
+    all_lines = [f"{cid}\t{title}\n" for (cid, title, _) in matches]
+    all_ids_path.write_text("".join(all_lines), encoding="utf-8")
+    return all_ids_path, selected_ids_path
 
 
 def cmd_make_dossiers(args: argparse.Namespace) -> None:
@@ -95,18 +283,6 @@ def cmd_make_dossiers(args: argparse.Namespace) -> None:
         req_formats = [f.lower() for f in (getattr(args, "format", None) or [])]
         if not req_formats:
             req_formats = ["txt"]
-
-        # helper: convert markdown -> plain text
-        def _markdown_to_plain(md: str) -> str:
-            s = re.sub(r"\r\n?", "\n", md)
-            s = re.sub(r"(?m)^#{1,6}\s*", "", s)
-            s = re.sub(r"\*\*(.*?)\*\*", r"\1", s)
-            s = re.sub(r"\*(.*?)\*", r"\1", s)
-            s = re.sub(r"```.*?```", "", s, flags=re.S)
-            s = re.sub(r"`([^`]+)`", r"\1", s)
-            s = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", s)
-            s = re.sub(r"\n{3,}", "\n\n", s)
-            return s.strip() + "\n"
 
         created_paths: List[Path] = []
 
@@ -171,7 +347,7 @@ def cmd_make_dossiers(args: argparse.Namespace) -> None:
 
                 docx_path = base.with_suffix(".docx")
                 docx_doc = Document()
-                plain = _markdown_to_plain(md_content)
+                plain = markdown_to_plain_text(md_content)
                 for para in [p for p in plain.split("\n\n") if p.strip()]:
                     docx_doc.add_paragraph(para)
                 docx_doc.save(str(docx_path))
@@ -294,27 +470,7 @@ def cmd_recent(args: argparse.Namespace) -> None:
         die("Count must be at least 1.")
 
     home = home_dir(args.home)
-    zips_dir, extracted_dir, dossiers_dir = ensure_layout(home)
-
-    # Ensure we have an extracted/latest
-    has_any_extracted = any(
-        p.is_dir() and p.name != "latest" for p in extracted_dir.iterdir()
-    )
-    if not has_any_extracted:
-        # auto-extract newest zip
-        zpath = newest_zip(zips_dir)
-        out_dir = extracted_dir / zpath.stem
-        extract_zip_safely(zpath, out_dir)
-        refresh_latest_symlink(extracted_dir, out_dir)
-    else:
-        newest = newest_extracted(extracted_dir)
-        refresh_latest_symlink(extracted_dir, newest)
-
-    root = (
-        Path(args.root).expanduser().resolve()
-        if args.root
-        else default_root(extracted_dir)
-    )
+    root, dossiers_dir = _ensure_root_with_latest(home, args.root)
 
     data_file = find_conversations_json(root)
     if not data_file:
@@ -349,12 +505,7 @@ def cmd_recent(args: argparse.Namespace) -> None:
     # matches is already newest-first from the sort above
 
     slug = f"recent_{count}"
-    all_ids_path = dossiers_dir / f"ids__{slug}.tsv"
-    selected_ids_path = dossiers_dir / f"selected_ids__{slug}.txt"
-
-    # Write all matches
-    all_lines = [f"{cid}\t{title}\n" for (cid, title, _) in matches]
-    all_ids_path.write_text("".join(all_lines), encoding="utf-8")
+    all_ids_path, selected_ids_path = _write_ids_tsv(dossiers_dir, slug, matches)
 
     # Print numbered list
     print(f"\n=== {count} Most Recent Conversations ===\n")
@@ -363,101 +514,18 @@ def cmd_recent(args: argparse.Namespace) -> None:
 
     print(f"\nSaved full list to: {all_ids_path}")
 
-    # Selection logic (simplified from cmd_quick)
-    if args.all:
-        picked = list(range(1, len(matches) + 1))
-    else:
-
-        def parse_selection_text(raw_text: str) -> Tuple[List[int], List[str]]:
-            tokens = [t for t in re.split(r"[,\s]+", raw_text) if t]
-            picked_local: List[int] = []
-            warnings: List[str] = []
-            id_to_index = {cid: idx for idx, (cid, _, _) in enumerate(matches, start=1)}
-
-            for tok in tokens:
-                if re.match(r"^\d+-\d+$", tok):
-                    a, b = tok.split("-", 1)
-                    a_i, b_i = int(a), int(b)
-                    if a_i > b_i:
-                        a_i, b_i = b_i, a_i
-                    a_i = max(1, a_i)
-                    b_i = min(len(matches), b_i)
-                    if a_i > len(matches) or b_i < 1:
-                        warnings.append(f"Range out of bounds: {tok}")
-                        continue
-                    for n in range(a_i, b_i + 1):
-                        picked_local.append(n)
-                    continue
-
-                if tok.isdigit():
-                    n = int(tok)
-                    if 1 <= n <= len(matches):
-                        picked_local.append(n)
-                    else:
-                        warnings.append(f"Selection number out of range: {n}")
-                    continue
-
-                # treat as raw ID
-                if tok in id_to_index:
-                    picked_local.append(id_to_index[tok])
-                else:
-                    warnings.append(f"Unknown ID in selection: {tok}")
-
-            return picked_local, warnings
-
-        stdin_is_tty = sys.stdin.isatty()
-        if not stdin_is_tty:
-            try:
-                raw = sys.stdin.read()
-            except Exception:
-                die("Failed to read stdin for selection.")
-            if not raw or not raw.strip():
-                die("No selection provided on stdin.")
-            picked, warnings = parse_selection_text(raw)
-            if warnings:
-                for w in warnings:
-                    print(f"WARNING: {w}", file=sys.stderr)
-        else:
-            while True:
-                try:
-                    raw = input(
-                        "\nPick by number (e.g. 1 3 7), range (1-5), or 'all': "
-                    ).strip()
-                except (KeyboardInterrupt, EOFError):
-                    print("\nSelection cancelled.")
-                    return
-                if not raw:
-                    die("No selection provided.")
-                if raw.lower() == "all":
-                    picked = list(range(1, len(matches) + 1))
-                    break
-
-                picked, warnings = parse_selection_text(raw)
-                if not warnings:
-                    break
-                for w in warnings:
-                    print(f"WARNING: {w}", file=sys.stderr)
-                try:
-                    correction = input(
-                        "\nErrors detected. Enter corrected selection, or ENTER to accept valid picks: "
-                    )
-                except (KeyboardInterrupt, EOFError):
-                    print("\nSelection cancelled.")
-                    return
-                if correction is None:
-                    print("\nSelection cancelled.")
-                    return
-                correction = correction.strip()
-                if correction == "":
-                    if not picked:
-                        print("No valid selections; please try again.", file=sys.stderr)
-                        continue
-                    break
-                raw = correction
-
-    picked = sorted(set(picked))
-    if not picked:
-        die("No valid selections were parsed.")
+    picked = _collect_selection_indices(
+        matches=matches,
+        select_all=bool(args.all),
+        ids_file=None,
+        allow_ids_file_include=False,
+        pick_prompt="\nPick by number (e.g. 1 3 7), range (1-5), or 'all': ",
+        correction_prompt="\nErrors detected. Enter corrected selection, or ENTER to accept valid picks: ",
+        no_valid_warning="No valid selections; please try again.",
+        no_valid_error="No valid selections were parsed.",
+    )
+    if picked is None:
+        return
     wanted_ids = [matches[i - 1][0] for i in picked]
 
     selected_ids_path.write_text("\n".join(wanted_ids) + "\n", encoding="utf-8")
@@ -530,28 +598,7 @@ def cmd_quick(args: argparse.Namespace) -> None:
         die("--days must be >= 1")
 
     home = home_dir(args.home)
-    zips_dir, extracted_dir, dossiers_dir = ensure_layout(home)
-
-    # Ensure we have an extracted/latest
-    has_any_extracted = any(
-        p.is_dir() and p.name != "latest" for p in extracted_dir.iterdir()
-    )
-    if not has_any_extracted:
-        # auto-extract newest zip
-        zpath = newest_zip(zips_dir)
-        out_dir = extracted_dir / zpath.stem
-        extract_zip_safely(zpath, out_dir)
-        refresh_latest_symlink(extracted_dir, out_dir)
-    else:
-        # refresh latest to newest extracted dir (keeps things consistent)
-        newest = newest_extracted(extracted_dir)
-        refresh_latest_symlink(extracted_dir, newest)
-
-    root = (
-        Path(args.root).expanduser().resolve()
-        if args.root
-        else default_root(extracted_dir)
-    )
+    root, dossiers_dir = _ensure_root_with_latest(home, args.root)
 
     data_file = find_conversations_json(root)
     if not data_file:
@@ -621,12 +668,7 @@ def cmd_quick(args: argparse.Namespace) -> None:
     matches.sort(key=lambda x: x[2])
 
     slug = safe_slug("_".join(topics))
-    all_ids_path = dossiers_dir / f"ids__{slug}.tsv"
-    selected_ids_path = dossiers_dir / f"selected_ids__{slug}.txt"
-
-    # Write all matches (for manual copy if you want)
-    all_lines = [f"{cid}\t{title}\n" for (cid, title, _) in matches]
-    all_ids_path.write_text("".join(all_lines), encoding="utf-8")
+    all_ids_path, selected_ids_path = _write_ids_tsv(dossiers_dir, slug, matches)
 
     # Print numbered list
     for i, (cid, title, ctime) in enumerate(matches, start=1):
@@ -635,153 +677,24 @@ def cmd_quick(args: argparse.Namespace) -> None:
 
     print(f"\nSaved full match list to: {all_ids_path}")
 
-    def parse_selection_text(raw_text: str) -> Tuple[List[int], List[str]]:
-        tokens = [t for t in re.split(r"[,\s]+", raw_text) if t]
-        picked_local: List[int] = []
-        warnings: List[str] = []
-        id_to_index = {cid: idx for idx, (cid, _, _) in enumerate(matches, start=1)}
-
-        for tok in tokens:
-            if tok.startswith("@"):
-                # load IDs from file
-                path = Path(tok[1:]).expanduser()
-                if not path.exists():
-                    warnings.append(f"IDs file not found: {path}")
-                    continue
-                for ln in read_text_utf8(path, label="IDs").splitlines():
-                    ln = ln.strip()
-                    if not ln:
-                        continue
-                    if ln in id_to_index:
-                        picked_local.append(id_to_index[ln])
-                    else:
-                        # allow raw numeric indices in file
-                        if ln.isdigit():
-                            n = int(ln)
-                            if 1 <= n <= len(matches):
-                                picked_local.append(n)
-                            else:
-                                warnings.append(
-                                    f"Selection number out of range in file: {n}"
-                                )
-                        else:
-                            warnings.append(f"Unknown ID in file: {ln}")
-                continue
-
-            if re.match(r"^\d+-\d+$", tok):
-                a, b = tok.split("-", 1)
-                a_i = int(a)
-                b_i = int(b)
-                if a_i > b_i:
-                    a_i, b_i = b_i, a_i
-                # clamp to valid range
-                a_i = max(1, a_i)
-                b_i = min(len(matches), b_i)
-                if a_i > len(matches) or b_i < 1:
-                    warnings.append(f"Range out of bounds: {tok}")
-                    continue
-                for n in range(a_i, b_i + 1):
-                    picked_local.append(n)
-                continue
-
-            if tok.isdigit():
-                n = int(tok)
-                if 1 <= n <= len(matches):
-                    picked_local.append(n)
-                else:
-                    warnings.append(f"Selection number out of range: {n}")
-                continue
-
-            # treat as raw ID
-            if tok in id_to_index:
-                picked_local.append(id_to_index[tok])
-            else:
-                warnings.append(f"Unknown ID in selection: {tok}")
-
-        return picked_local, warnings
-
-    # Non-interactive selection via --ids-file: read file and parse selections.
-    if getattr(args, "ids_file", None):
-        p = Path(args.ids_file).expanduser().resolve()
-        if not p.exists():
-            die(f"IDs file not found: {p}")
-        raw = "\n".join(read_nonempty_lines_utf8(p, label="IDs"))
-        picked, warnings = parse_selection_text(raw)
-        if warnings:
-            for w in warnings:
-                print(f"WARNING: {w}", file=sys.stderr)
-    elif args.all:
-        picked = list(range(1, len(matches) + 1))
-    else:
-        stdin_is_tty = sys.stdin.isatty()
-        if not stdin_is_tty:
-            # Non-interactive stdin: read once and proceed (warnings printed)
-            try:
-                raw = sys.stdin.read()
-            except Exception:
-                die("Failed to read stdin for selection.")
-            if not raw or not raw.strip():
-                die("No selection provided on stdin.")
-            picked, warnings = parse_selection_text(raw)
-            if warnings:
-                for w in warnings:
-                    print(f"WARNING: {w}", file=sys.stderr)
-        else:
-            # Interactive: allow correction loop when there are warnings
-            while True:
-                try:
-                    raw = input(
-                        "\nPick by number (e.g. 1 3 7), or 'all', or paste IDs: "
-                    ).strip()
-                except (KeyboardInterrupt, EOFError):
-                    print("\nSelection cancelled.")
-                    return
-                if not raw:
-                    die("No selection provided.")
-                if raw.lower() == "all":
-                    picked = list(range(1, len(matches) + 1))
-                    warnings = []
-                    break
-
-                picked, warnings = parse_selection_text(raw)
-
-                if not warnings:
-                    break  # good selection, proceed
-
-                # There are warnings: show them and allow user to correct or accept partial selection
-                for w in warnings:
-                    print(f"WARNING: {w}", file=sys.stderr)
-                try:
-                    correction = input(
-                        "\nErrors detected. Enter corrected selection, or press ENTER to accept valid selections and continue: "
-                    )
-                except (KeyboardInterrupt, EOFError):
-                    print("\nSelection cancelled.")
-                    return
-                if correction is None:
-                    print("\nSelection cancelled.")
-                    return
-                correction = correction.strip()
-                if correction == "":
-                    # accept current valid picks (if any)
-                    if not picked:
-                        print(
-                            "No valid selections to accept; please enter a corrected selection.",
-                            file=sys.stderr,
-                        )
-                        continue
-                    break
-                # otherwise loop will parse the new correction text
-
-                raw = correction
-                picked, warnings = parse_selection_text(raw)
-                if not warnings:
-                    break
-                # else loop continues and user will be prompted again
-
-    picked = sorted(set(picked))
-    if not picked:
-        die("No valid selections were parsed. Check your selection numbers/IDs.")
+    picked = _collect_selection_indices(
+        matches=matches,
+        select_all=bool(args.all),
+        ids_file=getattr(args, "ids_file", None),
+        allow_ids_file_include=True,
+        pick_prompt="\nPick by number (e.g. 1 3 7), or 'all', or paste IDs: ",
+        correction_prompt=(
+            "\nErrors detected. Enter corrected selection, or press ENTER to accept valid selections and continue: "
+        ),
+        no_valid_warning=(
+            "No valid selections to accept; please enter a corrected selection."
+        ),
+        no_valid_error=(
+            "No valid selections were parsed. Check your selection numbers/IDs."
+        ),
+    )
+    if picked is None:
+        return
     wanted_ids = [matches[i - 1][0] for i in picked]
 
     selected_ids_path.write_text("\n".join(wanted_ids) + "\n", encoding="utf-8")
