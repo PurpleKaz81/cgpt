@@ -1,6 +1,7 @@
 import argparse
 import re
 import sys
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -227,6 +228,80 @@ def _write_ids_tsv(
     return all_ids_path, selected_ids_path
 
 
+def _load_conversations(root: Path) -> List[Dict[str, Any]]:
+    data_file = find_conversations_json(root)
+    if not data_file:
+        die(f"No conversations JSON found under {root}")
+    data = load_json(data_file)
+    return normalize_conversations(data)
+
+
+def _collect_wanted_ids(args: argparse.Namespace) -> List[str]:
+    wanted: List[str] = []
+    wanted.extend(getattr(args, "ids", None) or [])
+
+    ids_file = getattr(args, "ids_file", None)
+    if ids_file:
+        p = Path(ids_file).expanduser().resolve()
+        if not p.exists():
+            die(f"IDs file not found: {p}")
+        wanted.extend(read_nonempty_lines_utf8(p, label="IDs"))
+
+    wanted = [w.strip() for w in wanted if w.strip()]
+    if not wanted:
+        die("Provide --ids and/or --ids-file")
+    return wanted
+
+
+@dataclass
+class _BuildOptions:
+    formats: List[str]
+    patterns: Optional[List[str]]
+    split: bool
+    dedup: bool
+    used_links_file: Optional[str]
+    config_file: Optional[str]
+    mode: str
+    context: int
+    name: Optional[str]
+
+
+def _collect_build_options(
+    args: argparse.Namespace, *, validate_config: bool = False
+) -> _BuildOptions:
+    formats = [f.lower() for f in (getattr(args, "format", None) or [])]
+
+    patterns = None
+    patterns_file = getattr(args, "patterns_file", None)
+    if patterns_file:
+        pf = require_existing_file(patterns_file, label="patterns")
+        patterns = read_nonempty_lines_utf8(pf, label="patterns")
+
+    split = bool(getattr(args, "split", False))
+    dedup = bool(getattr(args, "dedup", True))
+    used_links_file = getattr(args, "used_links_file", None)
+    if used_links_file:
+        used_links_file = str(
+            require_existing_file(used_links_file, label="used-links")
+        )
+
+    config_file = getattr(args, "config", None)
+    if validate_config and config_file:
+        load_column_config(config_file)
+
+    return _BuildOptions(
+        formats=formats,
+        patterns=patterns,
+        split=split,
+        dedup=dedup,
+        used_links_file=used_links_file,
+        config_file=config_file,
+        mode=getattr(args, "mode", None) or "full",
+        context=int(getattr(args, "context", 2)),
+        name=getattr(args, "name", None),
+    )
+
+
 def cmd_make_dossiers(args: argparse.Namespace) -> None:
     home = home_dir(args.home)
     _, extracted_dir, dossiers_dir = ensure_layout(home)
@@ -235,23 +310,8 @@ def cmd_make_dossiers(args: argparse.Namespace) -> None:
         if args.root
         else default_root(extracted_dir)
     )
-    data_file = find_conversations_json(root)
-    if not data_file:
-        die(f"No conversations JSON found under {root}")
-    data = load_json(data_file)
-    convs = normalize_conversations(data)
-
-    wanted: List[str] = []
-    if args.ids:
-        wanted.extend(args.ids)
-    if args.ids_file:
-        p = Path(args.ids_file).expanduser().resolve()
-        if not p.exists():
-            die(f"IDs file not found: {p}")
-        wanted.extend(read_nonempty_lines_utf8(p, label="IDs"))
-    wanted = [w.strip() for w in wanted if w.strip()]
-    if not wanted:
-        die("Provide --ids and/or --ids-file")
+    convs = _load_conversations(root)
+    wanted = _collect_wanted_ids(args)
 
     by_id = build_conversation_map_by_id(convs)
 
@@ -376,8 +436,7 @@ def cmd_make_dossiers(args: argparse.Namespace) -> None:
             )
 
 def cmd_build_dossier(args: argparse.Namespace) -> None:
-    mode = getattr(args, "mode", None) or "full"
-    context = int(args.context)
+    options = _collect_build_options(args)
 
     topics: List[str] = []
     if getattr(args, "topic", None):
@@ -391,7 +450,7 @@ def cmd_build_dossier(args: argparse.Namespace) -> None:
         if isinstance(extra_terms, list):
             topics.extend([t for t in extra_terms if isinstance(t, str)])
     topics = [t.strip() for t in topics if t and t.strip()]
-    if not topics and mode == "excerpts":
+    if not topics and options.mode == "excerpts":
         die("Provide --topic and/or --topics when using --mode excerpts")
     if not topics:
         # In full mode, allow dossiers without topic filtering.
@@ -405,58 +464,24 @@ def cmd_build_dossier(args: argparse.Namespace) -> None:
         else default_root(extracted_dir)
     )
 
-    data_file = find_conversations_json(root)
-    if not data_file:
-        die(f"No conversations JSON found under {root}")
-    data = load_json(data_file)
-    convs = normalize_conversations(data)
-
-    wanted: List[str] = []
-    if args.ids:
-        wanted.extend(args.ids)
-    if args.ids_file:
-        p = Path(args.ids_file).expanduser().resolve()
-        if not p.exists():
-            die(f"IDs file not found: {p}")
-        wanted.extend(read_nonempty_lines_utf8(p, label="IDs"))
-    wanted = [w.strip() for w in wanted if w.strip()]
-    if not wanted:
-        die("Provide --ids and/or --ids-file")
-
-    # Determine output formats (default to txt)
-    formats = [f.lower() for f in (getattr(args, "format", None) or [])]
-
-    # Load patterns from file if provided
-    patterns = None
-    if getattr(args, "patterns_file", None):
-        pf = require_existing_file(args.patterns_file, label="patterns")
-        patterns = read_nonempty_lines_utf8(pf, label="patterns")
-
-    split = bool(getattr(args, "split", False))
-    dedup = bool(getattr(args, "dedup", True))
-    used_links_file = getattr(args, "used_links_file", None)
-    if used_links_file:
-        used_links_file = str(
-            require_existing_file(used_links_file, label="used-links")
-        )
-    config_file = getattr(args, "config", None)
-    name = getattr(args, "name", None)
+    convs = _load_conversations(root)
+    wanted = _collect_wanted_ids(args)
 
     out_path = build_combined_dossier(
         topics=topics,
-        mode=mode,
-        context=context,
+        mode=options.mode,
+        context=options.context,
         root=root,
         dossiers_dir=dossiers_dir,
         wanted_ids=wanted,
         convs=convs,
-        formats=formats,
-        split=split,
-        patterns=patterns,
-        dedup=dedup,
-        used_links_file=used_links_file,
-        config_file=config_file,
-        name=name,
+        formats=options.formats,
+        split=options.split,
+        patterns=options.patterns,
+        dedup=options.dedup,
+        used_links_file=options.used_links_file,
+        config_file=options.config_file,
+        name=options.name,
     )
     print(out_path)
 
@@ -471,12 +496,7 @@ def cmd_recent(args: argparse.Namespace) -> None:
 
     home = home_dir(args.home)
     root, dossiers_dir = _ensure_root_with_latest(home, args.root)
-
-    data_file = find_conversations_json(root)
-    if not data_file:
-        die(f"No conversations JSON found under {root}")
-    data = load_json(data_file)
-    convs = normalize_conversations(data)
+    convs = _load_conversations(root)
 
     # Sort by create_time descending (newest first), then take top N
     invalid_create_time = [0]
@@ -531,43 +551,23 @@ def cmd_recent(args: argparse.Namespace) -> None:
     selected_ids_path.write_text("\n".join(wanted_ids) + "\n", encoding="utf-8")
     print(f"\nSaved selected IDs to: {selected_ids_path}")
 
-    # Build dossier
-    formats = [f.lower() for f in (getattr(args, "format", None) or [])]
-    patterns = None
-    if getattr(args, "patterns_file", None):
-        pf = require_existing_file(args.patterns_file, label="patterns")
-        patterns = read_nonempty_lines_utf8(pf, label="patterns")
-
-    split = bool(getattr(args, "split", False))
-    dedup = bool(getattr(args, "dedup", True))
-    used_links_file = getattr(args, "used_links_file", None)
-    if used_links_file:
-        used_links_file = str(
-            require_existing_file(used_links_file, label="used-links")
-        )
-    config_file = getattr(args, "config", None)
-    if config_file:
-        # Validate upfront so explicit --config errors are not deferred/silent.
-        load_column_config(config_file)
-    mode = getattr(args, "mode", None) or "full"
-    context = int(getattr(args, "context", 2))
-    name = getattr(args, "name", None)
+    options = _collect_build_options(args, validate_config=True)
 
     out_path = build_combined_dossier(
         topics=[f"recent-{count}"],
-        mode=mode,
-        context=context,
+        mode=options.mode,
+        context=options.context,
         root=root,
         dossiers_dir=dossiers_dir,
         wanted_ids=wanted_ids,
         convs=convs,
-        formats=formats,
-        split=split,
-        patterns=patterns,
-        dedup=dedup,
-        used_links_file=used_links_file,
-        config_file=config_file,
-        name=name,
+        formats=options.formats,
+        split=options.split,
+        patterns=options.patterns,
+        dedup=options.dedup,
+        used_links_file=options.used_links_file,
+        config_file=options.config_file,
+        name=options.name,
     )
     print(f"\nWrote dossier: {out_path}")
 
@@ -588,8 +588,6 @@ def cmd_quick(args: argparse.Namespace) -> None:
     if not topics:
         die("Provide at least one topic.")
 
-    mode = args.mode
-    context = int(args.context)
     recent_count = getattr(args, "recent_count", None)
     days_count = getattr(args, "days_count", None)
     if recent_count is not None and recent_count < 1:
@@ -599,12 +597,7 @@ def cmd_quick(args: argparse.Namespace) -> None:
 
     home = home_dir(args.home)
     root, dossiers_dir = _ensure_root_with_latest(home, args.root)
-
-    data_file = find_conversations_json(root)
-    if not data_file:
-        die(f"No conversations JSON found under {root}")
-    data = load_json(data_file)
-    convs = normalize_conversations(data)
+    convs = _load_conversations(root)
     invalid_create_time = [0]
 
     def _ctime_for(c: Dict[str, Any]) -> float:
@@ -642,7 +635,9 @@ def cmd_quick(args: argparse.Namespace) -> None:
         if not cid:
             continue
         title_lower = (title or "").lower()
-        messages_lower = conversation_messages_blob(c).lower()
+        messages_lower = ""
+        if where in ("messages", "all"):
+            messages_lower = conversation_messages_blob(c).lower()
 
         checks: List[bool] = []
         if where == "title":
@@ -700,38 +695,22 @@ def cmd_quick(args: argparse.Namespace) -> None:
     selected_ids_path.write_text("\n".join(wanted_ids) + "\n", encoding="utf-8")
     print(f"\nSaved selected IDs to: {selected_ids_path}")
 
-    formats = [f.lower() for f in (getattr(args, "format", None) or [])]
-
-    # Load patterns from file if provided
-    patterns = None
-    if getattr(args, "patterns_file", None):
-        pf = require_existing_file(args.patterns_file, label="patterns")
-        patterns = read_nonempty_lines_utf8(pf, label="patterns")
-
-    split = bool(getattr(args, "split", False))
-    dedup = bool(getattr(args, "dedup", True))
-    used_links_file = getattr(args, "used_links_file", None)
-    if used_links_file:
-        used_links_file = str(
-            require_existing_file(used_links_file, label="used-links")
-        )
-    config_file = getattr(args, "config", None)
-    name = getattr(args, "name", None)
+    options = _collect_build_options(args)
 
     out_path = build_combined_dossier(
         topics=topics,
-        mode=mode,
-        context=context,
+        mode=options.mode,
+        context=options.context,
         root=root,
         dossiers_dir=dossiers_dir,
         wanted_ids=wanted_ids,
         convs=convs,
-        formats=formats,
-        split=split,
-        patterns=patterns,
-        dedup=dedup,
-        used_links_file=used_links_file,
-        config_file=config_file,
-        name=name,
+        formats=options.formats,
+        split=options.split,
+        patterns=options.patterns,
+        dedup=options.dedup,
+        used_links_file=options.used_links_file,
+        config_file=options.config_file,
+        name=options.name,
     )
     print(f"\nWrote dossier: {out_path}")

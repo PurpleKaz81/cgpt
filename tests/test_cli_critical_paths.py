@@ -328,6 +328,51 @@ class TestCliCriticalPaths(unittest.TestCase):
         ).resolve()
         self.assertEqual(indexed_path, db_path.resolve())
 
+    def test_search_ignores_index_rows_from_other_root(self):
+        other_root = self.extracted / "other_export"
+        other_root.mkdir(parents=True, exist_ok=True)
+        other_convs = [
+            _conv(
+                "conv-zeta",
+                "Zeta archive",
+                time.time(),
+                "zeta notes",
+                "zeta summary",
+            )
+        ]
+        (other_root / "conversations.json").write_text(
+            json.dumps(other_convs), encoding="utf-8"
+        )
+
+        reindex_result = self.run_cgpt(
+            "index", "--root", str(other_root), "--reindex"
+        )
+        self.assertEqual(reindex_result.returncode, 0, msg=reindex_result.stderr)
+
+        mismatch_result = self.run_cgpt(
+            "search",
+            "--terms",
+            "Zeta",
+            "--where",
+            "title",
+            "--root",
+            str(self.root),
+        )
+        self.assertEqual(mismatch_result.returncode, 0, msg=mismatch_result.stderr)
+        self.assertEqual(self._stdout_ids(mismatch_result.stdout), [])
+
+        match_result = self.run_cgpt(
+            "search",
+            "--terms",
+            "Zeta",
+            "--where",
+            "title",
+            "--root",
+            str(other_root),
+        )
+        self.assertEqual(match_result.returncode, 0, msg=match_result.stderr)
+        self.assertEqual(self._stdout_ids(match_result.stdout), ["conv-zeta"])
+
     def test_latest_zip_returns_newest_archive(self):
         now = time.time()
         self._write_export_zip("older_export", mtime=now - 20)

@@ -1,19 +1,17 @@
 import argparse
-import re
 from pathlib import Path
 from typing import List
 
 from cgpt.core.color import _colorize_title_with_topic, _colorize_title_with_topics
 from cgpt.core.layout import default_root, die, ensure_layout, home_dir
 from cgpt.domain.conversations import (
-    compile_topic_pattern,
     conv_id_and_title,
-    conversation_matches_text,
+    conversation_messages_blob,
     find_conversations_json,
     load_json,
     normalize_conversations,
 )
-from cgpt.domain.indexing import build_fts_query, query_index
+from cgpt.domain.indexing import build_fts_query, index_matches_root, query_index
 
 
 def cmd_ids(args: argparse.Namespace) -> None:
@@ -80,9 +78,9 @@ def cmd_search(args: argparse.Namespace) -> None:
         else default_root(extracted_dir)
     )
 
-    # Try using SQLite FTS index if present for faster searches
+    # Try using SQLite FTS index only when scoped to the same export root.
     db_path = extracted_dir / "cgpt_index.db"
-    if db_path.exists():
+    if db_path.exists() and index_matches_root(db_path, root):
         fts_q = build_fts_query(terms, and_terms)
         if fts_q:
             rows = query_index(db_path, fts_q, where=where)
@@ -98,40 +96,33 @@ def cmd_search(args: argparse.Namespace) -> None:
     data = load_json(data_file)
     convs = normalize_conversations(data)
 
-    # For fallback scanning: compile an OR regex for quick checks; use per-term checks for AND.
-    topic_re = compile_topic_pattern(terms)
+    terms_lower = [term.lower() for term in terms]
 
     for c in convs:
         cid, title = conv_id_and_title(c)
         if not cid:
             continue
 
-        hit = False
-        # Title checks
-        if where in ("title", "all"):
-            t = title or ""
-            if and_terms:
-                ok_title = all((term.lower() in t.lower()) for term in terms)
-            else:
-                ok_title = bool(topic_re.search(t))
-            if ok_title:
-                hit = True
+        title_lower = (title or "").lower()
+        messages_lower = ""
+        if where in ("messages", "all"):
+            messages_lower = conversation_messages_blob(c).lower()
 
-        # Message checks (AND/OR semantics)
-        if not hit and where in ("messages", "all"):
-            if and_terms:
-                ok_msgs = True
-                for term in terms:
-                    p = re.compile(re.escape(term), re.IGNORECASE)
-                    if not conversation_matches_text(c, p):
-                        ok_msgs = False
-                        break
-            else:
-                ok_msgs = conversation_matches_text(c, topic_re)
-            if ok_msgs:
-                hit = True
+        checks: List[bool]
+        if where == "title":
+            checks = [term in title_lower for term in terms_lower]
+        elif where == "messages":
+            checks = [term in messages_lower for term in terms_lower]
+        elif where == "all":
+            checks = [
+                (term in title_lower) or (term in messages_lower)
+                for term in terms_lower
+            ]
+        else:
+            die(f"Invalid --where value: {where}")
+
+        hit = all(checks) if and_terms else any(checks)
 
         if hit:
             colored_title = _colorize_title_with_topics(title or "", terms)
             print(f"{cid}\t{colored_title}")
-

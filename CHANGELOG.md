@@ -19,6 +19,26 @@ Maintenance note for markdown lint:
 
 - Nothing yet.
 
+## [0.2.17] - 2026-02-19
+
+### Added in 0.2.17
+
+- Added regression coverage ensuring `search --root <path>` ignores cached index rows built from a different export root.
+
+### Changed in 0.2.17
+
+- Search now uses SQLite FTS only when index metadata confirms the index was built for the same requested root; mismatched scope falls back to root-local JSON scanning.
+- Index metadata now stores the indexed export root and clears stale rows when rebuilding against a different root (or when migrating legacy metadata-free indexes).
+- Refactored parser command wiring for `build-dossier`/`quick`/`recent` aliases into shared helper configuration to reduce duplication risk.
+- Refactored shared dossier command setup (`build-dossier`, `quick`, `recent`) into reusable option and conversation-loading helpers.
+- Refactored split working-TXT transformation into a dedicated pipeline helper with explicit fail-fast behavior for pipeline errors.
+- Updated technical/capability/roadmap/quality-ledger docs to reflect shipped index-scope integrity behavior.
+
+### Fixed in 0.2.17
+
+- Fixed cross-export search mismatches caused by stale global index data being reused for a different `--root`.
+- Fixed unnecessary message-blob construction during title-only quick/search paths.
+
 ## [0.2.16] - 2026-02-19
 
 ### Added in 0.2.16
@@ -335,6 +355,14 @@ Maintenance note for markdown lint:
 - FAQ and troubleshooting section
 - Common mistakes and fixes guide
 
+[0.2.17]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.17
+[0.2.16]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.16
+[0.2.15]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.15
+[0.2.14]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.14
+[0.2.13]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.13
+[0.2.12]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.12
+[0.2.11]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.11
+[0.2.10]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.10
 [0.2.9]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.9
 [0.2.8]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.8
 [0.2.7]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.7
@@ -346,4 +374,4 @@ Maintenance note for markdown lint:
 [0.2.1]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.1
 [0.2.0]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.0
 [0.1.0]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.1.0
-[Unreleased]: https://github.com/PurpleKaz81/cgpt/compare/v0.2.9...HEAD
+[Unreleased]: https://github.com/PurpleKaz81/cgpt/compare/v0.2.17...HEAD
