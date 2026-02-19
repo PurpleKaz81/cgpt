@@ -19,6 +19,7 @@ Maintenance note for markdown lint:
 
 - `quick`/`recent` now skip latest-pointer refresh and extraction side effects when `--root` is explicitly provided.
 - Synced architecture/security references across `TECHNICAL.md`, `SECURITY.md`, and `docs/runbooks/ai-agent-reference.md` with the modular runtime and current hardening env vars.
+- Split oversized dossier command/cleaning modules into focused helper modules while preserving existing CLI behavior and command flags.
 
 ## [0.2.17] - 2026-02-19
 
