@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 from cgpt.core.io import coerce_create_time, ts_to_local_str
 from cgpt.core.layout import die
-from cgpt.domain.conversations import Msg
 
 
 def _config_schema_error(field: str, detail: str) -> None:
@@ -176,74 +175,6 @@ def matches_thread_filter(
                 return True, bucket_name
 
     return False, None
-
-def score_segment(text: str, config: Dict[str, Any]) -> float:
-    """Score a text segment for relevance based on mechanism/bridging terms."""
-    if not text or len(text) < 50:
-        return 0.0
-
-    scoring = config.get("segment_scoring", {})
-    mechanism_terms = scoring.get("mechanism_terms", [])
-    bridging_terms = scoring.get("bridging_terms", [])
-
-    text_lower = text.lower()
-    score = 0.0
-
-    # Mechanism terms (higher weight)
-    for term in mechanism_terms:
-        if term.lower() in text_lower:
-            score += 2.0
-
-    # Bridging terms (lower weight)
-    for term in bridging_terms:
-        if term.lower() in text_lower:
-            score += 1.0
-
-    # Normalize by text length (avoid inflating on longer texts)
-    normalized = score / (len(text) / 100.0) if text else 0.0
-    return min(normalized, 10.0)  # Cap at 10
-
-def extract_segments_with_context(
-    msgs: List[Msg], config: Dict[str, Any], min_score: float = 0.5
-) -> List[Msg]:
-    """Extract only high-scoring segments + context windows."""
-    if not msgs:
-        return []
-
-    context_window = config.get("segment_scoring", {}).get("context_window", 2)
-
-    # Find high-scoring messages
-    scored = []
-    for i, msg in enumerate(msgs):
-        score = score_segment(msg.text, config)
-        scored.append((i, msg, score))
-
-    # Keep only high-scoring
-    high_scoring_indices = {i for i, m, s in scored if s >= min_score}
-
-    if not high_scoring_indices:
-        return msgs  # Fallback: return all if nothing scores high
-
-    # Add context around high-scoring messages
-    to_keep = set()
-    for idx in high_scoring_indices:
-        for j in range(
-            max(0, idx - context_window), min(len(msgs), idx + context_window + 1)
-        ):
-            to_keep.add(j)
-
-    return [msgs[i] for i in sorted(to_keep)]
-
-def get_thread_tag(title: str, config: Dict[str, Any]) -> str:
-    """Get tag for thread based on bucket from config filter."""
-    _, bucket = matches_thread_filter(title, config)
-    if not bucket:
-        return "OTHER"
-
-    # Generate tag from bucket name (e.g., "primary_research" -> "PRIMARY")
-    # Use first word of bucket, uppercase, max 10 chars
-    tag = bucket.split("_")[0].upper()[:10]
-    return tag if tag else "OTHER"
 
 def generate_completeness_check(
     convs: List[Dict[str, Any]], config: Dict[str, Any]

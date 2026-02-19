@@ -178,6 +178,46 @@ class TestCliCriticalPaths(unittest.TestCase):
         dossier_files = list(self.dossiers.glob("dossier_*.txt"))
         self.assertTrue(dossier_files, "Expected recent command to generate dossier TXT output")
 
+    def test_quick_with_explicit_root_does_not_mutate_latest_pointer_state(self):
+        sentinel = self.extracted / "sentinel-latest-pointer"
+        latest_ptr = self.extracted / "LATEST.txt"
+        latest_ptr.write_text(str(sentinel) + "\n", encoding="utf-8")
+        self.assertFalse((self.extracted / "latest").exists())
+
+        result = self.run_cgpt(
+            "quick",
+            "Alpha",
+            "--all",
+            "--root",
+            str(self.root),
+            "--format",
+            "txt",
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertEqual(latest_ptr.read_text(encoding="utf-8").strip(), str(sentinel))
+        self.assertFalse((self.extracted / "latest").exists())
+
+    def test_recent_with_explicit_root_does_not_mutate_latest_pointer_state(self):
+        sentinel = self.extracted / "sentinel-latest-pointer"
+        latest_ptr = self.extracted / "LATEST.txt"
+        latest_ptr.write_text(str(sentinel) + "\n", encoding="utf-8")
+        self.assertFalse((self.extracted / "latest").exists())
+
+        result = self.run_cgpt(
+            "recent",
+            "2",
+            "--all",
+            "--root",
+            str(self.root),
+            "--format",
+            "txt",
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertEqual(latest_ptr.read_text(encoding="utf-8").strip(), str(sentinel))
+        self.assertFalse((self.extracted / "latest").exists())
+
     def test_make_dossiers_generates_requested_formats(self):
         result = self.run_cgpt(
             "make-dossiers",

@@ -205,25 +205,6 @@ def extract_messages_best_effort(c: Dict[str, Any]) -> List[Msg]:
     msgs.sort(key=lambda x: x.t)
     return msgs
 
-def conversation_matches_text(c: Dict[str, Any], pat: re.Pattern) -> bool:
-    """
-    Return True if the compiled regex `pat` matches any message text or the conversation title.
-    Uses the same message extraction logic as extract_messages_best_effort.
-    """
-    try:
-        # Check messages
-        msgs = extract_messages_best_effort(c)
-        for m in msgs:
-            if pat.search(m.text):
-                return True
-        # Fallback: check title/name fields
-        title = c.get("title") or c.get("name") or ""
-        if isinstance(title, str) and pat.search(title):
-            return True
-    except Exception:
-        return False
-    return False
-
 def conversation_messages_blob(c: Dict[str, Any]) -> str:
     try:
         msgs = extract_messages_best_effort(c)

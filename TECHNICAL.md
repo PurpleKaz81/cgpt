@@ -116,6 +116,8 @@ Operational notes:
 
 - `extract` unpacks exports into `extracted/<zip_stem>/`.
 - Selection/search commands default to `extracted/latest` unless `--root` is provided.
+- `quick`/`recent` refresh `extracted/latest` only when `--root` is not provided.
+- `quick`/`recent` with explicit `--root` do not mutate `extracted/latest` or `extracted/LATEST.txt`.
 - `quick` performs topic discovery + selection + dossier generation in one flow.
 - `recent` is recency-first selection.
 - `build-dossier` is explicit-ID-first generation.
@@ -419,6 +421,7 @@ Rules:
 
 - `--recent` and `--days` are mutually exclusive
 - if neither is set, quick uses the full available conversation set
+- with explicit `--root`, quick reads only that root and does not refresh latest-pointer state
 - `--and --where messages` requires every term in message text scope.
 - `--and --where all` requires every term across title+message union scope.
 - `--context` must be within `0..200`
@@ -455,6 +458,7 @@ Rules:
 
 - `recent` does not accept keyword positional terms
 - for keyword + recency in one command, use `quick --recent N "term"` or `quick --days N "term"`
+- with explicit `--root`, recent reads only that root and does not refresh latest-pointer state
 - `--context` must be within `0..200`
 - explicit `--patterns-file`/`--used-links-file` paths must exist
 

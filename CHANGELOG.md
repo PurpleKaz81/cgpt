@@ -19,6 +19,18 @@ Maintenance note for markdown lint:
 
 - Nothing yet.
 
+## [0.2.18] - 2026-02-19
+
+### Added in 0.2.18
+
+- Added regression coverage ensuring `quick --root <path>` and `recent --root <path>` do not mutate latest-pointer state (`extracted/latest`, `extracted/LATEST.txt`).
+
+### Changed in 0.2.18
+
+- `quick`/`recent` now skip latest-pointer refresh and extraction side effects when `--root` is explicitly provided.
+- Synced architecture/security references across `TECHNICAL.md`, `SECURITY.md`, and `docs/runbooks/ai-agent-reference.md` with the modular runtime and current hardening env vars.
+- Split oversized dossier command/cleaning modules into focused helper modules while preserving existing CLI behavior and command flags.
+
 ## [0.2.17] - 2026-02-19
 
 ### Added in 0.2.17

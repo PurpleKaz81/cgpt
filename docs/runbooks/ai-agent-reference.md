@@ -1,6 +1,6 @@
 # AI Agent Reference
 
-Last updated: 2026-02-17
+Last updated: 2026-02-19
 
 ## Purpose
 
@@ -26,7 +26,11 @@ When sources conflict, use this precedence:
 
 ## Repository Landmarks
 
-- `cgpt.py`: CLI entrypoint and command implementation.
+- `cgpt/core/`: runtime helpers for environment, layout, IO, and safety primitives.
+- `cgpt/domain/`: conversation normalization, indexing, and dossier processing logic.
+- `cgpt/commands/`: CLI command handler implementations.
+- `cgpt/cli/`: parser wiring and CLI entrypoint orchestration.
+- `cgpt.py`: compatibility shim entrypoint for `python3 cgpt.py ...`.
 - `config.json`: public baseline defaults.
 - `tests/`: unit tests and critical-path coverage.
 - `scripts/release_check.sh`: release preflight gate.
@@ -61,7 +65,7 @@ These rules are required for every AI-agent change in this repository:
 Safe git staging pattern (public files only):
 
 ```bash
-git add cgpt.py config.json requirements.txt
+git add cgpt/ cgpt.py config.json pyproject.toml requirements.txt
 git add README.md TECHNICAL.md SECURITY.md CHANGELOG.md RELEASING.md CONTRIBUTING.md LICENSE
 git add .github/CODEOWNERS .github/dependabot.yml
 git add .github/workflows/tests.yml .github/workflows/docs-guard.yml .github/workflows/lint.yml
