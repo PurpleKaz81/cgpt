@@ -1,6 +1,6 @@
 from cgpt.core.env import _env_positive_int
 
-__version__ = "0.2.16"
+__version__ = "0.2.17"
 
 SAO_PAULO_TZ = "America/Sao_Paulo"
 MIN_CONTEXT = 0
