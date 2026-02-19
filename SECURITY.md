@@ -93,6 +93,9 @@ Used for configuration only:
 - `CGPT_DEFAULT_MODE`
 - `CGPT_DEFAULT_SPLIT`
 - `CGPT_FORCE_COLOR`
+- `CGPT_MAX_ZIP_MEMBERS`
+- `CGPT_MAX_ZIP_UNCOMPRESSED_BYTES`
+- `CGPT_JSON_DISCOVERY_BUCKET_LIMIT`
 
 No environment variable is used as an authentication secret.
 
