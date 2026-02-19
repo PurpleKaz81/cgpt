@@ -13,11 +13,12 @@ Maintenance note for markdown lint:
 
 ### Added
 
-- Nothing yet.
+- Added planned feature spec `docs/specs/v0.2.20-split-audit.md` for a new `split-audit` command to verify suspicious removals between split raw and working TXT outputs.
 
 ### Changed
 
-- Nothing yet.
+- Synced roadmap/capabilities/technical/readme docs to track split-output integrity audit as roadmap item `R17` (planned, not yet shipped).
+- Added a temporary troubleshooting workflow in `TECHNICAL.md` for fast manual split-output triage (`raw.txt` vs `__working.txt`) until `R17 split-audit` is implemented.
 
 ## [0.2.19] - 2026-02-19
 

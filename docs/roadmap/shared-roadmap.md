@@ -61,26 +61,27 @@ Necessity tags:
 | Rank | ID | Initiative | Necessity | Status | Commitment | Horizon | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | R2 | `--redact` mode on dossier-producing commands | `critical` | `planned` | `committed` | `2026-T2` | Privacy protection before sharing generated outputs; modularization baseline dependency was completed in `v0.2.13`. |
-| 2 | R3 | Discovery `--json` (`ids`, `find`, `search`) | `high` | `planned` | `committed` | `2026-T1` | Machine-readable discovery pipeline for automation. |
-| 3 | R5 | Token-aware chunking (`--max-tokens`) | `high` | `planned` | `committed` | `2026-T2` | Upload-safe context segmentation with ordering guarantees. |
-| 4 | R15 | Context Quality Gates (Reliability Layer) | `high` | `planned` | `committed` | `2026-T2` | Pass/fail dossier readiness checks with staged rollout; distinct from already-shipped repository CI gates in `R16`. |
-| 5 | R7 | Date range filters (`--since`, `--until`) | `medium` | `planned` | `target` | `2026-T2` | Deterministic time-window filtering beyond relative recency. |
-| 6 | R6 | `--dry-run` for write commands | `medium` | `planned` | `target` | `2026-T2` | Safe preview before file writes. |
-| 7 | R8 | Output control flags (`--out-dir`, `--output-prefix`) | `medium` | `planned` | `target` | `2026-T3` | Better automation with deterministic paths and names. |
-| 8 | R1 | Optional dependency CI matrix (`python-docx` present/missing) | `medium` | `planned` | `target` | `2026-T3` | Prevent regressions in optional DOCX paths. |
-| 9 | R9 | Config profiles (`--profile`) | `medium` | `planned` | `target` | `2026-T3` | Reusable profile-based command defaults. |
-| 10 | R10 | Write-command `--json` output + `--strict` mode | `medium` | `experimental` | `exploratory` | `2026-T3` | Structured automation semantics and hard-fail workflows. |
-| 11 | R11 | Google (Gemini) provider ingestion path | `exploratory` | `experimental` | `exploratory` | `2026-T4` | First non-ChatGPT expansion milestone. |
-| 12 | R12 | Perplexity provider ingestion path | `exploratory` | `experimental` | `exploratory` | `2026-T4` | Second provider expansion milestone. |
-| 13 | R13 | Provider abstraction layer across AI ecosystems | `exploratory` | `experimental` | `exploratory` | `backlog` | Normalize provider-specific exports into one internal model. |
-| 14 | R14 | Cloud-assisted sync/workflows | `exploratory` | `experimental` | `exploratory` | `backlog` | Evaluate only after local-first baseline remains stable. |
+| 2 | R17 | Split-output integrity audit (`split-audit`) | `high` | `planned` | `committed` | `2026-T1` | Add a fast verification command that flags suspicious removals between `raw.txt` and `__working.txt`; see `docs/specs/v0.2.20-split-audit.md`. |
+| 3 | R3 | Discovery `--json` (`ids`, `find`, `search`) | `high` | `planned` | `committed` | `2026-T1` | Machine-readable discovery pipeline for automation. |
+| 4 | R5 | Token-aware chunking (`--max-tokens`) | `high` | `planned` | `committed` | `2026-T2` | Upload-safe context segmentation with ordering guarantees. |
+| 5 | R15 | Context Quality Gates (Reliability Layer) | `high` | `planned` | `committed` | `2026-T2` | Pass/fail dossier readiness checks with staged rollout; distinct from already-shipped repository CI gates in `R16`. |
+| 6 | R7 | Date range filters (`--since`, `--until`) | `medium` | `planned` | `target` | `2026-T2` | Deterministic time-window filtering beyond relative recency. |
+| 7 | R6 | `--dry-run` for write commands | `medium` | `planned` | `target` | `2026-T2` | Safe preview before file writes. |
+| 8 | R8 | Output control flags (`--out-dir`, `--output-prefix`) | `medium` | `planned` | `target` | `2026-T3` | Better automation with deterministic paths and names. |
+| 9 | R1 | Optional dependency CI matrix (`python-docx` present/missing) | `medium` | `planned` | `target` | `2026-T3` | Prevent regressions in optional DOCX paths. |
+| 10 | R9 | Config profiles (`--profile`) | `medium` | `planned` | `target` | `2026-T3` | Reusable profile-based command defaults. |
+| 11 | R10 | Write-command `--json` output + `--strict` mode | `medium` | `experimental` | `exploratory` | `2026-T3` | Structured automation semantics and hard-fail workflows. |
+| 12 | R11 | Google (Gemini) provider ingestion path | `exploratory` | `experimental` | `exploratory` | `2026-T4` | First non-ChatGPT expansion milestone. |
+| 13 | R12 | Perplexity provider ingestion path | `exploratory` | `experimental` | `exploratory` | `2026-T4` | Second provider expansion milestone. |
+| 14 | R13 | Provider abstraction layer across AI ecosystems | `exploratory` | `experimental` | `exploratory` | `backlog` | Normalize provider-specific exports into one internal model. |
+| 15 | R14 | Cloud-assisted sync/workflows | `exploratory` | `experimental` | `exploratory` | `backlog` | Evaluate only after local-first baseline remains stable. |
 
 ## Trimester Plan (Derived from Necessity Ranking)
 
-- `2026-T1`: deliver rank `2` (`R3`) and complete automation baseline work.
-- `2026-T2`: deliver ranks `1, 3-6` (`R2`, `R5`, `R15`, `R7`, `R6`) in that order.
-- `2026-T3`: deliver ranks `7-10` (`R8`, `R1`, `R9`, `R10`) only after `2026-T2` committed items are complete.
-- `2026-T4` and later: evaluate ranks `11-14` (`R11`, `R12`, `R13`, `R14`) based on local-first stability and user pull.
+- `2026-T1`: deliver ranks `2-3` (`R17`, `R3`) and complete automation baseline work.
+- `2026-T2`: deliver ranks `1, 4-7` (`R2`, `R5`, `R15`, `R7`, `R6`) in that order.
+- `2026-T3`: deliver ranks `8-11` (`R8`, `R1`, `R9`, `R10`) only after `2026-T2` committed items are complete.
+- `2026-T4` and later: evaluate ranks `12-15` (`R11`, `R12`, `R13`, `R14`) based on local-first stability and user pull.
 
 ## R15 Initiative Breakdown
 
