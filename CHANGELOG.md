@@ -39,6 +39,7 @@ Maintenance note for markdown lint:
 - Fixed docs-guard workflow behavior-change matching to include `cgpt/**/*.py` runtime files instead of only `cgpt.py`.
 - Fixed release-process version-source guidance to use `cgpt/core/constants.py` (`__version__`) with `pyproject.toml` dynamic mapping.
 - Fixed explicit transaction ordering in `index --reindex` so table clears run inside one opened transaction.
+- Fixed cross-platform test robustness by normalizing extracted-path assertions on Windows and keeping new test annotations compatible with Python 3.8.
 
 ## [0.2.15] - 2026-02-18
 

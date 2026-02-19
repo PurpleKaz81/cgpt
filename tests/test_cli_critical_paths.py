@@ -8,6 +8,7 @@ import time
 import unittest
 import zipfile
 from pathlib import Path
+from typing import List
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CGPT = REPO_ROOT / "cgpt.py"
@@ -95,7 +96,7 @@ class TestCliCriticalPaths(unittest.TestCase):
         return zpath
 
     @staticmethod
-    def _stdout_ids(stdout: str) -> list[str]:
+    def _stdout_ids(stdout: str) -> List[str]:
         ids = []
         for line in stdout.splitlines():
             if "\t" not in line:
@@ -348,7 +349,9 @@ class TestCliCriticalPaths(unittest.TestCase):
         self.assertTrue(out_dir.is_dir())
         self.assertTrue((out_dir / "conversations.json").exists())
         self.assertFalse((self.extracted / "older_export").exists())
-        self.assertIn(str(out_dir), result.stdout)
+        expected_out = os.path.normcase(os.path.realpath(str(out_dir)))
+        reported_out = os.path.normcase(os.path.realpath(result.stdout.strip()))
+        self.assertEqual(reported_out, expected_out)
 
     def test_default_mode_env_and_cli_override(self):
         env = {"CGPT_DEFAULT_MODE": "excerpts"}
