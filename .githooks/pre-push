@@ -5,6 +5,7 @@ remote_name="${1:-}"
 remote_url="${2:-}"
 
 blocked=0
+# shellcheck disable=SC2034
 while read -r local_ref local_sha remote_ref remote_sha; do
   [ -z "${remote_ref}" ] && continue
   if [ "${remote_ref}" = "refs/heads/main" ]; then
