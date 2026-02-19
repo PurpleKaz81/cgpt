@@ -3,7 +3,7 @@ import sys
 import time
 from contextlib import suppress
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from cgpt.core.io import coerce_create_time
 from cgpt.domain.conversations import (
@@ -22,6 +22,9 @@ def _init_index(db_path: Path) -> None:
         cur.execute(
             "CREATE TABLE IF NOT EXISTS conv_meta (id TEXT PRIMARY KEY, title TEXT, create_time REAL)"
         )
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS index_meta (key TEXT PRIMARY KEY, value TEXT)"
+        )
         try:
             cur.execute(
                 "CREATE VIRTUAL TABLE IF NOT EXISTS conv_search USING fts5(title, content, cid UNINDEXED)"
@@ -33,6 +36,55 @@ def _init_index(db_path: Path) -> None:
                 file=sys.stderr,
             )
         conn.commit()
+    finally:
+        conn.close()
+
+
+def _root_scope_key(root: Path) -> str:
+    try:
+        return str(root.resolve())
+    except Exception:
+        return str(root)
+
+
+def _get_index_meta(cur: sqlite3.Cursor, key: str) -> Optional[str]:
+    try:
+        row = cur.execute("SELECT value FROM index_meta WHERE key = ?", (key,)).fetchone()
+    except sqlite3.Error:
+        return None
+    if not row:
+        return None
+    value = row[0]
+    return value if isinstance(value, str) else None
+
+
+def _set_index_meta(cur: sqlite3.Cursor, key: str, value: str) -> None:
+    cur.execute(
+        "REPLACE INTO index_meta (key, value) VALUES (?, ?)",
+        (key, value),
+    )
+
+
+def _clear_index_rows(cur: sqlite3.Cursor) -> None:
+    with suppress(sqlite3.Error):
+        cur.execute("DELETE FROM conv_meta")
+    with suppress(sqlite3.Error):
+        cur.execute("DELETE FROM conv_search")
+
+
+def index_matches_root(db_path: Path, root: Path) -> bool:
+    """Return True only when index metadata confirms this DB was built for `root`."""
+    if not db_path.exists():
+        return False
+    conn = sqlite3.connect(str(db_path))
+    try:
+        cur = conn.cursor()
+        indexed_root = _get_index_meta(cur, "root")
+        if indexed_root is None:
+            return False
+        return indexed_root == _root_scope_key(root)
+    except sqlite3.Error:
+        return False
     finally:
         conn.close()
 
@@ -57,11 +109,22 @@ def index_export(
     try:
         cur = conn.cursor()
         conn.execute("BEGIN")
-        if reindex:
-            with suppress(Exception):
-                cur.execute("DELETE FROM conv_meta")
-            with suppress(Exception):
-                cur.execute("DELETE FROM conv_search")
+        root_key = _root_scope_key(root)
+        indexed_root = _get_index_meta(cur, "root")
+        scope_changed = indexed_root is not None and indexed_root != root_key
+
+        # Legacy DBs (without metadata) cannot guarantee root scoping.
+        legacy_without_scope = False
+        if indexed_root is None and not reindex:
+            try:
+                row = cur.execute("SELECT COUNT(*) FROM conv_meta").fetchone()
+                legacy_without_scope = bool(row and int(row[0]) > 0)
+            except sqlite3.Error:
+                legacy_without_scope = False
+
+        if reindex or scope_changed or legacy_without_scope:
+            _clear_index_rows(cur)
+        _set_index_meta(cur, "root", root_key)
         total = len(convs)
         i = 0
         start = time.time()

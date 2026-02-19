@@ -2,7 +2,7 @@ import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from cgpt.core.io import (
     coerce_create_time,
@@ -55,6 +55,119 @@ def markdown_to_plain_text(md: str) -> str:
     s = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", s)
     s = re.sub(r"\n{3,}", "\n\n", s)
     return s.strip() + "\n"
+
+
+def _load_used_links(used_links_file: Optional[str]) -> Optional[Set[str]]:
+    if not used_links_file:
+        return None
+    used_links_path = require_existing_file(used_links_file, label="used-links")
+    used_links_text = read_text_utf8(used_links_path, label="used-links")
+    return {
+        line.strip()
+        for line in used_links_text.splitlines()
+        if line.strip() and not line.startswith("#")
+    }
+
+
+def _build_working_txt_variant(
+    *,
+    raw_txt: str,
+    dedup: bool,
+    patterns: Optional[List[str]],
+    used_links_file: Optional[str],
+    config_file: Optional[str],
+    convs: List[Dict[str, Any]],
+    by_id: Dict[str, Dict[str, Any]],
+    wanted_ids: List[str],
+    topics: List[str],
+) -> Tuple[str, bool]:
+    config = load_column_config(config_file) if config_file else None
+    used_links = _load_used_links(used_links_file)
+
+    working_txt = raw_txt
+    # Apply all processing filters (in order)
+    working_txt = _strip_tool_noise(working_txt)
+    working_txt = _strip_citation_markers(working_txt)
+    working_txt = _sanitize_openai_markup(working_txt)
+    working_txt = _strip_existing_appendix(working_txt)
+    working_txt = _remove_appendix_header_lines(working_txt)
+    working_txt = _replace_dead_citations(working_txt, {})
+    if dedup:
+        working_txt = _deduplicate_blocks(working_txt, min_block_size=200)
+    if patterns is not None:
+        working_txt = _extract_deliverables(working_txt, patterns)
+
+    # Reorganize sources section with categorization
+    working_txt = _reorganize_sources_section(working_txt, used_links)
+
+    # Extract and quarantine research artifacts to list (not to string yet)
+    working_txt, artifacts_list = extract_research_artifacts(working_txt)
+    if artifacts_list:
+        artifacts_list = [
+            a
+            for a in artifacts_list
+            if "APPENDIX: RESEARCH LOG" not in a
+            and "RESEARCH LOG & TOOL ARTIFACTS" not in a
+            and "JSON/Tool Call" not in a
+        ]
+    append_expected = bool(artifacts_list)
+
+    # Add control layer front-matter if config provided
+    if config:
+        control_layer = generate_control_layer(config)
+        completeness = generate_completeness_check(convs, config)
+        front_matter = (
+            control_layer
+            + "COMPLETENESS CHECK\n"
+            + "=" * 70
+            + "\n"
+            + completeness
+            + "\n"
+            + "=" * 70
+            + "\n\n"
+        )
+        working_txt = front_matter + working_txt
+
+    if not working_txt.strip():
+        die("NO INCLUDED THREADS/SEGMENTS — CHECK FILTERS/KEYWORDS/PATTERNS")
+
+    # Add working index at top (with timeline, priority threads, and tags if config)
+    selected_convs = [by_id[cid] for cid in wanted_ids if cid in by_id]
+    coverage_report = []
+    if config:
+        # Use tagged index if config provided
+        working_idx, coverage_report = _generate_working_index_with_tags(
+            working_txt,
+            conversations=selected_convs,
+            topics=topics,
+            config=config,
+        )
+    else:
+        # Fall back to standard index
+        working_idx = _generate_working_index(
+            working_txt, conversations=selected_convs, topics=topics
+        )
+
+    # Build final output: index + coverage + content + appendix (once, at end)
+    final_txt = "".join(working_idx)
+    if coverage_report:
+        final_txt += "\n" + "\n".join(coverage_report)
+    final_txt += "\n" + working_txt
+
+    # Emit appendix ONCE at the very end if artifacts exist
+    if artifacts_list:
+        final_txt += (
+            "\n\n" + "=" * 70 + "\n"
+            "APPENDIX: RESEARCH LOG & TOOL ARTIFACTS\n"
+            "=" * 70 + "\n\n"
+            "This section contains metadata, tool-call fragments, and provenance\n"
+            "information from the research extraction process.\n\n"
+            + "\n\n".join(artifacts_list)
+        )
+
+    # Final safety: ensure appendix header appears only once
+    final_txt = _dedupe_appendix_header(final_txt)
+    return final_txt, append_expected
 
 
 def build_combined_dossier(
@@ -215,112 +328,19 @@ def build_combined_dossier(
     append_expected = False
     if split and raw_txt:
         try:
-            # Load config if provided
-            config = None
-            if config_file:
-                config = load_column_config(config_file)
-
-            # Load used links if file provided
-            used_links: Optional[Set[str]] = None
-            if used_links_file:
-                used_links_path = require_existing_file(
-                    used_links_file, label="used-links"
-                )
-                used_links_text = read_text_utf8(used_links_path, label="used-links")
-                used_links = {
-                    line.strip()
-                    for line in used_links_text.splitlines()
-                    if line.strip() and not line.startswith("#")
-                }
-
-            working_txt = raw_txt
-            # Apply all processing filters (in order)
-            working_txt = _strip_tool_noise(working_txt)
-            working_txt = _strip_citation_markers(working_txt)
-            working_txt = _sanitize_openai_markup(working_txt)
-            working_txt = _strip_existing_appendix(working_txt)
-            working_txt = _remove_appendix_header_lines(working_txt)
-            working_txt = _replace_dead_citations(working_txt, {})
-            if dedup:
-                working_txt = _deduplicate_blocks(working_txt, min_block_size=200)
-            if patterns is not None:
-                working_txt = _extract_deliverables(working_txt, patterns)
-
-            # Reorganize sources section with categorization
-            working_txt = _reorganize_sources_section(working_txt, used_links)
-
-            # Extract and quarantine research artifacts to list (not to string yet)
-            working_txt, artifacts_list = extract_research_artifacts(working_txt)
-            if artifacts_list:
-                artifacts_list = [
-                    a
-                    for a in artifacts_list
-                    if "APPENDIX: RESEARCH LOG" not in a
-                    and "RESEARCH LOG & TOOL ARTIFACTS" not in a
-                    and "JSON/Tool Call" not in a
-                ]
-            append_expected = bool(artifacts_list)
-
-            # Add control layer front-matter if config provided
-            if config:
-                control_layer = generate_control_layer(config)
-                completeness = generate_completeness_check(convs, config)
-                front_matter = (
-                    control_layer
-                    + "COMPLETENESS CHECK\n"
-                    + "=" * 70
-                    + "\n"
-                    + completeness
-                    + "\n"
-                    + "=" * 70
-                    + "\n\n"
-                )
-                working_txt = front_matter + working_txt
-
-            if not working_txt.strip():
-                die("NO INCLUDED THREADS/SEGMENTS — CHECK FILTERS/KEYWORDS/PATTERNS")
-
-            # Add working index at top (with timeline, priority threads, and tags if config)
-            selected_convs = [by_id[cid] for cid in wanted_ids if cid in by_id]
-            coverage_report = []
-            if config:
-                # Use tagged index if config provided
-                working_idx, coverage_report = _generate_working_index_with_tags(
-                    working_txt,
-                    conversations=selected_convs,
-                    topics=topics,
-                    config=config,
-                )
-            else:
-                # Fall back to standard index
-                working_idx = _generate_working_index(
-                    working_txt, conversations=selected_convs, topics=topics
-                )
-
-            # Build final output: index + coverage + content + appendix (once, at end)
-            final_txt = "".join(working_idx)
-            if coverage_report:
-                final_txt += "\n" + "\n".join(coverage_report)
-            final_txt += "\n" + working_txt
-
-            # Emit appendix ONCE at the very end if artifacts exist
-            if artifacts_list:
-                final_txt += (
-                    "\n\n" + "=" * 70 + "\n"
-                    "APPENDIX: RESEARCH LOG & TOOL ARTIFACTS\n"
-                    "=" * 70 + "\n\n"
-                    "This section contains metadata, tool-call fragments, and provenance\n"
-                    "information from the research extraction process.\n\n"
-                    + "\n\n".join(artifacts_list)
-                )
-
-            # Final safety: ensure appendix header appears only once
-            final_txt = _dedupe_appendix_header(final_txt)
-
-            working_txt = final_txt
+            working_txt, append_expected = _build_working_txt_variant(
+                raw_txt=raw_txt,
+                dedup=dedup,
+                patterns=patterns,
+                used_links_file=used_links_file,
+                config_file=config_file,
+                convs=convs,
+                by_id=by_id,
+                wanted_ids=wanted_ids,
+                topics=topics,
+            )
         except Exception as e:
-            print(f"WARNING: Working TXT processing failed: {e}", file=sys.stderr)
-            working_txt = None
+            die(f"Working TXT processing failed: {e}")
 
     # Write MD if requested
     if "md" in req_formats:

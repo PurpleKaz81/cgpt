@@ -26,6 +26,7 @@ Implemented in this baseline hardening pass:
 - `doctor --dev` preflight checks runtime/developer toolchain health and minimum Node.js major expectations.
 - Internal runtime modularization baseline is implemented with package-layer split and `cgpt.py` compatibility shim.
 - Ruff baseline has no temporary per-file import-order exceptions (`.ruff.toml` has no `per-file-ignores` section).
+- Discovery/index integrity hardening now scopes cached SQLite search data to the indexed export root to prevent cross-export mismatches.
 
 Pending / next-phase quality work remains below.
 

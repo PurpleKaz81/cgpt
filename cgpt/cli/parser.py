@@ -30,6 +30,213 @@ def _add_split_flags(parser: argparse.ArgumentParser, split_help: str) -> None:
         help="Disable split output (overrides CGPT_DEFAULT_SPLIT).",
     )
 
+
+def _configure_build_dossier_parser(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--topic", help="Single topic keyword (for excerpts mode)")
+    parser.add_argument(
+        "--topics", nargs="*", help="One or more topics (OR logic) (for excerpts mode)"
+    )
+    parser.add_argument(
+        "--mode",
+        choices=["full", "excerpts"],
+        default=None,
+        help="full = include everything; excerpts = topic-only + context",
+    )
+    parser.add_argument(
+        "--context",
+        type=parse_context,
+        default=2,
+        help="In excerpts mode, include +/- N messages around matches",
+    )
+    parser.add_argument(
+        "--root", help="Extracted folder to scan (defaults to extracted/latest)"
+    )
+    parser.add_argument("--ids-file", help="Text file with one id per line")
+    parser.add_argument("--ids", nargs="*", help="One or more IDs")
+    parser.add_argument(
+        "--format",
+        nargs="+",
+        choices=["txt", "md", "docx"],
+        help=(
+            "One or more output formats: txt (default), md, docx. "
+            "Examples: --format txt; --format md docx; --format txt md docx"
+        ),
+        default=["txt"],
+    )
+    _add_split_flags(
+        parser,
+        "Generate two TXT files: dossier_raw.txt (full) and dossier_raw__working.txt (cleaned, deduplicated, deliverables-only).",
+    )
+    parser.add_argument(
+        "--dedup",
+        action="store_true",
+        default=True,
+        help="Enable deduplication in working output (default: True)",
+    )
+    parser.add_argument(
+        "--no-dedup",
+        dest="dedup",
+        action="store_false",
+        help="Disable deduplication in working output",
+    )
+    parser.add_argument(
+        "--patterns-file",
+        help="Path to file with deliverable patterns (one per line). Default patterns: ##, Constraint, Draft, Decision, Output, Result",
+    )
+    parser.add_argument(
+        "--used-links-file",
+        help="Path to file with URLs already used in drafts (one per line). These will be prioritized in source lists.",
+    )
+    parser.add_argument(
+        "--config",
+        help="Path to column config file (JSON) for segment filtering and control layer generation",
+    )
+    parser.add_argument(
+        "--name",
+        help="Project name for organizing output. Creates dossiers/{name}/ subfolder.",
+    )
+    parser.set_defaults(func=cmd_build_dossier)
+
+
+def _configure_quick_parser(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "topics",
+        nargs="+",
+        help="One or more topic terms to match in conversation titles",
+    )
+    parser.add_argument(
+        "--and",
+        dest="and_terms",
+        action="store_true",
+        help="Require ALL terms to appear in title (default is OR)",
+    )
+    parser.add_argument("--mode", choices=["full", "excerpts"], default=None)
+    parser.add_argument("--context", type=parse_context, default=2)
+    parser.add_argument("--all", action="store_true", help="Select all matches (no prompt)")
+    parser.add_argument(
+        "--where",
+        choices=["title", "messages", "all"],
+        default="title",
+        help="Where to search when matching topics: title (default), messages, or all",
+    )
+    quick_recency = parser.add_mutually_exclusive_group()
+    quick_recency.add_argument(
+        "--recent",
+        dest="recent_count",
+        type=int,
+        default=None,
+        help="Limit quick matching to the N most recent conversations before applying topic filters",
+    )
+    quick_recency.add_argument(
+        "--days",
+        dest="days_count",
+        type=int,
+        default=None,
+        help="Limit quick matching to conversations created in the last N days before applying topic filters",
+    )
+    parser.add_argument(
+        "--root", help="Extracted folder to scan (defaults to extracted/latest)"
+    )
+    parser.add_argument("--ids-file", help="Text file with one id per line")
+    parser.add_argument(
+        "--format",
+        nargs="+",
+        choices=["txt", "md", "docx"],
+        default=["txt"],
+        help=(
+            "Output formats for dossier (default: txt). "
+            "Examples: python3 cgpt.py quick --format txt 'term1' 'term2'; "
+            "python3 cgpt.py quick --format md docx 'research' 'analysis'"
+        ),
+    )
+    _add_split_flags(
+        parser,
+        "Generate two TXT files: dossier_raw.txt (full) and dossier_raw__working.txt (cleaned, deduplicated, deliverables-only).",
+    )
+    parser.add_argument(
+        "--dedup",
+        action="store_true",
+        default=True,
+        help="Enable deduplication in working output (default: True)",
+    )
+    parser.add_argument(
+        "--no-dedup",
+        dest="dedup",
+        action="store_false",
+        help="Disable deduplication in working output",
+    )
+    parser.add_argument(
+        "--patterns-file",
+        help="Path to file with deliverable patterns (one per line). Default patterns: ##, Constraint, Draft, Decision, Output, Result",
+    )
+    parser.add_argument(
+        "--used-links-file",
+        help="Path to file with URLs already used in drafts (one per line).",
+    )
+    parser.add_argument(
+        "--config",
+        help="Path to column config file (JSON) for segment filtering and control layer generation",
+    )
+    parser.add_argument(
+        "--name",
+        help="Project name for organizing output. Creates dossiers/{name}/ subfolder.",
+    )
+    parser.set_defaults(func=cmd_quick)
+
+
+def _configure_recent_parser(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "count",
+        type=int,
+        nargs="?",
+        default=30,
+        help="Number of recent conversations to show (default: 30)",
+    )
+    parser.add_argument("--all", action="store_true", help="Select all shown (no prompt)")
+    parser.add_argument(
+        "--root", help="Extracted folder to scan (defaults to extracted/latest)"
+    )
+    parser.add_argument(
+        "--format",
+        nargs="+",
+        choices=["txt", "md", "docx"],
+        default=["txt"],
+        help="Output format(s) for dossier (default: txt)",
+    )
+    _add_split_flags(parser, "Generate both raw and working TXT files.")
+    parser.add_argument(
+        "--dedup",
+        action="store_true",
+        default=True,
+        help="Enable deduplication in working output (default: True)",
+    )
+    parser.add_argument(
+        "--no-dedup",
+        dest="dedup",
+        action="store_false",
+        help="Disable deduplication in working output",
+    )
+    parser.add_argument(
+        "--patterns-file",
+        help="Path to file with deliverable patterns (one per line)",
+    )
+    parser.add_argument(
+        "--used-links-file",
+        help="Path to file with URLs already used in drafts (one per line)",
+    )
+    parser.add_argument(
+        "--config",
+        help="Path to column config file (JSON)",
+    )
+    parser.add_argument(
+        "--name",
+        help="Project name for organizing output. Creates dossiers/{name}/ subfolder.",
+    )
+    parser.add_argument("--mode", choices=["full", "excerpts"], default=None)
+    parser.add_argument("--context", type=parse_context, default=2)
+    parser.set_defaults(func=cmd_recent)
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="cgpt",
@@ -239,362 +446,28 @@ def build_parser() -> argparse.ArgumentParser:
     )
     a.set_defaults(func=cmd_make_dossiers)
 
-    a = sub.add_parser(
-        "build-dossier",
-        help="Build a single combined dossier with time + branch nesting",
-    )
-    a.add_argument("--topic", help="Single topic keyword (for excerpts mode)")
-    a.add_argument(
-        "--topics", nargs="*", help="One or more topics (OR logic) (for excerpts mode)"
-    )
-    a.add_argument(
-        "--mode",
-        choices=["full", "excerpts"],
-        default=None,
-        help="full = include everything; excerpts = topic-only + context",
-    )
-    a.add_argument(
-        "--context",
-        type=parse_context,
-        default=2,
-        help="In excerpts mode, include +/- N messages around matches",
-    )
-    a.add_argument(
-        "--root", help="Extracted folder to scan (defaults to extracted/latest)"
-    )
-    a.add_argument("--ids-file", help="Text file with one id per line")
-    a.add_argument("--ids", nargs="*", help="One or more IDs")
-    a.add_argument(
-        "--format",
-        nargs="+",
-        choices=["txt", "md", "docx"],
-        help=(
-            "One or more output formats: txt (default), md, docx. "
-            "Examples: --format txt; --format md docx; --format txt md docx"
+    for cmd_name, cmd_help in (
+        ("build-dossier", "Build a single combined dossier with time + branch nesting"),
+        ("d", "Alias for build-dossier"),
+    ):
+        a = sub.add_parser(cmd_name, help=cmd_help)
+        _configure_build_dossier_parser(a)
+
+    for cmd_name, cmd_help in (
+        (
+            "quick",
+            "Extract (if needed) → find by title → pick IDs → build dossier",
         ),
-        default=["txt"],
-    )
-    _add_split_flags(
-        a,
-        "Generate two TXT files: dossier_raw.txt (full) and dossier_raw__working.txt (cleaned, deduplicated, deliverables-only).",
-    )
-    a.add_argument(
-        "--dedup",
-        action="store_true",
-        default=True,
-        help="Enable deduplication in working output (default: True)",
-    )
-    a.add_argument(
-        "--no-dedup",
-        dest="dedup",
-        action="store_false",
-        help="Disable deduplication in working output",
-    )
-    a.add_argument(
-        "--patterns-file",
-        help="Path to file with deliverable patterns (one per line). Default patterns: ##, Constraint, Draft, Decision, Output, Result",
-    )
-    a.add_argument(
-        "--used-links-file",
-        help="Path to file with URLs already used in drafts (one per line). These will be prioritized in source lists.",
-    )
-    a.add_argument(
-        "--config",
-        help="Path to column config file (JSON) for segment filtering and control layer generation",
-    )
-    a.add_argument(
-        "--name",
-        help="Project name for organizing output. Creates dossiers/{name}/ subfolder.",
-    )
-    a.set_defaults(func=cmd_build_dossier)
+        ("q", "Alias for quick"),
+    ):
+        a = sub.add_parser(cmd_name, help=cmd_help)
+        _configure_quick_parser(a)
 
-    # Short alias
-    a = sub.add_parser("d", help="Alias for build-dossier")
-    a.add_argument("--topic", help="Single topic keyword (for excerpts mode)")
-    a.add_argument(
-        "--topics", nargs="*", help="One or more topics (OR logic) (for excerpts mode)"
-    )
-    a.add_argument("--mode", choices=["full", "excerpts"], default=None)
-    a.add_argument("--context", type=parse_context, default=2)
-    a.add_argument(
-        "--root", help="Extracted folder to scan (defaults to extracted/latest)"
-    )
-    a.add_argument("--ids-file", help="Text file with one id per line")
-    a.add_argument("--ids", nargs="*", help="One or more IDs")
-    a.add_argument(
-        "--format",
-        nargs="+",
-        choices=["txt", "md", "docx"],
-        default=["txt"],
-    )
-    _add_split_flags(
-        a,
-        "Generate two TXT files: dossier_raw.txt (full) and dossier_raw__working.txt (cleaned, deduplicated, deliverables-only).",
-    )
-    a.add_argument(
-        "--dedup",
-        action="store_true",
-        default=True,
-        help="Enable deduplication in working output (default: True)",
-    )
-    a.add_argument(
-        "--no-dedup",
-        dest="dedup",
-        action="store_false",
-        help="Disable deduplication in working output",
-    )
-    a.add_argument(
-        "--patterns-file",
-        help="Path to file with deliverable patterns (one per line). Default patterns: ##, Constraint, Draft, Decision, Output, Result",
-    )
-    a.add_argument(
-        "--used-links-file",
-        help="Path to file with URLs already used in drafts (one per line). These will be prioritized in source lists.",
-    )
-    a.add_argument(
-        "--config",
-        help="Path to column config file (JSON) for segment filtering and control layer generation",
-    )
-    a.add_argument(
-        "--name",
-        help="Project name for organizing output. Creates dossiers/{name}/ subfolder.",
-    )
-    a.set_defaults(func=cmd_build_dossier)
-
-    # One-shot command for minimal typing
-    a = sub.add_parser(
-        "quick", help="Extract (if needed) → find by title → pick IDs → build dossier"
-    )
-    a.add_argument(
-        "topics",
-        nargs="+",
-        help="One or more topic terms to match in conversation titles",
-    )
-    a.add_argument(
-        "--and",
-        dest="and_terms",
-        action="store_true",
-        help="Require ALL terms to appear in title (default is OR)",
-    )
-    a.add_argument("--mode", choices=["full", "excerpts"], default=None)
-    a.add_argument("--context", type=parse_context, default=2)
-    a.add_argument("--all", action="store_true", help="Select all matches (no prompt)")
-    a.add_argument(
-        "--where",
-        choices=["title", "messages", "all"],
-        default="title",
-        help="Where to search when matching topics: title (default), messages, or all",
-    )
-    quick_recency = a.add_mutually_exclusive_group()
-    quick_recency.add_argument(
-        "--recent",
-        dest="recent_count",
-        type=int,
-        default=None,
-        help="Limit quick matching to the N most recent conversations before applying topic filters",
-    )
-    quick_recency.add_argument(
-        "--days",
-        dest="days_count",
-        type=int,
-        default=None,
-        help="Limit quick matching to conversations created in the last N days before applying topic filters",
-    )
-    a.add_argument(
-        "--root", help="Extracted folder to scan (defaults to extracted/latest)"
-    )
-    a.add_argument("--ids-file", help="Text file with one id per line")
-    a.add_argument(
-        "--format",
-        nargs="+",
-        choices=["txt", "md", "docx"],
-        default=["txt"],
-        help=(
-            "Output formats for dossier (default: txt). "
-            "Examples: python3 cgpt.py quick --format txt 'term1' 'term2'; "
-            "python3 cgpt.py quick --format md docx 'research' 'analysis'"
-        ),
-    )
-    _add_split_flags(
-        a,
-        "Generate two TXT files: dossier_raw.txt (full) and dossier_raw__working.txt (cleaned, deduplicated, deliverables-only).",
-    )
-    a.add_argument(
-        "--dedup",
-        action="store_true",
-        default=True,
-        help="Enable deduplication in working output (default: True)",
-    )
-    a.add_argument(
-        "--no-dedup",
-        dest="dedup",
-        action="store_false",
-        help="Disable deduplication in working output",
-    )
-    a.add_argument(
-        "--patterns-file",
-        help="Path to file with deliverable patterns (one per line). Default patterns: ##, Constraint, Draft, Decision, Output, Result",
-    )
-    a.add_argument(
-        "--used-links-file",
-        help="Path to file with URLs already used in drafts (one per line).",
-    )
-    a.add_argument(
-        "--config",
-        help="Path to column config file (JSON) for segment filtering and control layer generation",
-    )
-    a.add_argument(
-        "--name",
-        help="Project name for organizing output. Creates dossiers/{name}/ subfolder.",
-    )
-    a.set_defaults(func=cmd_quick)
-
-    # Very short alias
-    a = sub.add_parser("q", help="Alias for quick")
-    a.add_argument("topics", nargs="+")
-    a.add_argument("--and", dest="and_terms", action="store_true")
-    a.add_argument("--mode", choices=["full", "excerpts"], default=None)
-    a.add_argument("--context", type=parse_context, default=2)
-    a.add_argument("--all", action="store_true")
-    a.add_argument(
-        "--where",
-        choices=["title", "messages", "all"],
-        default="title",
-        help="Where to search when matching topics: title (default), messages, or all",
-    )
-    quick_recency = a.add_mutually_exclusive_group()
-    quick_recency.add_argument(
-        "--recent",
-        dest="recent_count",
-        type=int,
-        default=None,
-        help="Limit quick matching to the N most recent conversations before applying topic filters",
-    )
-    quick_recency.add_argument(
-        "--days",
-        dest="days_count",
-        type=int,
-        default=None,
-        help="Limit quick matching to conversations created in the last N days before applying topic filters",
-    )
-    a.add_argument(
-        "--root", help="Extracted folder to scan (defaults to extracted/latest)"
-    )
-    a.add_argument("--ids-file", help="Text file with one id per line")
-    a.add_argument(
-        "--format",
-        nargs="+",
-        choices=["txt", "md", "docx"],
-        default=["txt"],
-    )
-    _add_split_flags(
-        a,
-        "Generate two TXT files: dossier_raw.txt (full) and dossier_raw__working.txt (cleaned, deduplicated, deliverables-only).",
-    )
-    a.add_argument(
-        "--dedup",
-        action="store_true",
-        default=True,
-        help="Enable deduplication in working output (default: True)",
-    )
-    a.add_argument(
-        "--no-dedup",
-        dest="dedup",
-        action="store_false",
-        help="Disable deduplication in working output",
-    )
-    a.add_argument(
-        "--patterns-file",
-        help="Path to file with deliverable patterns (one per line). Default patterns: ##, Constraint, Draft, Decision, Output, Result",
-    )
-    a.add_argument(
-        "--used-links-file",
-        help="Path to file with URLs already used in drafts (one per line).",
-    )
-    a.add_argument(
-        "--config",
-        help="Path to column config file (JSON) for segment filtering and control layer generation",
-    )
-    a.add_argument(
-        "--name",
-        help="Project name for organizing output. Creates dossiers/{name}/ subfolder.",
-    )
-    a.set_defaults(func=cmd_quick)
-
-    # Recent command: browse N most recent conversations interactively
-    a = sub.add_parser(
-        "recent",
-        help="Show the N most recent conversations and select interactively",
-    )
-    a.add_argument(
-        "count",
-        type=int,
-        nargs="?",
-        default=30,
-        help="Number of recent conversations to show (default: 30)",
-    )
-    a.add_argument("--all", action="store_true", help="Select all shown (no prompt)")
-    a.add_argument(
-        "--root", help="Extracted folder to scan (defaults to extracted/latest)"
-    )
-    a.add_argument(
-        "--format",
-        nargs="+",
-        choices=["txt", "md", "docx"],
-        default=["txt"],
-        help="Output format(s) for dossier (default: txt)",
-    )
-    _add_split_flags(a, "Generate both raw and working TXT files.")
-    a.add_argument(
-        "--dedup",
-        action="store_true",
-        default=True,
-        help="Enable deduplication in working output (default: True)",
-    )
-    a.add_argument(
-        "--no-dedup",
-        dest="dedup",
-        action="store_false",
-        help="Disable deduplication in working output",
-    )
-    a.add_argument(
-        "--patterns-file",
-        help="Path to file with deliverable patterns (one per line)",
-    )
-    a.add_argument(
-        "--used-links-file",
-        help="Path to file with URLs already used in drafts (one per line)",
-    )
-    a.add_argument(
-        "--config",
-        help="Path to column config file (JSON)",
-    )
-    a.add_argument(
-        "--name",
-        help="Project name for organizing output. Creates dossiers/{name}/ subfolder.",
-    )
-    a.add_argument("--mode", choices=["full", "excerpts"], default=None)
-    a.add_argument("--context", type=parse_context, default=2)
-    a.set_defaults(func=cmd_recent)
-
-    # Short alias for recent
-    a = sub.add_parser("r", help="Alias for recent")
-    a.add_argument("count", type=int, nargs="?", default=30)
-    a.add_argument("--all", action="store_true")
-    a.add_argument("--root")
-    a.add_argument(
-        "--format", nargs="+", choices=["txt", "md", "docx"], default=["txt"]
-    )
-    _add_split_flags(a, "Generate both raw and working TXT files.")
-    a.add_argument("--dedup", action="store_true", default=True)
-    a.add_argument("--no-dedup", dest="dedup", action="store_false")
-    a.add_argument("--patterns-file")
-    a.add_argument("--used-links-file")
-    a.add_argument("--config")
-    a.add_argument("--name", help="Project name for organizing output.")
-    a.add_argument("--mode", choices=["full", "excerpts"], default=None)
-    a.add_argument("--context", type=parse_context, default=2)
-    a.set_defaults(func=cmd_recent)
+    for cmd_name, cmd_help in (
+        ("recent", "Show the N most recent conversations and select interactively"),
+        ("r", "Alias for recent"),
+    ):
+        a = sub.add_parser(cmd_name, help=cmd_help)
+        _configure_recent_parser(a)
 
     return p
-

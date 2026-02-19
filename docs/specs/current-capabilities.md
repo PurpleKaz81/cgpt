@@ -78,6 +78,7 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 - Re-extraction for the same ZIP stem replaces prior extraction contents to avoid stale files.
 - Conversations JSON discovery uses conversation-aware heuristics instead of generic largest-file fallback.
 - Conversations JSON discovery uses bounded per-priority candidate shortlists to avoid unbounded parse growth.
+- Search only trusts SQLite index hits when index metadata matches the requested export root; otherwise it falls back to root-local scan.
 - Duplicate conversation IDs in exports fail fast in map-building command paths.
 
 ## Canonical Future Source

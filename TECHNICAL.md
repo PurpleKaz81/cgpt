@@ -261,6 +261,11 @@ Flags:
 - `--reindex`: force rebuild
 - `--db <path>`: override index DB path (default: `extracted/cgpt_index.db`)
 
+Notes:
+
+- Index metadata stores the source export root path.
+- Reindexing against a different root clears stale rows before repopulation to prevent cross-export result bleed.
+
 ### `ids` / `i`
 
 Purpose: print `id<TAB>title` for conversations.
@@ -312,6 +317,11 @@ Flags:
 - `--and`: require all terms (default logic is OR)
 - `--where {title,messages,all}`: explicit search scope
 - `--root <path>`
+
+Notes:
+
+- When SQLite index metadata confirms it was built for the same `--root`, search uses FTS for speed.
+- If index scope does not match the requested root, search falls back to root-local JSON scanning for correctness.
 
 ### `make-dossiers`
 
