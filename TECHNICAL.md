@@ -584,7 +584,8 @@ Safe git routine:
 ```bash
 git status --short
 git pull origin main
-git add cgpt.py README.md TECHNICAL.md CHANGELOG.md SECURITY.md RELEASING.md config.json .gitignore .githooks/pre-commit
+git add cgpt.py cgpt/
+git add README.md TECHNICAL.md CHANGELOG.md SECURITY.md RELEASING.md config.json .gitignore .githooks/pre-commit
 git add docs/INDEX.md docs/specs docs/adr docs/runbooks docs/roadmap
 git diff --cached
 git commit -m "your message"

@@ -29,7 +29,7 @@ Scoped supplemental markdown files (allowed):
 Rules:
 
 - Every scoped supplemental markdown file must be linked from `docs/INDEX.md`.
-- Every change to `cgpt.py`, `config.json`, or `requirements.txt` must update at least one core markdown file.
+- Every change to `cgpt/**/*.py` (including `cgpt.py`), `config.json`, or `requirements.txt` must update at least one core markdown file.
 - User-visible behavior changes should update `README.md` and `CHANGELOG.md`, and update `TECHNICAL.md` when command behavior/flags/examples change.
 - Security/data-handling changes should update `SECURITY.md`.
 
@@ -41,7 +41,7 @@ Enforcement:
 
 - [ ] Working tree is clean (`git status`).
 - [ ] No private config files are tracked/staged (`config.personal.json`, `*.private.json`).
-- [ ] `cgpt.py` version (`__version__`) is updated.
+- [ ] `cgpt/core/constants.py` version (`__version__`) is updated.
 - [ ] `CHANGELOG.md` has a new version section with date and changes.
 - [ ] `CHANGELOG.md` numbered release subsections use unique version-qualified H3 headings (`Added/Changed/Fixed in X.Y.Z`) to satisfy markdown lint.
 - [ ] `docs/specs/current-capabilities.md` is reviewed and reflects shipped behavior.
@@ -63,7 +63,8 @@ git pull origin main
 
 Update:
 
-- `cgpt.py` (`__version__`)
+- `cgpt/core/constants.py` (`__version__`)
+- `pyproject.toml` version mapping remains `cgpt.core.constants.__version__` under `[tool.setuptools.dynamic]`
 - `CHANGELOG.md`
 - Any docs changed by the release
 - `docs/specs/current-capabilities.md` (current-state sync)
@@ -77,7 +78,8 @@ Update:
 Then commit:
 
 ```bash
-git add cgpt.py config.json requirements.txt pyproject.toml Makefile tox.ini
+git add cgpt.py cgpt/
+git add config.json requirements.txt pyproject.toml Makefile tox.ini
 git add README.md TECHNICAL.md SECURITY.md CHANGELOG.md RELEASING.md CONTRIBUTING.md LICENSE
 git add .github/CODEOWNERS .github/dependabot.yml
 git add .github/workflows/tests.yml .github/workflows/docs-guard.yml .github/workflows/lint.yml

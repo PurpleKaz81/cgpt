@@ -87,7 +87,7 @@ Commitment:
 ## Documentation Update Rules
 
 - Any new markdown file under scoped docs must be linked in `docs/INDEX.md`.
-- Behavior changes in `cgpt.py`, `config.json`, or `requirements.txt` must update at least one core canonical doc.
+- Behavior changes in `cgpt/**/*.py` (including `cgpt.py`), `config.json`, or `requirements.txt` must update at least one core canonical doc.
 - Release cadence requires docs review and roadmap status refresh.
 - For `CHANGELOG.md` numbered releases, use unique level-3 subsection headings to satisfy markdown lint (for example: `### Added in 0.2.4`, `### Changed in 0.2.4`, `### Fixed in 0.2.4`).
 

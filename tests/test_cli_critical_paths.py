@@ -6,7 +6,9 @@ import sys
 import tempfile
 import time
 import unittest
+import zipfile
 from pathlib import Path
+from typing import List
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CGPT = REPO_ROOT / "cgpt.py"
@@ -83,6 +85,25 @@ class TestCliCriticalPaths(unittest.TestCase):
             check=False,
         )
 
+    def _write_export_zip(self, stem: str, *, mtime: float) -> Path:
+        zpath = self.zips / f"{stem}.zip"
+        conversations = json.loads(
+            (self.root / "conversations.json").read_text(encoding="utf-8")
+        )
+        with zipfile.ZipFile(zpath, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("conversations.json", json.dumps(conversations))
+        os.utime(zpath, (mtime, mtime))
+        return zpath
+
+    @staticmethod
+    def _stdout_ids(stdout: str) -> List[str]:
+        ids = []
+        for line in stdout.splitlines():
+            if "\t" not in line:
+                continue
+            ids.append(line.split("\t", 1)[0].strip())
+        return ids
+
     def test_quick_selection_parsing_from_ids_file(self):
         ids_file = self.home / "selection.txt"
         # Includes a valid index, valid raw ID, and invalid entries for warning coverage.
@@ -109,6 +130,29 @@ class TestCliCriticalPaths(unittest.TestCase):
 
         dossier_files = list(self.dossiers.glob("dossier_*.txt"))
         self.assertTrue(dossier_files, "Expected quick command to generate dossier TXT output")
+
+    def test_quick_selection_from_stdin_supports_at_file_tokens(self):
+        ids_file = self.home / "from_stdin_ids.txt"
+        ids_file.write_text("conv-c\n", encoding="utf-8")
+
+        result = self.run_cgpt(
+            "quick",
+            "Alpha",
+            "--root",
+            str(self.root),
+            "--format",
+            "txt",
+            input_text=f"@{ids_file}\n",
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+        selected_file = self.dossiers / "selected_ids__Alpha.txt"
+        self.assertTrue(selected_file.exists())
+        self.assertEqual(
+            selected_file.read_text(encoding="utf-8").strip().splitlines(),
+            ["conv-c"],
+        )
 
     def test_recent_selection_parsing_from_stdin(self):
         # Pick #1 and #3 from recent(3) plus one invalid token to trigger warning.
@@ -251,6 +295,134 @@ class TestCliCriticalPaths(unittest.TestCase):
         selected_ids = selected_file.read_text(encoding="utf-8").strip().splitlines()
         # Last 2 days include conv-d and conv-c; only conv-c matches "Alpha".
         self.assertEqual(selected_ids, ["conv-c"])
+
+    def test_find_matches_titles_case_insensitively(self):
+        result = self.run_cgpt("find", "beta", "--root", str(self.root))
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertEqual(self._stdout_ids(result.stdout), ["conv-b"])
+
+    def test_search_supports_terms_and_and_semantics(self):
+        result = self.run_cgpt(
+            "search",
+            "--terms",
+            "Need",
+            "plan",
+            "--and",
+            "--where",
+            "messages",
+            "--root",
+            str(self.root),
+        )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertEqual(self._stdout_ids(result.stdout), ["conv-a"])
+
+    def test_index_builds_db_at_explicit_path(self):
+        db_path = self.home / "custom-index" / "cgpt_index.db"
+        result = self.run_cgpt(
+            "index", "--root", str(self.root), "--db", str(db_path), "--reindex"
+        )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertTrue(db_path.exists())
+        indexed_path = Path(
+            result.stdout.strip().split("Index built at: ", 1)[1]
+        ).resolve()
+        self.assertEqual(indexed_path, db_path.resolve())
+
+    def test_latest_zip_returns_newest_archive(self):
+        now = time.time()
+        self._write_export_zip("older_export", mtime=now - 20)
+        newest = self._write_export_zip("newest_export", mtime=now - 10)
+
+        result = self.run_cgpt("latest-zip")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertEqual(Path(result.stdout.strip()).resolve(), newest.resolve())
+
+    def test_no_subcommand_defaults_to_extract_newest_zip(self):
+        now = time.time()
+        self._write_export_zip("older_export", mtime=now - 20)
+        newest = self._write_export_zip("default_export", mtime=now - 10)
+
+        result = self.run_cgpt()
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+        out_dir = self.extracted / newest.stem
+        self.assertTrue(out_dir.is_dir())
+        self.assertTrue((out_dir / "conversations.json").exists())
+        self.assertFalse((self.extracted / "older_export").exists())
+        expected_out = os.path.normcase(os.path.realpath(str(out_dir)))
+        reported_out = os.path.normcase(os.path.realpath(result.stdout.strip()))
+        self.assertEqual(reported_out, expected_out)
+
+    def test_default_mode_env_and_cli_override(self):
+        env = {"CGPT_DEFAULT_MODE": "excerpts"}
+
+        fail_result = self.run_cgpt(
+            "build-dossier",
+            "--root",
+            str(self.root),
+            "--ids",
+            "conv-a",
+            "--format",
+            "txt",
+            env=env,
+        )
+        self.assertNotEqual(fail_result.returncode, 0)
+        self.assertIn(
+            "Provide --topic and/or --topics when using --mode excerpts",
+            fail_result.stderr,
+        )
+
+        ok_result = self.run_cgpt(
+            "--default-mode",
+            "full",
+            "build-dossier",
+            "--root",
+            str(self.root),
+            "--ids",
+            "conv-a",
+            "--format",
+            "txt",
+            env=env,
+        )
+        self.assertEqual(ok_result.returncode, 0, msg=ok_result.stderr)
+        output_path = Path(ok_result.stdout.strip().splitlines()[-1])
+        self.assertTrue(output_path.exists())
+
+    def test_default_split_env_applies_and_cli_no_split_overrides(self):
+        env = {"CGPT_DEFAULT_SPLIT": "1"}
+
+        split_on = self.run_cgpt(
+            "build-dossier",
+            "--root",
+            str(self.root),
+            "--ids",
+            "conv-a",
+            "--format",
+            "txt",
+            "--name",
+            "split-env-on",
+            env=env,
+        )
+        self.assertEqual(split_on.returncode, 0, msg=split_on.stderr)
+        split_on_files = list((self.dossiers / "split-env-on").glob("*.txt"))
+        self.assertTrue(any(p.name.endswith("__working.txt") for p in split_on_files))
+
+        split_off = self.run_cgpt(
+            "build-dossier",
+            "--root",
+            str(self.root),
+            "--ids",
+            "conv-a",
+            "--format",
+            "txt",
+            "--name",
+            "split-env-off",
+            "--no-split",
+            env=env,
+        )
+        self.assertEqual(split_off.returncode, 0, msg=split_off.stderr)
+        split_off_files = list((self.dossiers / "split-env-off").glob("*.txt"))
+        self.assertFalse(any(p.name.endswith("__working.txt") for p in split_off_files))
 
 
 class TestInitCommand(unittest.TestCase):
