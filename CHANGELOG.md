@@ -19,6 +19,21 @@ Maintenance note for markdown lint:
 
 - Nothing yet.
 
+## [0.2.19] - 2026-02-19
+
+### Added in 0.2.19
+
+- Added root `AGENTS.md` with non-negotiable agent guardrails for PR-first delivery and canonical Ruff invocation.
+- Added `.githooks/pre-push` to block direct pushes to protected `main` when local hooks are enabled.
+- Added `scripts/release_via_pr.sh` to automate PR-based release preparation without direct `main` pushes.
+
+### Changed in 0.2.19
+
+- Updated release workflow docs to enforce branch -> PR -> merge -> tag flow and removed direct `main` push instructions.
+- Updated contributor and agent references to standardize Python lint usage on `make lint-py` (with `.venv` fallback), avoiding unreliable bare `python3 -m ruff` assumptions.
+- Hardened docs-guard CI checks to enforce canonical Ruff command guidance and forbid direct-push-to-main release instructions.
+- `scripts/release_check.sh` now runs Python lint (`make lint-py`) as part of release preflight.
+
 ## [0.2.18] - 2026-02-19
 
 ### Added in 0.2.18

@@ -17,6 +17,7 @@ Core markdown files (canonical):
 Governance markdown files (allowed root-level docs):
 
 - `CONTRIBUTING.md`
+- `AGENTS.md`
 
 Scoped supplemental markdown files (allowed):
 
@@ -50,15 +51,16 @@ Enforcement:
 - [ ] `README.md` high-level positioning still matches current scope and constraints.
 - [ ] Core smoke tests pass (see below).
 - [ ] CI `lint` workflow is green for the release commit/PR.
-- [ ] Release commit is on `main`.
+- [ ] Release PR is merged to `main`.
 - [ ] Annotated git tag is created and pushed.
 - [ ] GitHub release is created from that tag.
 
-## 1. Prepare the release commit
+## 1. Prepare a release branch and release commit
 
 ```bash
 git checkout main
 git pull origin main
+git checkout -b release/vX.Y.Z
 ```
 
 Update:
@@ -80,10 +82,11 @@ Then commit:
 ```bash
 git add cgpt.py cgpt/
 git add config.json requirements.txt pyproject.toml Makefile tox.ini
-git add README.md TECHNICAL.md SECURITY.md CHANGELOG.md RELEASING.md CONTRIBUTING.md LICENSE
+git add README.md TECHNICAL.md SECURITY.md CHANGELOG.md RELEASING.md CONTRIBUTING.md AGENTS.md LICENSE
 git add .github/CODEOWNERS .github/dependabot.yml
 git add .github/workflows/tests.yml .github/workflows/docs-guard.yml .github/workflows/lint.yml
-git add .ruff.toml .markdownlint.yml .gitignore .githooks/pre-commit
+git add .ruff.toml .markdownlint.yml .gitignore .githooks/pre-commit .githooks/pre-push
+git add scripts/release_check.sh scripts/release_via_pr.sh scripts/gh_retry.sh
 git add docs/INDEX.md docs/specs docs/adr docs/runbooks docs/roadmap
 git commit -m "Release vX.Y.Z"
 ```
@@ -94,12 +97,14 @@ Before commit, verify no private files are staged:
 git diff --cached --name-only
 ```
 
-## 2. Run smoke tests
+## 2. Run local quality gates
 
-Preferred (one command):
+Preferred:
 
 ```bash
 ./scripts/release_check.sh
+make lint-py
+make lint-md
 ```
 
 Manual equivalent from repo root:
@@ -115,11 +120,11 @@ python3 cgpt.py make-dossiers --help
 python3 cgpt.py search --help
 python3 cgpt.py doctor
 python3 -m unittest discover -s tests -p "test_*.py"
-python3 -m ruff check .
+make lint-py
 npx --yes markdownlint-cli2@0.16.0 "**/*.md" "#node_modules" "#.venv" "#.tox"
 ```
 
-If any command fails, fix before tagging.
+If any command fails, fix before opening the release PR.
 
 ## GitHub CLI Resilience
 
@@ -137,15 +142,35 @@ You can tune retry behavior with:
 - `GH_RETRY_MAX_DELAY` (default: `30`)
 - `GH_RETRY_BACKOFF` (default: `2`)
 
-## 3. Tag and push
+## 3. Open release PR and merge to main
+
+Use PR flow for protected `main`:
+
+```bash
+git push -u origin release/vX.Y.Z
+./scripts/gh_retry.sh gh pr create --base main --head release/vX.Y.Z --title "Release vX.Y.Z" --body "Release vX.Y.Z"
+./scripts/gh_retry.sh gh pr checks <PR_NUMBER>
+./scripts/gh_retry.sh gh pr merge <PR_NUMBER> --merge --delete-branch
+git checkout main
+git pull origin main
+```
+
+Optional helper from `release/vX.Y.Z`:
+
+```bash
+./scripts/release_via_pr.sh X.Y.Z
+```
+
+## 4. Tag and push
 
 Replace `X.Y.Z` with the release version:
 
 ```bash
 git tag -a vX.Y.Z -m "Release vX.Y.Z"
-git push origin main
 git push origin vX.Y.Z
 ```
+
+Tag only after the release PR is merged and local `main` is synced.
 
 Verify tag exists remotely:
 
@@ -153,7 +178,7 @@ Verify tag exists remotely:
 git ls-remote --tags origin | rg "vX.Y.Z"
 ```
 
-## 4. Create GitHub release
+## 5. Create GitHub release
 
 1. Open: `https://github.com/PurpleKaz81/cgpt/releases/new`
 2. Choose tag: `vX.Y.Z`
@@ -164,7 +189,7 @@ git ls-remote --tags origin | rg "vX.Y.Z"
 5. Mark as pre-release only when appropriate.
 6. Publish.
 
-## 5. Post-release verification
+## 6. Post-release verification
 
 - [ ] `git status` is clean.
 - [ ] `main` and `origin/main` are in sync.

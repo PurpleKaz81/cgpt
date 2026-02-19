@@ -43,6 +43,7 @@ Core checks:
 
 ```bash
 python3 cgpt.py doctor --dev
+make lint-py
 make check
 tox run -e py,lint
 ./scripts/release_check.sh
@@ -53,6 +54,7 @@ tox run -e py,lint
 These rules are required for every AI-agent change in this repository:
 
 1. Never commit directly to `main`.
+1. Never run `git push origin main` directly from local workflows.
 1. Create a focused branch per change set (`<type>/<scope>` naming preferred).
 1. Keep commits scoped and reviewable; do not mix unrelated concerns.
 1. Run `make check` after each meaningful code change.

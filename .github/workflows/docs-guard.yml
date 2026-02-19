@@ -15,13 +15,18 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install ripgrep
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ripgrep
+
       - name: Enforce markdown policy and code-doc sync
         shell: bash
         run: |
           set -euo pipefail
 
           core_behavior_md='^(README\.md|TECHNICAL\.md|SECURITY\.md|CHANGELOG\.md|RELEASING\.md)$'
-          allowed_md='^(README\.md|TECHNICAL\.md|SECURITY\.md|CHANGELOG\.md|RELEASING\.md|CONTRIBUTING\.md|docs/INDEX\.md|docs/(specs|adr|runbooks|roadmap)/.+\.md)$'
+          allowed_md='^(README\.md|TECHNICAL\.md|SECURITY\.md|CHANGELOG\.md|RELEASING\.md|CONTRIBUTING\.md|AGENTS\.md|docs/INDEX\.md|docs/(specs|adr|runbooks|roadmap)/.+\.md)$'
 
           # Keep markdown set minimal and explicit.
           disallowed_md="$(git ls-files '*.md' | rg -v "$allowed_md" || true)"
@@ -29,9 +34,31 @@ jobs:
             echo "Disallowed markdown files detected:"
             echo "$disallowed_md"
             echo "Allowed markdown paths:"
-            echo "- README.md, TECHNICAL.md, SECURITY.md, CHANGELOG.md, RELEASING.md, CONTRIBUTING.md"
+            echo "- README.md, TECHNICAL.md, SECURITY.md, CHANGELOG.md, RELEASING.md, CONTRIBUTING.md, AGENTS.md"
             echo "- docs/INDEX.md"
             echo "- docs/specs/**/*.md, docs/adr/**/*.md, docs/runbooks/**/*.md, docs/roadmap/**/*.md"
+            exit 1
+          fi
+
+          # Keep contributor/release lint guidance canonical.
+          if rg -n 'python3 -m ruff check \.' CONTRIBUTING.md RELEASING.md >/dev/null; then
+            echo "Disallowed Ruff invocation found in CONTRIBUTING.md or RELEASING.md."
+            echo "Use 'make lint-py' (preferred) or '.venv/bin/python -m ruff check .' (fallback)."
+            exit 1
+          fi
+          if ! rg -n 'make lint-py' CONTRIBUTING.md >/dev/null; then
+            echo "CONTRIBUTING.md must include canonical Ruff guidance via 'make lint-py'."
+            exit 1
+          fi
+          if ! rg -n 'make lint-py' RELEASING.md >/dev/null; then
+            echo "RELEASING.md must include canonical Ruff guidance via 'make lint-py'."
+            exit 1
+          fi
+
+          # Release process must stay PR-based for protected main branch.
+          if rg -n 'git push origin main' RELEASING.md >/dev/null; then
+            echo "RELEASING.md cannot instruct direct pushes to main."
+            echo "Use release branch -> PR -> merge -> tag."
             exit 1
           fi
 

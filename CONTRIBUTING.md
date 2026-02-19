@@ -37,7 +37,7 @@ Equivalent commands:
 
 ```bash
 python3 -m unittest discover -s tests -p "test_*.py" -v
-python3 -m ruff check .
+make lint-py
 npx --yes markdownlint-cli2@0.16.0 "**/*.md" "#node_modules" "#.venv" "#.tox"
 ```
 
@@ -92,6 +92,7 @@ When behavior changes, update docs in the same PR.
 - Never commit private local files (`config.personal.json`, `*.private.json`) or raw user export artifacts.
 - Keep generated/local export data in ignored folders (`zips/`, `extracted/`, `dossiers/`) unless explicitly asked otherwise.
 - Keep the pre-commit hook enabled to block accidental staging of private configs, secrets, and export artifacts.
+- Keep local git hooks enabled (`.githooks/pre-commit`, `.githooks/pre-push`) to block sensitive commits and direct pushes to protected `main`.
 - Follow `SECURITY.md` for data handling practices.
 
 ## Pull Request Expectations

@@ -54,7 +54,7 @@ Necessity tags:
 | R0.3 | Additional hardening follow-up patch (`v0.2.3`) | `implemented` | `committed` | `2026-T1` | Added ZIP special-member and archive-limit validation, strict optional-file/config schema validation, duplicate ID detection, and bounded JSON discovery candidate parsing. |
 | R0.4 | Internal modularization baseline (`v0.2.13`) | `implemented` | `committed` | `2026-T1` | Split runtime into package layers (`core`, `domain`, `commands`, `cli`) with compatibility-preserving `cgpt.py` shim and stable CLI behavior. |
 | R4 | `cgpt doctor` health check command | `implemented` | `committed` | `2026-T1` | Runtime/developer diagnostics with `--fix`, `--dev`, and `--strict` are shipped. |
-| R16 | Engineering Quality Baseline Hardening | `implemented` | `committed` | `2026-T1` | CI Python matrix/cross-platform smoke, lint gates, governance baseline, and maintenance ledger contracts are in place; ongoing follow-ups include shipped search-index scope integrity hardening in `v0.2.17`. |
+| R16 | Engineering Quality Baseline Hardening | `implemented` | `committed` | `2026-T1` | CI Python matrix/cross-platform smoke, lint gates, governance baseline, and maintenance ledger contracts are in place; ongoing follow-ups include shipped search-index scope integrity hardening in `v0.2.17` and PR-first release guardrails in `v0.2.19`. |
 
 ## Active Queue (Ranked by Necessity)
 
