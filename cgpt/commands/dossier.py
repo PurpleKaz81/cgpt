@@ -43,6 +43,14 @@ from cgpt.domain.dossier_cleaning import _extract_sources
 def _ensure_root_with_latest(home: Path, root_arg: Optional[str]) -> Tuple[Path, Path]:
     """Ensure extracted/latest points to newest extracted data and resolve root."""
     zips_dir, extracted_dir, dossiers_dir = ensure_layout(home)
+    if root_arg:
+        root = Path(root_arg).expanduser().resolve()
+        if not root.exists():
+            die(f"Root path not found: {root}")
+        if not root.is_dir():
+            die(f"Root path is not a directory: {root}")
+        return root, dossiers_dir
+
     has_any_extracted = any(
         p.is_dir() and p.name != "latest" for p in extracted_dir.iterdir()
     )
@@ -54,11 +62,7 @@ def _ensure_root_with_latest(home: Path, root_arg: Optional[str]) -> Tuple[Path,
     else:
         refresh_latest_symlink(extracted_dir, newest_extracted(extracted_dir))
 
-    root = (
-        Path(root_arg).expanduser().resolve()
-        if root_arg
-        else default_root(extracted_dir)
-    )
+    root = default_root(extracted_dir)
     return root, dossiers_dir
 
 
