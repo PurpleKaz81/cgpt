@@ -27,6 +27,8 @@ Implemented in this baseline hardening pass:
 - Internal runtime modularization baseline is implemented with package-layer split and `cgpt.py` compatibility shim.
 - Ruff baseline has no temporary per-file import-order exceptions (`.ruff.toml` has no `per-file-ignores` section).
 - Discovery/index integrity hardening now scopes cached SQLite search data to the indexed export root to prevent cross-export mismatches.
+- Release process hardening now enforces PR-first merge flow in docs and local guardrails (including pre-push block for direct `main` pushes).
+- Agent guardrail baseline is documented in `AGENTS.md` and validated by docs-guard checks for canonical Ruff invocation guidance.
 
 Pending / next-phase quality work remains below.
 
@@ -36,7 +38,7 @@ Pending / next-phase quality work remains below.
 | --- | --- | --- | --- |
 | P0 | Security scanning baseline | `planned` | Add lightweight security scan workflow (dependency and secret scanning) with documented triage policy. |
 | P1 | Optional dependency CI split for DOCX paths | `planned` | CI has explicit legs that validate behavior with and without `python-docx`, and docx-only command expectations are covered. |
-| P1 | Release automation hardening | `planned` | Add release/tag validation automation and document failure handling in `RELEASING.md`. |
+| P1 | Release automation hardening | `implemented` | Added `scripts/release_via_pr.sh`, documented PR-based release flow in `RELEASING.md`, and blocked direct pushes to `main` via `.githooks/pre-push`. |
 | P2 | Stricter typing baseline | `planned` | Define incremental typing plan (scope, excludes, gate level) and enable first non-blocking type check pass. |
 
 ## Continue Optimization Checklist

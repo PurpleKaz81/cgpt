@@ -34,13 +34,19 @@ echo "✅ CLI smoke checks passed"
 python3 -m unittest discover -s tests -p 'test_*.py' >/dev/null || fail "Unit tests failed"
 echo "✅ Unit tests passed"
 
-# 4) Changelog has unreleased section
+# 4) Python lint
+if ! make lint-py >/dev/null; then
+  fail "Python lint failed (run: make lint-py)"
+fi
+echo "✅ Python lint passed"
+
+# 5) Changelog has unreleased section
 if ! rg -n '^## \[Unreleased\]' CHANGELOG.md >/dev/null; then
   fail "CHANGELOG.md is missing an [Unreleased] section"
 fi
 echo "✅ CHANGELOG.md has [Unreleased] section"
 
-# 5) Defensive private file check (staged + tracked)
+# 6) Defensive private file check (staged + tracked)
 if git ls-files | rg -e '(^|/)config\.personal\.json$' -e '\.private\.json$' >/dev/null; then
   fail "Private config file is tracked in git"
 fi

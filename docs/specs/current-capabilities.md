@@ -53,6 +53,7 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 - Single-user, local CLI workflow.
 - Local files are the system of record; no required hosted service integration.
 - Internal implementation is package-modularized (`cgpt/core`, `cgpt/domain`, `cgpt/commands`, `cgpt/cli`) while preserving `cgpt.py` compatibility invocation.
+- Agent workflow guardrails are documented in root `AGENTS.md` (PR-first flow and canonical lint commands).
 
 ## Known Constraints
 
@@ -70,8 +71,10 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 - `cgpt doctor` provides local runtime/dependency/layout diagnostics.
 - Critical-path unit tests are in `tests/`.
 - One-command release preflight is available at `scripts/release_check.sh`.
+- Release automation helper is available at `scripts/release_via_pr.sh` for PR-based release preparation.
 - CI test coverage includes Python `3.8` through `3.13` plus macOS/Windows smoke coverage.
 - CI includes required `unit` summary gating, `lint` (`ruff` + markdown lint), and docs policy enforcement (`docs-guard`).
+- Local git hook path (`.githooks`) includes pre-push protection that blocks direct pushes to `main` when hooks are enabled.
 - Edge-case hardening tests cover ZIP path safety, timestamp coercion, strict config handling, and input-file decoding behavior.
 - Extraction rejects unsafe ZIP member paths before writing files.
 - Extraction rejects ZIP symlink/special members and enforces bounded member-count/uncompressed-size limits.
