@@ -651,6 +651,72 @@ class TestCliCriticalPaths(unittest.TestCase):
         self.assertEqual(search_alpha.returncode, 0, msg=search_alpha.stderr)
         self.assertEqual(self._stdout_ids(search_alpha.stdout), ["conv-alpha"])
 
+    def test_explicit_root_override_does_not_rebind_active_project_root(self):
+        init_result = self.run_cgpt("project", "init", "alpha-project")
+        self.assertEqual(init_result.returncode, 0, msg=init_result.stderr)
+
+        baseline = self.run_cgpt("search", "--terms", "Alpha", "--where", "title")
+        self.assertEqual(baseline.returncode, 0, msg=baseline.stderr)
+        baseline_ids = self._stdout_ids(baseline.stdout)
+        self.assertIn("conv-a", baseline_ids)
+        self.assertIn("conv-c", baseline_ids)
+
+        other_root = self.extracted / "other_export"
+        other_root.mkdir(parents=True)
+        (other_root / "conversations.json").write_text(
+            json.dumps(
+                [
+                    _conv(
+                        "conv-other",
+                        "Beta only",
+                        time.time() - 25,
+                        "beta body",
+                        "reply",
+                    )
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        override = self.run_cgpt(
+            "search",
+            "--terms",
+            "Beta",
+            "--where",
+            "title",
+            "--root",
+            str(other_root),
+        )
+        self.assertEqual(override.returncode, 0, msg=override.stderr)
+        self.assertEqual(self._stdout_ids(override.stdout), ["conv-other"])
+
+        after = self.run_cgpt("search", "--terms", "Alpha", "--where", "title")
+        self.assertEqual(after.returncode, 0, msg=after.stderr)
+        after_ids = self._stdout_ids(after.stdout)
+        self.assertIn("conv-a", after_ids)
+        self.assertIn("conv-c", after_ids)
+        self.assertNotIn("conv-other", after_ids)
+
+        meta_path = self.dossiers / "alpha-project" / ".cgpt-project.json"
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        self.assertEqual(Path(meta["extract_root"]).resolve(), self.root.resolve())
+
+    def test_project_commands_fail_cleanly_when_project_path_is_file(self):
+        blocked = self.dossiers / "blocked-project"
+        blocked.write_text("not a directory", encoding="utf-8")
+
+        init_result = self.run_cgpt("project", "init", "blocked-project")
+        self.assertNotEqual(init_result.returncode, 0)
+        self.assertIn(
+            "Project path exists but is not a directory", init_result.stderr
+        )
+        self.assertNotIn("FileExistsError", init_result.stderr)
+
+        use_result = self.run_cgpt("project", "use", "blocked-project", "--create")
+        self.assertNotEqual(use_result.returncode, 0)
+        self.assertIn("Project path exists but is not a directory", use_result.stderr)
+        self.assertNotIn("FileExistsError", use_result.stderr)
+
 
 class TestInitCommand(unittest.TestCase):
     def setUp(self):

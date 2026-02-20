@@ -5,7 +5,7 @@ from typing import List
 from cgpt.commands.dossier_roots import resolve_root
 from cgpt.core.color import _colorize_title_with_topic, _colorize_title_with_topics
 from cgpt.core.layout import die, ensure_layout, home_dir
-from cgpt.core.project import get_active_project, set_project_extract_root
+from cgpt.core.project import get_active_project
 from cgpt.domain.conversations import (
     conv_id_and_title,
     conversation_messages_blob,
@@ -21,8 +21,6 @@ def _resolve_search_root(args: argparse.Namespace) -> Path:
     _, _, dossiers_dir = ensure_layout(home)
     active_project = get_active_project(dossiers_dir)
     root, _, _ = resolve_root(home, getattr(args, "root", None), active_project)
-    if active_project:
-        set_project_extract_root(dossiers_dir, active_project, root)
     return root
 
 

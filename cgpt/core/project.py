@@ -41,6 +41,11 @@ def normalize_project_name(name: str) -> str:
 def ensure_project_dir(dossiers_dir: Path, name: str) -> Path:
     normalized = normalize_project_name(name)
     project_dir = dossiers_dir / normalized
+    if project_dir.exists() and not project_dir.is_dir():
+        die(
+            f"Project path exists but is not a directory: {project_dir}\n"
+            "Rename or remove that file, then try again."
+        )
     project_dir.mkdir(parents=True, exist_ok=True)
     _ensure_project_metadata(project_dir, normalized)
     return project_dir

@@ -29,8 +29,8 @@ def resolve_root(
             die(f"Root path not found: {root}")
         if not root.is_dir():
             die(f"Root path is not a directory: {root}")
-        if project_name:
-            set_project_extract_root(dossiers_dir, project_name, root)
+        # Explicit --root is a one-off override and must not mutate
+        # the project's persistent extract binding.
         return root, extracted_dir, dossiers_dir
 
     if project_name:
@@ -55,8 +55,8 @@ def ensure_root_with_latest(
             die(f"Root path not found: {root}")
         if not root.is_dir():
             die(f"Root path is not a directory: {root}")
-        if project_name:
-            set_project_extract_root(dossiers_dir, project_name, root)
+        # Explicit --root is a one-off override and must not mutate
+        # the project's persistent extract binding.
         return root, dossiers_dir
 
     if project_name:
