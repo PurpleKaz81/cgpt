@@ -20,6 +20,7 @@ echo "✅ Working tree is clean"
 # 2) Basic CLI health
 python3 cgpt.py --version >/dev/null || fail "cgpt.py --version failed"
 python3 cgpt.py --help >/dev/null || fail "cgpt.py --help failed"
+python3 cgpt.py project --help >/dev/null || fail "project --help failed"
 python3 cgpt.py extract --help >/dev/null || fail "extract --help failed"
 python3 cgpt.py recent --help >/dev/null || fail "recent --help failed"
 python3 cgpt.py quick --help >/dev/null || fail "quick --help failed"

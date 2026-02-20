@@ -5,6 +5,8 @@ from cgpt.cli.parser import build_parser
 from cgpt.commands.extract_index import cmd_extract
 from cgpt.core.color import set_cli_color_override
 from cgpt.core.env import _parse_env_bool
+from cgpt.core.layout import ensure_layout, home_dir
+from cgpt.core.project import resolve_project_name
 
 # Enable line-editing for interactive `input()` (arrow keys, history, tab completion).
 # On macOS this typically wraps libedit; ignore failures if module/bindings differ.
@@ -56,5 +58,11 @@ def main() -> None:
     if hasattr(args, "split") and args.split is None:
         env_split = _parse_env_bool("CGPT_DEFAULT_SPLIT")
         args.split = env_split if env_split is not None else False
+
+    # Resolve project name: explicit --name wins; otherwise use active project if available.
+    if hasattr(args, "name"):
+        home = home_dir(getattr(args, "home", None))
+        _, _, dossiers_dir = ensure_layout(home)
+        args.name = resolve_project_name(dossiers_dir, getattr(args, "name", None))
 
     args.func(args)

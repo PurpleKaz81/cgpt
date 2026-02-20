@@ -9,6 +9,13 @@ from cgpt.commands.dossier import (
 )
 from cgpt.commands.extract_index import cmd_extract, cmd_index, cmd_latest_zip
 from cgpt.commands.init_doctor import cmd_doctor, cmd_init
+from cgpt.commands.project import (
+    cmd_project_clear,
+    cmd_project_init,
+    cmd_project_list,
+    cmd_project_status,
+    cmd_project_use,
+)
 from cgpt.core.constants import __version__
 from cgpt.core.io import parse_context
 
@@ -281,6 +288,37 @@ def build_parser() -> argparse.ArgumentParser:
     )
     a.set_defaults(func=cmd_init)
 
+    a = sub.add_parser("project", help="Manage active research project context")
+    project_sub = a.add_subparsers(dest="project_cmd", required=True)
+
+    p_init = project_sub.add_parser(
+        "init", help="Create project folder under dossiers/ and set as active"
+    )
+    p_init.add_argument("name", help="Project name (used as dossiers/<name>/)")
+    p_init.set_defaults(func=cmd_project_init)
+
+    p_use = project_sub.add_parser("use", help="Set an existing project as active")
+    p_use.add_argument("name", help="Project name (folder under dossiers/)")
+    p_use.add_argument(
+        "--create",
+        action="store_true",
+        help="Create the project folder if it does not exist",
+    )
+    p_use.set_defaults(func=cmd_project_use)
+
+    p_status = project_sub.add_parser("status", help="Show active project")
+    p_status.set_defaults(func=cmd_project_status)
+
+    p_list = project_sub.add_parser(
+        "list", help="List project folders under dossiers/ (active marked with *)"
+    )
+    p_list.set_defaults(func=cmd_project_list)
+
+    p_clear = project_sub.add_parser(
+        "clear", help="Clear active project (commands fall back to legacy behavior)"
+    )
+    p_clear.set_defaults(func=cmd_project_clear)
+
     a = sub.add_parser(
         "doctor",
         help="Validate runtime/developer environment and folder layout",
@@ -432,6 +470,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     a.add_argument("--ids-file", help="Text file with one id per line")
     a.add_argument("--ids", nargs="*", help="One or more IDs")
+    a.add_argument(
+        "--name",
+        help="Project name for organizing output. Creates dossiers/{name}/ subfolder.",
+    )
     a.add_argument(
         "--format",
         nargs="+",

@@ -273,6 +273,25 @@ class TestCliCriticalPaths(unittest.TestCase):
         self.assertTrue(md_files, "Expected Markdown dossier for conv-a")
         self.assertFalse(txt_files, "Did not expect TXT dossier for conv-a")
 
+    def test_make_dossiers_name_scopes_output_directory(self):
+        result = self.run_cgpt(
+            "make-dossiers",
+            "--root",
+            str(self.root),
+            "--ids",
+            "conv-a",
+            "--name",
+            "named-output",
+            "--format",
+            "txt",
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        scoped_txt_files = list((self.dossiers / "named-output").glob("conv-a__*.txt"))
+        legacy_txt_files = list(self.dossiers.glob("conv-a__*.txt"))
+        self.assertTrue(scoped_txt_files, "Expected TXT dossier under named project folder")
+        self.assertFalse(legacy_txt_files, "Did not expect root-level TXT dossier")
+
     @unittest.skipIf(HAS_DOCX, "requires missing python-docx environment")
     def test_build_dossier_docx_only_fails_when_docx_dependency_missing(self):
         result = self.run_cgpt(
@@ -508,6 +527,129 @@ class TestCliCriticalPaths(unittest.TestCase):
         self.assertEqual(split_off.returncode, 0, msg=split_off.stderr)
         split_off_files = list((self.dossiers / "split-env-off").glob("*.txt"))
         self.assertFalse(any(p.name.endswith("__working.txt") for p in split_off_files))
+
+    def test_split_appendix_guard_ignores_phrase_mentions_in_content(self):
+        convs = json.loads((self.root / "conversations.json").read_text(encoding="utf-8"))
+        convs[0]["mapping"]["a1"]["message"]["content"]["parts"] = [
+            (
+                "This is normal transcript text mentioning "
+                "`RESEARCH LOG & TOOL ARTIFACTS` for verification.\n"
+                "[Search Query] israel ceasefire timeline analysis and source triage\n"
+                "Continue discussion."
+            )
+        ]
+        (self.root / "conversations.json").write_text(
+            json.dumps(convs), encoding="utf-8"
+        )
+
+        result = self.run_cgpt(
+            "build-dossier",
+            "--root",
+            str(self.root),
+            "--ids",
+            "conv-a",
+            "--format",
+            "txt",
+            "--split",
+            "--name",
+            "appendix-guard",
+        )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertNotIn("WARNING: Appendix header appears", result.stderr)
+
+        output_path = Path(result.stdout.strip().splitlines()[-1])
+        working_path = output_path.with_name(
+            output_path.stem + "__working" + output_path.suffix
+        )
+        self.assertTrue(working_path.exists())
+
+        working_txt = working_path.read_text(encoding="utf-8")
+        header_line_count = sum(
+            1
+            for line in working_txt.splitlines()
+            if line.strip() == "APPENDIX: RESEARCH LOG & TOOL ARTIFACTS"
+        )
+        self.assertEqual(header_line_count, 1)
+        self.assertGreaterEqual(working_txt.count("RESEARCH LOG & TOOL ARTIFACTS"), 2)
+
+    def test_build_dossier_uses_active_project_when_name_omitted(self):
+        init_result = self.run_cgpt("project", "init", "alpha-project")
+        self.assertEqual(init_result.returncode, 0, msg=init_result.stderr)
+
+        result = self.run_cgpt(
+            "build-dossier",
+            "--root",
+            str(self.root),
+            "--ids",
+            "conv-a",
+            "--format",
+            "txt",
+        )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        output_path = Path(result.stdout.strip().splitlines()[-1]).resolve()
+        self.assertIn(str((self.dossiers / "alpha-project").resolve()), str(output_path))
+        self.assertTrue(output_path.exists())
+
+    def test_quick_selection_files_are_scoped_to_active_project(self):
+        init_result = self.run_cgpt("project", "init", "focus-topic")
+        self.assertEqual(init_result.returncode, 0, msg=init_result.stderr)
+
+        result = self.run_cgpt(
+            "quick",
+            "Alpha",
+            "--all",
+            "--root",
+            str(self.root),
+            "--format",
+            "txt",
+        )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+        project_selected = self.dossiers / "focus-topic" / "selected_ids__Alpha.txt"
+        legacy_selected = self.dossiers / "selected_ids__Alpha.txt"
+        self.assertTrue(project_selected.exists())
+        self.assertFalse(legacy_selected.exists())
+
+    def test_search_defaults_to_active_project_bound_root(self):
+        convs_alpha = [
+            _conv("conv-alpha", "Alpha topic", time.time() - 100, "alpha body", "reply")
+        ]
+        convs_beta = [
+            _conv("conv-beta", "Beta topic", time.time() - 50, "beta body", "reply")
+        ]
+        zip_alpha = self.zips / "alpha_export.zip"
+        zip_beta = self.zips / "beta_export.zip"
+        with zipfile.ZipFile(zip_alpha, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("conversations.json", json.dumps(convs_alpha))
+        with zipfile.ZipFile(zip_beta, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("conversations.json", json.dumps(convs_beta))
+
+        self.assertEqual(
+            self.run_cgpt("project", "init", "alpha-project").returncode,
+            0,
+        )
+        self.assertEqual(
+            self.run_cgpt("extract", str(zip_alpha)).returncode,
+            0,
+        )
+        self.assertEqual(
+            self.run_cgpt("project", "init", "beta-project").returncode,
+            0,
+        )
+        self.assertEqual(
+            self.run_cgpt("extract", str(zip_beta)).returncode,
+            0,
+        )
+
+        self.assertEqual(
+            self.run_cgpt("project", "use", "alpha-project").returncode,
+            0,
+        )
+        search_alpha = self.run_cgpt(
+            "search", "--terms", "Alpha", "--where", "title"
+        )
+        self.assertEqual(search_alpha.returncode, 0, msg=search_alpha.stderr)
+        self.assertEqual(self._stdout_ids(search_alpha.stdout), ["conv-alpha"])
 
 
 class TestInitCommand(unittest.TestCase):

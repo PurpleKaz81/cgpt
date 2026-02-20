@@ -365,23 +365,19 @@ def build_combined_dossier(
                     txt_path.stem + "__working" + txt_path.suffix
                 )
 
-                # HARD GUARDS: Verify appendix header appears exactly once (only if appended)
+                # HARD GUARDS: Verify appendix header line appears exactly once (only if appended).
+                # Count exact header lines to avoid false positives when the phrase appears
+                # in normal transcript content.
                 if append_expected:
-                    appendix_header_count = working_txt.count(
-                        "APPENDIX: RESEARCH LOG & TOOL ARTIFACTS"
+                    appendix_header_marker = "APPENDIX: RESEARCH LOG & TOOL ARTIFACTS"
+                    appendix_header_count = sum(
+                        1
+                        for line in working_txt.splitlines()
+                        if line.strip() == appendix_header_marker
                     )
                     if appendix_header_count != 1:
                         print(
                             f"WARNING: Appendix header appears {appendix_header_count} times (expected 1)",
-                            file=sys.stderr,
-                        )
-
-                    research_log_count = working_txt.count(
-                        "RESEARCH LOG & TOOL ARTIFACTS"
-                    )
-                    if research_log_count != 1:
-                        print(
-                            f"WARNING: 'RESEARCH LOG & TOOL ARTIFACTS' appears {research_log_count} times (expected 1)",
                             file=sys.stderr,
                         )
 
