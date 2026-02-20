@@ -112,6 +112,7 @@ Manual equivalent from repo root:
 ```bash
 python3 cgpt.py --version
 python3 cgpt.py --help
+python3 cgpt.py project --help
 python3 cgpt.py extract --help
 python3 cgpt.py recent --help
 python3 cgpt.py quick --help

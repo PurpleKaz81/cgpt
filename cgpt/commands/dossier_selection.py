@@ -164,10 +164,10 @@ def collect_selection_indices(
 
 
 def write_ids_tsv(
-    dossiers_dir: Path, slug: str, matches: List[Tuple[str, str, float]]
+    output_dir: Path, slug: str, matches: List[Tuple[str, str, float]]
 ) -> Tuple[Path, Path]:
-    all_ids_path = dossiers_dir / f"ids__{slug}.tsv"
-    selected_ids_path = dossiers_dir / f"selected_ids__{slug}.txt"
+    all_ids_path = output_dir / f"ids__{slug}.tsv"
+    selected_ids_path = output_dir / f"selected_ids__{slug}.txt"
     all_lines = [f"{cid}\t{title}\n" for (cid, title, _) in matches]
     all_ids_path.write_text("".join(all_lines), encoding="utf-8")
     return all_ids_path, selected_ids_path

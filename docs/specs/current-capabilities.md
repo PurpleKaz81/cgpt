@@ -1,6 +1,6 @@
 # Current Capabilities
 
-Last updated: 2026-02-19
+Last updated: 2026-02-20
 
 ## Scope Snapshot
 
@@ -15,6 +15,7 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 
 - Extraction and indexing:
   - `cgpt extract`, `cgpt index`, `cgpt latest-zip`
+  - No-subcommand default (`cgpt` / `python3 cgpt.py`) extracts newest ZIP and updates index.
 - Discovery and search:
   - `cgpt ids`, `cgpt find`, `cgpt search`
 - Selection and dossier generation:
@@ -22,6 +23,7 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 - Workspace bootstrap and health checks:
   - `cgpt init` creates/verifies required folders.
   - `cgpt doctor` validates runtime/layout state with optional `--fix`, `--dev`, and `--strict`.
+  - `cgpt project` manages active project context (`init`, `use`, `status`, `list`, `clear`).
 
 ## Selection Features Implemented
 
@@ -32,12 +34,14 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 - Keyword/topic-driven conversation discovery.
 - `quick --and` enforces all-term matching for `--where title`, `--where messages`, and `--where all` (title+message union).
 - `--context` input is validated to bounded range (`0..200`) across dossier-producing commands.
+- Active project context can scope default root resolution for discovery commands when `--root` is omitted.
 
 ## Output Features Implemented
 
 - Output formats: `txt`, `md`, and `docx` (DOCX requires optional `python-docx` dependency).
 - Combined dossier workflows support split output (`--split`) and dedup controls.
 - Strict format behavior for `make-dossiers --format` (only requested formats are emitted).
+- Project-scoped output routing via `--name` and active project defaults for dossier-producing commands.
 - Built-in redaction is not currently implemented in write commands.
 
 ## Configuration Features Implemented
@@ -53,7 +57,9 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 - Single-user, local CLI workflow.
 - Local files are the system of record; no required hosted service integration.
 - Internal implementation is package-modularized (`cgpt/core`, `cgpt/domain`, `cgpt/commands`, `cgpt/cli`) while preserving `cgpt.py` compatibility invocation.
+- CLI invocation forms `cgpt ...` and `python3 cgpt.py ...` are equivalent.
 - Agent workflow guardrails are documented in root `AGENTS.md` (PR-first flow and canonical lint commands).
+- Project-scoped workflows are supported via active project state and `--name` output scoping for dossier-producing commands.
 
 ## Known Constraints
 
@@ -80,6 +86,7 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 - Extraction rejects unsafe ZIP member paths before writing files.
 - Extraction rejects ZIP symlink/special members and enforces bounded member-count/uncompressed-size limits.
 - Re-extraction for the same ZIP stem replaces prior extraction contents to avoid stale files.
+- Extraction binds extracted root metadata to the active project context when one is set.
 - Conversations JSON discovery uses conversation-aware heuristics instead of generic largest-file fallback.
 - Conversations JSON discovery uses bounded per-priority candidate shortlists to avoid unbounded parse growth.
 - Search only trusts SQLite index hits when index metadata matches the requested export root; otherwise it falls back to root-local scan.

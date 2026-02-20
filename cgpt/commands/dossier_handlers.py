@@ -5,7 +5,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 from cgpt.commands.dossier_options import collect_build_options, collect_wanted_ids
-from cgpt.commands.dossier_roots import ensure_root_with_latest, load_conversations
+from cgpt.commands.dossier_roots import (
+    ensure_root_with_latest,
+    load_conversations,
+    resolve_root,
+)
 from cgpt.commands.dossier_selection import collect_selection_indices, write_ids_tsv
 from cgpt.core.color import _colorize_title_with_topics
 from cgpt.core.io import (
@@ -14,7 +18,8 @@ from cgpt.core.io import (
     ts_to_local_str,
     warn_invalid_create_time,
 )
-from cgpt.core.layout import default_root, die, ensure_layout, home_dir
+from cgpt.core.layout import die, ensure_layout, home_dir
+from cgpt.core.project import project_output_dir
 from cgpt.domain.config_schema import load_column_config
 from cgpt.domain.conversations import (
     build_conversation_map_by_id,
@@ -28,12 +33,10 @@ from cgpt.domain.dossier_cleaning import _extract_sources
 
 def cmd_make_dossiers(args: argparse.Namespace) -> None:
     home = home_dir(args.home)
-    _, extracted_dir, dossiers_dir = ensure_layout(home)
-    root = (
-        Path(args.root).expanduser().resolve()
-        if args.root
-        else default_root(extracted_dir)
-    )
+    _, _, dossiers_dir = ensure_layout(home)
+    project_name = getattr(args, "name", None)
+    root, _, _ = resolve_root(home, getattr(args, "root", None), project_name)
+    out_dir = project_output_dir(dossiers_dir, project_name)
     convs = load_conversations(root)
     wanted = collect_wanted_ids(args)
 
@@ -46,7 +49,7 @@ def cmd_make_dossiers(args: argparse.Namespace) -> None:
     for cid in wanted:
         c = by_id[cid]
         _, title = conv_id_and_title(c)
-        base = dossiers_dir / f"{cid}__{safe_slug(title or 'untitled')}"
+        base = out_dir / f"{cid}__{safe_slug(title or 'untitled')}"
         md_path = base.with_suffix(".md")
 
         msgs = extract_messages_best_effort(c)
@@ -182,12 +185,8 @@ def cmd_build_dossier(args: argparse.Namespace) -> None:
         topics = ["selected-conversations"]
 
     home = home_dir(args.home)
-    _, extracted_dir, dossiers_dir = ensure_layout(home)
-    root = (
-        Path(args.root).expanduser().resolve()
-        if args.root
-        else default_root(extracted_dir)
-    )
+    _, _, dossiers_dir = ensure_layout(home)
+    root, _, _ = resolve_root(home, getattr(args, "root", None), options.name)
 
     convs = load_conversations(root)
     wanted = collect_wanted_ids(args)
@@ -221,7 +220,11 @@ def cmd_recent(args: argparse.Namespace) -> None:
         die("Count must be at least 1.")
 
     home = home_dir(args.home)
-    root, dossiers_dir = ensure_root_with_latest(home, args.root)
+    project_name = getattr(args, "name", None)
+    root, dossiers_dir = ensure_root_with_latest(
+        home, getattr(args, "root", None), project_name
+    )
+    selected_output_dir = project_output_dir(dossiers_dir, project_name)
     convs = load_conversations(root)
 
     # Sort by create_time descending (newest first), then take top N
@@ -251,7 +254,7 @@ def cmd_recent(args: argparse.Namespace) -> None:
     # matches is already newest-first from the sort above
 
     slug = f"recent_{count}"
-    all_ids_path, selected_ids_path = write_ids_tsv(dossiers_dir, slug, matches)
+    all_ids_path, selected_ids_path = write_ids_tsv(selected_output_dir, slug, matches)
 
     # Print numbered list
     print(f"\n=== {count} Most Recent Conversations ===\n")
@@ -323,7 +326,11 @@ def cmd_quick(args: argparse.Namespace) -> None:
         die("--days must be >= 1")
 
     home = home_dir(args.home)
-    root, dossiers_dir = ensure_root_with_latest(home, args.root)
+    project_name = getattr(args, "name", None)
+    root, dossiers_dir = ensure_root_with_latest(
+        home, getattr(args, "root", None), project_name
+    )
+    selected_output_dir = project_output_dir(dossiers_dir, project_name)
     convs = load_conversations(root)
     invalid_create_time = [0]
 
@@ -390,7 +397,7 @@ def cmd_quick(args: argparse.Namespace) -> None:
     matches.sort(key=lambda x: x[2])
 
     slug = safe_slug("_".join(topics))
-    all_ids_path, selected_ids_path = write_ids_tsv(dossiers_dir, slug, matches)
+    all_ids_path, selected_ids_path = write_ids_tsv(selected_output_dir, slug, matches)
 
     # Print numbered list
     for i, (cid, title, ctime) in enumerate(matches, start=1):

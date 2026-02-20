@@ -2,8 +2,10 @@ import argparse
 from pathlib import Path
 from typing import List
 
+from cgpt.commands.dossier_roots import resolve_root
 from cgpt.core.color import _colorize_title_with_topic, _colorize_title_with_topics
-from cgpt.core.layout import default_root, die, ensure_layout, home_dir
+from cgpt.core.layout import die, ensure_layout, home_dir
+from cgpt.core.project import get_active_project
 from cgpt.domain.conversations import (
     conv_id_and_title,
     conversation_messages_blob,
@@ -14,14 +16,16 @@ from cgpt.domain.conversations import (
 from cgpt.domain.indexing import build_fts_query, index_matches_root, query_index
 
 
+def _resolve_search_root(args: argparse.Namespace) -> Path:
+    home = home_dir(getattr(args, "home", None))
+    _, _, dossiers_dir = ensure_layout(home)
+    active_project = get_active_project(dossiers_dir)
+    root, _, _ = resolve_root(home, getattr(args, "root", None), active_project)
+    return root
+
+
 def cmd_ids(args: argparse.Namespace) -> None:
-    home = home_dir(args.home)
-    _, extracted_dir, _ = ensure_layout(home)
-    root = (
-        Path(args.root).expanduser().resolve()
-        if args.root
-        else default_root(extracted_dir)
-    )
+    root = _resolve_search_root(args)
     data_file = find_conversations_json(root)
     if not data_file:
         die(f"No conversations JSON found under {root}")
@@ -37,13 +41,7 @@ def cmd_find(args: argparse.Namespace) -> None:
     q = query_raw.lower()
     if not query_raw:
         die("Query cannot be empty.")
-    home = home_dir(args.home)
-    _, extracted_dir, _ = ensure_layout(home)
-    root = (
-        Path(args.root).expanduser().resolve()
-        if args.root
-        else default_root(extracted_dir)
-    )
+    root = _resolve_search_root(args)
     data_file = find_conversations_json(root)
     if not data_file:
         die(f"No conversations JSON found under {root}")
@@ -72,11 +70,7 @@ def cmd_search(args: argparse.Namespace) -> None:
 
     home = home_dir(getattr(args, "home", None))
     _, extracted_dir, _ = ensure_layout(home)
-    root = (
-        Path(args.root).expanduser().resolve()
-        if getattr(args, "root", None)
-        else default_root(extracted_dir)
-    )
+    root = _resolve_search_root(args)
 
     # Try using SQLite FTS index only when scoped to the same export root.
     db_path = extracted_dir / "cgpt_index.db"

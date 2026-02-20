@@ -1,6 +1,6 @@
 # Engineering Quality Backlog
 
-Last updated: 2026-02-19
+Last updated: 2026-02-20
 
 ## Purpose
 
@@ -29,6 +29,8 @@ Implemented in this baseline hardening pass:
 - Discovery/index integrity hardening now scopes cached SQLite search data to the indexed export root to prevent cross-export mismatches.
 - Release process hardening now enforces PR-first merge flow in docs and local guardrails (including pre-push block for direct `main` pushes).
 - Agent guardrail baseline is documented in `AGENTS.md` and validated by docs-guard checks for canonical Ruff invocation guidance.
+- Project-first workflow baseline now supports active project context and project-scoped output/root defaults for discovery and dossier-producing commands.
+- Split working-output appendix guard now validates exact header lines to avoid false-positive warnings from ordinary content mentions.
 
 Pending / next-phase quality work remains below.
 

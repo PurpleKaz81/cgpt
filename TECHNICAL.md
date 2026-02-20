@@ -62,11 +62,14 @@ Global command:
 
 ```bash
 cgpt [global options] <subcommand> [subcommand options]
+# equivalent:
+python3 cgpt.py [global options] <subcommand> [subcommand options]
 ```
 
 Subcommands (with aliases):
 
 - `init`
+- `project`
 - `doctor`
 - `latest-zip`
 - `extract`
@@ -115,9 +118,11 @@ ZIP discovery -> extraction -> optional indexing -> selection -> dossier generat
 Operational notes:
 
 - `extract` unpacks exports into `extracted/<zip_stem>/`.
-- Selection/search commands default to `extracted/latest` unless `--root` is provided.
+- Running with no subcommand (`cgpt` or `python3 cgpt.py`) extracts newest ZIP and updates index by default.
+- Selection/search commands default to active project bound root first (when available), then `extracted/latest`, unless `--root` is provided.
 - `quick`/`recent` refresh `extracted/latest` only when `--root` is not provided.
 - `quick`/`recent` with explicit `--root` do not mutate `extracted/latest` or `extracted/LATEST.txt`.
+- `extract` binds the extracted root to the active project when one is set.
 - `quick` performs topic discovery + selection + dossier generation in one flow.
 - `recent` is recency-first selection.
 - `build-dossier` is explicit-ID-first generation.
@@ -197,6 +202,26 @@ Flags:
 
 - `-h`, `--help`
 
+### `project`
+
+Purpose: manage active research project context for scoped outputs and root resolution.
+
+```bash
+cgpt project init <name>
+cgpt project use <name> [--create]
+cgpt project status
+cgpt project list
+cgpt project clear
+```
+
+Subcommands:
+
+- `init <name>`: create `dossiers/<name>/` and set it as active
+- `use <name> [--create]`: set existing project active (optionally create it)
+- `status`: show active project and resolved path
+- `list`: list project folders under `dossiers/` (`*` marks active)
+- `clear`: clear active project (legacy default behavior resumes)
+
 ### `doctor`
 
 Purpose: validate runtime prerequisites and home layout; optionally include contributor tooling checks.
@@ -245,7 +270,7 @@ Flags:
 Notes:
 
 - Without `zip`, newest ZIP in `zips/` is used.
-- Running `cgpt` with no subcommand behaves like extraction of newest ZIP.
+- Running `cgpt` with no subcommand behaves like extracting newest ZIP and updating index.
 - ZIP members are security-validated before extraction; unsafe member paths fail fast with no extraction writes.
 - ZIP extraction rejects symlink/special entries and enforces limits for member count and total uncompressed bytes.
 - Re-extracting the same ZIP stem replaces prior extraction contents (no stale-file carryover).
@@ -323,6 +348,7 @@ Flags:
 
 Notes:
 
+- With an active project, root resolution prefers that project's bound extraction root unless `--root` is explicitly provided.
 - When SQLite index metadata confirms it was built for the same `--root`, search uses FTS for speed.
 - If index scope does not match the requested root, search falls back to root-local JSON scanning for correctness.
 
@@ -340,6 +366,7 @@ Flags:
 - `--root <path>`
 - `--ids-file <file>`
 - `--ids <id1> <id2> ...`
+- `--name <project_name>`
 - `--format txt|md|docx [txt|md|docx ...]` (default: `txt`)
 
 Rules:
@@ -348,6 +375,7 @@ Rules:
 - outputs are per-conversation, not one combined dossier
 - output formats are strict: only explicitly requested formats are written
 - duplicate conversation IDs in export input fail fast (ambiguous map protection)
+- when `--name` is omitted and an active project exists, outputs default to the active project folder
 
 ### `build-dossier` / `d`
 
@@ -383,6 +411,7 @@ Rules:
 - `--context` must be within `0..200`
 - explicit `--patterns-file`/`--used-links-file` paths must exist
 - exits with an error when none of the requested output formats can be created (for example `--format docx` without `python-docx`)
+- when `--name` is omitted and an active project exists, outputs default to the active project folder
 
 ### `quick` / `q`
 
@@ -427,6 +456,7 @@ Rules:
 - `--and --where all` requires every term across title+message union scope.
 - `--context` must be within `0..200`
 - explicit `--patterns-file`/`--used-links-file` paths must exist
+- helper files (`ids__*.tsv`, `selected_ids__*.txt`) are written in the project folder when `--name` is provided or an active project exists
 
 ### `recent` / `r`
 
@@ -462,6 +492,7 @@ Rules:
 - with explicit `--root`, recent reads only that root and does not refresh latest-pointer state
 - `--context` must be within `0..200`
 - explicit `--patterns-file`/`--used-links-file` paths must exist
+- helper files (`ids__*.tsv`, `selected_ids__*.txt`) are written in the project folder when `--name` is provided or an active project exists
 
 ## Selection Input Grammar (Interactive)
 
@@ -478,7 +509,7 @@ Used by `recent` and `quick` interactive selection:
 
 ### Combined dossier commands (`build-dossier`, `quick`, `recent`)
 
-Without `--name`:
+Without `--name` and without active project:
 
 ```text
 dossiers/
@@ -486,7 +517,7 @@ dossiers/
 `- dossier__topic__YYYYMMDD_HHMMSS__working.txt   # only when split+txt apply
 ```
 
-With `--name "project"`:
+With `--name "project"` (or when an active project is set and `--name` is omitted):
 
 ```text
 dossiers/
@@ -508,11 +539,23 @@ Format behavior for combined dossier commands:
 
 Output naming:
 
+Without `--name` and without active project:
+
 ```text
 dossiers/
 |- <conversation_id>__<title_slug>.txt
 |- <conversation_id>__<title_slug>.md
 `- <conversation_id>__<title_slug>.docx
+```
+
+With `--name "project"` (or when active project is set and `--name` is omitted):
+
+```text
+dossiers/
+`- project/
+   |- <conversation_id>__<title_slug>.txt
+   |- <conversation_id>__<title_slug>.md
+   `- <conversation_id>__<title_slug>.docx
 ```
 
 Format behavior for `make-dossiers`:
@@ -702,7 +745,7 @@ Cause: explicit `--config` file is missing, invalid JSON, or violates schema con
 
 Cause: `--context` is outside allowed bounds.
 
-### `ERROR: --name must contain at least one safe alphanumeric character after normalization.`
+### `ERROR: --name (project name) must contain at least one safe alphanumeric character after normalization and cannot start/end with '.'.`
 
 Cause: `--name` normalizes to an empty/unsafe path segment.
 
@@ -731,7 +774,8 @@ python -m unittest discover -s tests -p "test_*.py" -v
 Run lints:
 
 ```bash
-python -m ruff check .
+make lint-py
+make lint-md
 npx --yes markdownlint-cli2@0.16.0 "**/*.md" "#node_modules" "#.venv" "#.tox"
 ```
 

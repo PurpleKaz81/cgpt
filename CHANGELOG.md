@@ -13,12 +13,39 @@ Maintenance note for markdown lint:
 
 ### Added
 
-- Added planned feature spec `docs/specs/v0.2.20-split-audit.md` for a new `split-audit` command to verify suspicious removals between split raw and working TXT outputs.
+- None yet.
 
 ### Changed
 
+- None yet.
+
+### Fixed (Unreleased)
+
+- None yet.
+
+## [0.2.20] - 2026-02-20
+
+### Added in 0.2.20
+
+- Added project context management commands: `project init`, `project use`, `project status`, `project list`, and `project clear`.
+- Added active-project state and per-project metadata persistence under `dossiers/` to support project-first workflows.
+- Added regression coverage for active-project defaulting and project-scoped artifact outputs.
+- Added planned feature spec `docs/specs/v0.2.20-split-audit.md` for a future `split-audit` command that verifies suspicious removals between split raw and working TXT outputs.
+
+### Changed in 0.2.20
+
+- `quick` and `recent` now write helper artifacts (`ids__*.tsv`, `selected_ids__*.txt`) inside the project folder when `--name` is provided or an active project is set.
+- `build-dossier` now defaults to the active project output folder when `--name` is omitted.
+- `make-dossiers` now supports `--name` and writes per-conversation outputs to `dossiers/<project>/` when used.
+- Discovery commands (`ids`, `find`, `search`) now resolve roots through active project context before falling back to global `extracted/latest`.
+- `extract` now records the extracted root for the active project when one is set.
+- Synced README/capabilities/technical/agent docs to clarify command invocation equivalence (`cgpt` vs `python3 cgpt.py`) and no-subcommand extraction + indexing behavior.
 - Synced roadmap/capabilities/technical/readme docs to track split-output integrity audit as roadmap item `R17` (planned, not yet shipped).
 - Added a temporary troubleshooting workflow in `TECHNICAL.md` for fast manual split-output triage (`raw.txt` vs `__working.txt`) until `R17 split-audit` is implemented.
+
+### Fixed in 0.2.20
+
+- Fixed split working-output guard false positives by validating exact appendix header lines instead of counting phrase substrings in transcript content.
 
 ## [0.2.19] - 2026-02-19
 
@@ -383,6 +410,9 @@ Maintenance note for markdown lint:
 - FAQ and troubleshooting section
 - Common mistakes and fixes guide
 
+[0.2.20]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.20
+[0.2.19]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.19
+[0.2.18]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.18
 [0.2.17]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.17
 [0.2.16]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.16
 [0.2.15]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.15
@@ -402,4 +432,4 @@ Maintenance note for markdown lint:
 [0.2.1]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.1
 [0.2.0]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.0
 [0.1.0]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.1.0
-[Unreleased]: https://github.com/PurpleKaz81/cgpt/compare/v0.2.17...HEAD
+[Unreleased]: https://github.com/PurpleKaz81/cgpt/compare/v0.2.20...HEAD

@@ -24,7 +24,7 @@ If you want full technical details and every flag, go to [TECHNICAL.md](TECHNICA
 - Reliable handoff: package context so a future you (or another person/model session) can resume work with less ambiguity.
 
 Near-term roadmap priorities are ranked by necessity: `R2` (`--redact` privacy mode), `R17` (`split-audit` for `raw.txt` vs `__working.txt` verification), `R3` (discovery `--json`), then `R5` (token-aware chunking). See [`docs/roadmap/shared-roadmap.md`](docs/roadmap/shared-roadmap.md).
-As of `0.2.19`, both `R2` redaction and `R17` split-audit are planned but not yet shipped in CLI behavior.
+As of `0.2.20`, both `R2` redaction and `R17` split-audit are planned but not yet shipped in CLI behavior.
 
 ## What This Tool Is (In Plain English)
 
@@ -63,6 +63,20 @@ cgpt/
 - Python `3.8+`
 - No mandatory third-party packages for `txt`/`md` output
 - Optional: `python-docx` only when you want `--format docx`
+
+## Invocation Rules (Important)
+
+- `cgpt` and `python3 cgpt.py` are equivalent command forms.
+- If `cgpt` is not installed in your shell path, use `python3 cgpt.py ...`.
+- Running with no subcommand defaults to extraction of the newest ZIP and index update.
+
+Examples:
+
+```bash
+cgpt extract
+python3 cgpt.py extract
+python3 cgpt.py
+```
 
 ## 5-Minute First Setup
 
@@ -103,19 +117,40 @@ Example:
 cp ~/Downloads/chatgpt_export.zip zips/
 ```
 
-### Step 2. Build a dossier from recent chats
+### Step 2. Create/select a project (recommended)
 
 ```bash
-cgpt recent 30 --name "my-project" --split
+cgpt project init my-project
+```
+
+What this means:
+
+- Creates `dossiers/my-project/`
+- Sets `my-project` as active project
+- Commands that support project output (`quick`, `recent`, `build-dossier`, `make-dossiers`) will default to this project folder when `--name` is omitted.
+
+Useful project commands:
+
+```bash
+cgpt project status
+cgpt project list
+cgpt project use my-other-project
+cgpt project clear
+```
+
+### Step 3. Build a dossier from recent chats
+
+```bash
+cgpt recent 30 --split
 ```
 
 What this means:
 
 - `recent 30`: show your 30 most recent conversations.
-- `--name "my-project"`: save output in `dossiers/my-project/`.
+- Output is saved in your active project folder (for example, `dossiers/my-project/`).
 - `--split`: create both raw and cleaned files.
 
-### Step 3. Choose conversations when prompted
+### Step 4. Choose conversations when prompted
 
 When cgpt asks what to include, you can type:
 
@@ -124,7 +159,7 @@ When cgpt asks what to include, you can type:
 - `1-10` for a range
 - `1-3 8 12-15` for mixed selections
 
-### Step 4. Use the cleaned output file
+### Step 5. Use the cleaned output file
 
 After generation, upload the file ending in `__working.txt` to ChatGPT.
 
@@ -159,6 +194,10 @@ Most common commands:
 
 ```bash
 cgpt recent 30 --split
+cgpt project init my-project
+cgpt project status
+cgpt project use my-project
+cgpt project list
 cgpt q "topic"
 cgpt q --recent 25 "topic"
 cgpt q --days 7 "topic"
