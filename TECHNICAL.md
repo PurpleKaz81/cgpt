@@ -53,8 +53,8 @@ Index requirement:
 
 Compatibility:
 
-- `cgpt.py` remains as a thin shim so `python3 cgpt.py ...` keeps working.
 - Installed command entrypoint resolves to `cgpt.cli:main`.
+- `cgpt.py` remains as an internal compatibility shim.
 
 ## CLI Surface (Current)
 
@@ -62,8 +62,6 @@ Global command:
 
 ```bash
 cgpt [global options] <subcommand> [subcommand options]
-# equivalent:
-python3 cgpt.py [global options] <subcommand> [subcommand options]
 ```
 
 Subcommands (with aliases):
@@ -118,7 +116,7 @@ ZIP discovery -> extraction -> optional indexing -> selection -> dossier generat
 Operational notes:
 
 - `extract` unpacks exports into `extracted/<zip_stem>/`.
-- Running with no subcommand (`cgpt` or `python3 cgpt.py`) extracts newest ZIP and updates index by default.
+- Running with no subcommand (`cgpt`) extracts newest ZIP and updates index by default.
 - Selection/search commands default to active project bound root first (when available), then `extracted/latest`, unless `--root` is provided.
 - `quick`/`recent` refresh `extracted/latest` only when `--root` is not provided.
 - `quick`/`recent` with explicit `--root` do not mutate `extracted/latest` or `extracted/LATEST.txt`.
@@ -158,8 +156,8 @@ Repository CI gates currently include:
 
 ```bash
 cd /path/to/cgpt
-python3 cgpt.py doctor --fix
-python3 cgpt.py --help
+cgpt doctor --fix
+cgpt --help
 ```
 
 ### Option B: Install as a command from this repository

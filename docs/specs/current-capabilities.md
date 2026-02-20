@@ -15,7 +15,7 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 
 - Extraction and indexing:
   - `cgpt extract`, `cgpt index`, `cgpt latest-zip`
-  - No-subcommand default (`cgpt` / `python3 cgpt.py`) extracts newest ZIP and updates index.
+  - No-subcommand default (`cgpt`) extracts newest ZIP and updates index.
 - Discovery and search:
   - `cgpt ids`, `cgpt find`, `cgpt search`
 - Selection and dossier generation:
@@ -57,7 +57,7 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 - Single-user, local CLI workflow.
 - Local files are the system of record; no required hosted service integration.
 - Internal implementation is package-modularized (`cgpt/core`, `cgpt/domain`, `cgpt/commands`, `cgpt/cli`) while preserving `cgpt.py` compatibility invocation.
-- CLI invocation forms `cgpt ...` and `python3 cgpt.py ...` are equivalent.
+- CLI documentation uses `cgpt ...` as the canonical invocation form.
 - Agent workflow guardrails are documented in root `AGENTS.md` (PR-first flow and canonical lint commands).
 - Project-scoped workflows are supported via active project state and `--name` output scoping for dossier-producing commands.
 

@@ -30,7 +30,7 @@ When sources conflict, use this precedence:
 - `cgpt/domain/`: conversation normalization, indexing, and dossier processing logic.
 - `cgpt/commands/`: CLI command handler implementations.
 - `cgpt/cli/`: parser wiring and CLI entrypoint orchestration.
-- `cgpt.py`: compatibility shim entrypoint for `python3 cgpt.py ...`.
+- `cgpt.py`: compatibility shim entrypoint.
 - `config.json`: public baseline defaults.
 - `tests/`: unit tests and critical-path coverage.
 - `scripts/release_check.sh`: release preflight gate.
@@ -42,7 +42,7 @@ When sources conflict, use this precedence:
 Core checks:
 
 ```bash
-python3 cgpt.py doctor --dev
+cgpt doctor --dev
 make lint-py
 make check
 tox run -e py,lint

@@ -23,6 +23,7 @@ This file defines non-negotiable workflow rules for AI agents operating in this 
    - Do not attempt `git push origin main` for release delivery.
 
 5. Command invocation conventions for this repository:
-   - Treat `cgpt` and `python3 cgpt.py` as equivalent forms.
-   - When giving command examples to users, prefer `python3 cgpt.py ...` unless the user explicitly asks for `cgpt ...`.
-   - Remember that running with no subcommand (`cgpt` or `python3 cgpt.py`) defaults to extracting the newest ZIP and updating the index.
+   - Treat `cgpt ...` as the canonical command form.
+   - When giving command examples to users, use `cgpt ...`.
+   - Avoid legacy shim syntax in examples and guidance.
+   - Remember that running with no subcommand (`cgpt`) defaults to extracting the newest ZIP and updating the index.
