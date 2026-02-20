@@ -23,6 +23,25 @@ Maintenance note for markdown lint:
 
 - None yet.
 
+## [0.2.21] - 2026-02-20
+
+### Added in 0.2.21
+
+- Added regression coverage for invalid ZIP extraction errors, `index --root` validation failures, split-output JSON preservation, and date-only formatting helpers.
+
+### Changed in 0.2.21
+
+- `index` now validates `--root` path existence/type before attempting indexing and fails fast when no conversation-like JSON payload is found.
+- Split-output artifact cleaning now uses high-confidence tool-metadata keys and preserves ordinary transcript JSON content.
+- Centralized local date-only rendering with a dedicated helper for metadata/index outputs.
+
+### Fixed in 0.2.21
+
+- Fixed invalid/corrupt ZIP extraction paths to emit clean CLI errors instead of Python tracebacks.
+- Fixed false-success `index` output for invalid roots or roots without conversation payloads.
+- Fixed split working-output cleaning removing legitimate JSON transcript lines (for example user-provided `{\"title\": ...}` content).
+- Fixed date-only metadata fields that unintentionally emitted full timestamps.
+
 ## [0.2.20] - 2026-02-20
 
 ### Added in 0.2.20
@@ -410,6 +429,7 @@ Maintenance note for markdown lint:
 - FAQ and troubleshooting section
 - Common mistakes and fixes guide
 
+[0.2.21]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.21
 [0.2.20]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.20
 [0.2.19]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.19
 [0.2.18]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.18
@@ -432,4 +452,4 @@ Maintenance note for markdown lint:
 [0.2.1]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.1
 [0.2.0]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.2.0
 [0.1.0]: https://github.com/PurpleKaz81/cgpt/releases/tag/v0.1.0
-[Unreleased]: https://github.com/PurpleKaz81/cgpt/compare/v0.2.20...HEAD
+[Unreleased]: https://github.com/PurpleKaz81/cgpt/compare/v0.2.21...HEAD

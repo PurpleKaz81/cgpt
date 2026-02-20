@@ -90,7 +90,7 @@ def index_matches_root(db_path: Path, root: Path) -> bool:
 
 def index_export(
     root: Path, db_path: Path, reindex: bool = False, show_progress: bool = True
-) -> None:
+) -> Optional[int]:
     """Index conversations under `root` into `db_path`.
 
     If `reindex` is True the existing indexed rows will be cleared first.
@@ -99,7 +99,7 @@ def index_export(
     """
     data_file = find_conversations_json(root)
     if not data_file:
-        return
+        return None
     data = load_json(data_file)
     convs = normalize_conversations(data)
 
@@ -194,6 +194,7 @@ def index_export(
         conn.commit()
     finally:
         conn.close()
+    return i
 
 def query_index(db_path: Path, q: str, where: str = "all") -> List[Tuple[str, str]]:
     """Query the index and return list of (cid, title).

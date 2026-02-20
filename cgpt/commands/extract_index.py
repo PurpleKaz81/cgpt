@@ -59,18 +59,25 @@ def cmd_index(args: argparse.Namespace) -> None:
         if getattr(args, "root", None)
         else default_root(extracted_dir)
     )
+    if not root.exists():
+        die(f"Root path not found: {root}")
+    if not root.is_dir():
+        die(f"Root path is not a directory: {root}")
+
     db_path = (
         Path(args.db).expanduser().resolve()
         if getattr(args, "db", None)
         else extracted_dir / "cgpt_index.db"
     )
     try:
-        index_export(
+        indexed_count = index_export(
             root,
             db_path,
             reindex=bool(getattr(args, "reindex", False)),
             show_progress=not getattr(args, "quiet", False),
         )
+        if indexed_count is None:
+            die(f"No conversations JSON found under {root}")
         print(f"Index built at: {db_path}")
     except Exception as e:
         die(f"Indexing failed: {e}")

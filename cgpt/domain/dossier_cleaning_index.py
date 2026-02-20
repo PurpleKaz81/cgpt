@@ -1,7 +1,7 @@
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
-from cgpt.core.io import coerce_create_time, ts_to_local_str
+from cgpt.core.io import coerce_create_time, ts_to_local_date_str, ts_to_local_str
 from cgpt.domain.config_schema import _get_short_tag, matches_thread_filter
 from cgpt.domain.conversations import conv_id_and_title
 
@@ -32,7 +32,7 @@ def _generate_working_index(
         for conv in sorted_convs[:10]:  # Show latest 10
             cid, title = conv_id_and_title(conv)
             ctime = _conv_ctime(conv)
-            date_str = ts_to_local_str(ctime).split()[0] if ctime else "Unknown"
+            date_str = ts_to_local_date_str(ctime) if ctime else "Unknown"
             cid_label = f"{cid[:8]}..." if cid else "unknown"
             index_lines.append(f"  - {date_str}: {title} (ID: {cid_label})\n")
         index_lines.append("\n")
@@ -84,7 +84,7 @@ def _generate_working_index(
         # Sort by score and show top 5
         scored_convs.sort(reverse=True, key=lambda x: x[0])
         for i, (_score, _cid, title, ctime) in enumerate(scored_convs[:5], 1):
-            date_str = ts_to_local_str(ctime).split()[0] if ctime else "Unknown"
+            date_str = ts_to_local_date_str(ctime) if ctime else "Unknown"
             index_lines.append(f"  {i}. [{date_str}] {title}\n")
         index_lines.append("\n")
 
