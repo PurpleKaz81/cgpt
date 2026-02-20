@@ -14,26 +14,21 @@ def _strip_tool_noise(text: str) -> str:
       Tool creation/update messages
       Meta-prompt instructions
     """
-    # Extended tool-related keys (including system/safety fields)
+    # High-confidence tool/runtime keys only. Keep this list narrow to avoid
+    # stripping legitimate transcript JSON content.
     tool_keys = [
         "search_query",
-        "tool_call",
-        "function",
-        "action",
+        "image_query",
         "open",
         "click",
         "find",
         "screenshot",
         "response_length",
-        "file_path",
-        "command",
-        "terminal",
-        "browser",
+        "tool_uses",
+        "recipient_name",
+        "parameters",
+        "tool_call",
         "task_violates_safety_guidelines",
-        "updates",
-        "comments",
-        "title",
-        "prompt",
     ]
 
     # Remove complete JSON objects that contain tool-related keys
@@ -52,14 +47,6 @@ def _strip_tool_noise(text: str) -> str:
         r"(?:Successfully created|Successfully updated|Failed with error).*?\n",
         "",
         text,
-    )
-
-    # Remove meta-prompt instructions like "Make sure to include...", "remember to..."
-    text = re.sub(
-        r"^[^\n]*(?:Make sure to|remember to|don't forget to).*?$",
-        "",
-        text,
-        flags=re.MULTILINE | re.IGNORECASE,
     )
 
     # Remove tool usage boilerplate/instruction blocks that leak into transcripts
@@ -100,10 +87,10 @@ def _strip_tool_noise(text: str) -> str:
         # Skip JSON blocks with tool/system keys
         if normalized.startswith("{") and any(key in normalized for key in tool_keys):
             continue
-        # Skip lines with embedded JSON containing safety/task fields
+        # Skip lines with embedded JSON containing explicit safety/task fields.
         if any(
             f'"{key}"' in normalized or f"'{key}'" in normalized
-            for key in ["task_violates_safety_guidelines", "updates", "comments"]
+            for key in ["task_violates_safety_guidelines"]
         ):
             continue
         cleaned_lines.append(line)
@@ -340,10 +327,25 @@ def extract_research_artifacts(text: str) -> Tuple[str, List[str]]:
     artifact_patterns = [
         (r"\[Search Query\].*?(?=\n\n|\n[A-Z]|$)", "Search Fragment"),
         (r"\[JSON/Tool Call\].*", "JSON/Tool Call"),
-        (r"\{\".*?\}", "JSON/Tool Call"),
+        (r"\{.*?\}", "JSON/Tool Call"),
         (r"\[Image.*?\]", "Image Reference"),
         (r"\[GPT Model.*?\]", "Model Info"),
         (r"\[Citation Widget.*?\]", "Citation Widget"),
+    ]
+
+    tool_json_keys = [
+        "search_query",
+        "image_query",
+        "open",
+        "click",
+        "find",
+        "screenshot",
+        "response_length",
+        "task_violates_safety_guidelines",
+        "tool_call",
+        "tool_uses",
+        "recipient_name",
+        "parameters",
     ]
 
     lines = text.split("\n")
@@ -371,6 +373,16 @@ def extract_research_artifacts(text: str) -> Tuple[str, List[str]]:
                     break
                 # Always drop JSON/Tool Call lines (do not propagate to appendix)
                 if label == "JSON/Tool Call":
+                    if not any(
+                        re.search(
+                            rf'["\']{re.escape(k)}["\']\s*:',
+                            artifact_text,
+                            re.IGNORECASE,
+                        )
+                        for k in tool_json_keys
+                    ):
+                        # Keep ordinary JSON content that does not look like tool metadata.
+                        continue
                     found_artifact = True
                     break
                 # Only capture substantial artifacts for other labels

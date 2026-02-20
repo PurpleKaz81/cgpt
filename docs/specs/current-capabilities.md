@@ -85,10 +85,12 @@ This file describes what `cgpt` does today. Anything not listed as implemented h
 - Edge-case hardening tests cover ZIP path safety, timestamp coercion, strict config handling, and input-file decoding behavior.
 - Extraction rejects unsafe ZIP member paths before writing files.
 - Extraction rejects ZIP symlink/special members and enforces bounded member-count/uncompressed-size limits.
+- Extraction fails cleanly on invalid/corrupt ZIP files without Python traceback output.
 - Re-extraction for the same ZIP stem replaces prior extraction contents to avoid stale files.
 - Extraction binds extracted root metadata to the active project context when one is set.
 - Conversations JSON discovery uses conversation-aware heuristics instead of generic largest-file fallback.
 - Conversations JSON discovery uses bounded per-priority candidate shortlists to avoid unbounded parse growth.
+- `index --root` validates root existence/type and fails fast when no conversation-like JSON payload is found.
 - Search only trusts SQLite index hits when index metadata matches the requested export root; otherwise it falls back to root-local scan.
 - Duplicate conversation IDs in exports fail fast in map-building command paths.
 

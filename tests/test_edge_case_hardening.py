@@ -171,6 +171,40 @@ class TestZipSafety(EdgeCaseBase):
             self.assertEqual(list(unsafe_out.rglob("*")), [])
         self.assertFalse((self.extracted / "escaped.txt").exists())
 
+    def test_extract_invalid_zip_fails_cleanly_without_traceback(self):
+        zpath = self.zips / "invalid_payload.zip"
+        zpath.write_text("not a zip file", encoding="utf-8")
+
+        result = self.run_cgpt("extract", str(zpath))
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("invalid zip file", result.stderr.lower())
+        self.assertNotIn("traceback", result.stderr.lower())
+
+
+class TestIndexErrorPolicy(EdgeCaseBase):
+    def test_index_fails_when_root_is_missing(self):
+        missing = self.extracted / "missing_root"
+        result = self.run_cgpt("index", "--root", str(missing))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("root path not found", result.stderr.lower())
+
+    def test_index_fails_when_root_is_not_directory(self):
+        file_root = self.home / "not_a_dir.txt"
+        file_root.write_text("x", encoding="utf-8")
+        result = self.run_cgpt("index", "--root", str(file_root))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("not a directory", result.stderr.lower())
+
+    def test_index_fails_when_root_has_no_conversation_json(self):
+        root = self.extracted / "index_empty_root"
+        root.mkdir(parents=True, exist_ok=True)
+        (root / "data.json").write_text(json.dumps({"note": "no conversations"}), encoding="utf-8")
+
+        result = self.run_cgpt("index", "--root", str(root))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("no conversations json found", result.stderr.lower())
+
 
 class TestQuickAndSemantics(EdgeCaseBase):
     def setUp(self):
@@ -759,6 +793,38 @@ class TestRemainingEdgeCases(EdgeCaseBase):
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertNotIn("traceback", result.stderr.lower())
 
+    def test_build_dossier_split_preserves_legitimate_json_content(self):
+        self.write_conversations(
+            self.root,
+            [
+                _conv(
+                    "conv-json",
+                    "JSON transcript",
+                    time.time(),
+                    '{"title":"Project Plan","steps":["alpha","beta"]}',
+                    "Acknowledged.",
+                )
+            ],
+        )
+        result = self.run_cgpt(
+            "build-dossier",
+            "--root",
+            str(self.root),
+            "--ids",
+            "conv-json",
+            "--mode",
+            "full",
+            "--split",
+            "--format",
+            "txt",
+        )
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        out_path = Path(result.stdout.strip().splitlines()[-1])
+        working_path = out_path.with_name(out_path.stem + "__working" + out_path.suffix)
+        self.assertTrue(working_path.exists())
+        working_txt = working_path.read_text(encoding="utf-8")
+        self.assertIn('"title":"Project Plan"', working_txt)
+
     def test_build_dossier_fails_on_duplicate_conversation_ids(self):
         now = time.time()
         dup = [
@@ -855,6 +921,15 @@ class TestJsonDiscoveryScaling(unittest.TestCase):
             self.assertIsNotNone(picked)
             self.assertEqual(picked.resolve(), valid_path.resolve())
             self.assertLessEqual(calls[0], bucket_limit * 2)
+
+
+class TestDateFormattingHelpers(unittest.TestCase):
+    def test_ts_to_local_date_str_returns_date_only(self):
+        from cgpt.core.io import ts_to_local_date_str
+
+        rendered = ts_to_local_date_str(time.time())
+        self.assertEqual(len(rendered), 10)
+        self.assertRegex(rendered, r"^\d{4}-\d{2}-\d{2}$")
 
 
 if __name__ == "__main__":

@@ -32,6 +32,12 @@ def ts_to_local_str(ts: float) -> str:
             return dt_utc.isoformat()
     return dt_utc.isoformat()
 
+def ts_to_local_date_str(ts: float) -> str:
+    rendered = ts_to_local_str(ts)
+    if not rendered:
+        return ""
+    return rendered[:10]
+
 def normalize_text(s: str) -> str:
     s = (s or "").strip()
     s = re.sub(r"\s+", " ", s)

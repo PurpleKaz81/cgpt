@@ -270,6 +270,7 @@ Notes:
 - Without `zip`, newest ZIP in `zips/` is used.
 - Running `cgpt` with no subcommand behaves like extracting newest ZIP and updating index.
 - ZIP members are security-validated before extraction; unsafe member paths fail fast with no extraction writes.
+- Invalid/corrupt ZIP files fail with a clean CLI error (no Python traceback).
 - ZIP extraction rejects symlink/special entries and enforces limits for member count and total uncompressed bytes.
 - Re-extracting the same ZIP stem replaces prior extraction contents (no stale-file carryover).
 
@@ -291,6 +292,8 @@ Notes:
 
 - Index metadata stores the source export root path.
 - Reindexing against a different root clears stale rows before repopulation to prevent cross-export result bleed.
+- `--root` must exist and be a directory; invalid roots fail fast.
+- Indexing fails fast when no conversation-like JSON payload exists under the selected root.
 
 ### `ids` / `i`
 

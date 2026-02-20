@@ -76,6 +76,10 @@ def extract_zip_safely(zpath: Path, out_dir: Path) -> None:
             shutil.rmtree(out_dir)
 
         temp_dir.replace(out_dir)
+    except zipfile.BadZipFile as e:
+        if temp_dir.exists():
+            shutil.rmtree(temp_dir, ignore_errors=True)
+        die(f"Invalid ZIP file: {zpath}\n{e}")
     except BaseException:
         if temp_dir.exists():
             shutil.rmtree(temp_dir, ignore_errors=True)

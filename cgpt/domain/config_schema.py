@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from cgpt.core.io import coerce_create_time, ts_to_local_str
+from cgpt.core.io import coerce_create_time, ts_to_local_date_str
 from cgpt.core.layout import die
 
 
@@ -194,14 +194,14 @@ def generate_completeness_check(
         return "No date information available."
 
     latest_date = max(dates)
-    latest_str = ts_to_local_str(latest_date).split()[0]
+    latest_str = ts_to_local_date_str(latest_date)
 
     # Count matches after a certain date
     now = datetime.now(tz=timezone.utc).timestamp()
     recent_matches = sum(1 for d in dates if now - d < 7 * 86400)
 
     metadata = (
-        f"Searched conversations up to {ts_to_local_str(now).split()[0]}.\n"
+        f"Searched conversations up to {ts_to_local_date_str(now)}.\n"
         f"Last relevant match: {latest_str}.\n"
         f"Recent matches (< 7 days): {recent_matches}.\n"
         f"Total conversations in dossier: {len(convs)}."
