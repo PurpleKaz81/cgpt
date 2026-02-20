@@ -66,16 +66,14 @@ cgpt/
 
 ## Invocation Rules (Important)
 
-- `cgpt` and `python3 cgpt.py` are equivalent command forms.
-- If `cgpt` is not installed in your shell path, use `python3 cgpt.py ...`.
+- Use `cgpt ...` in examples and scripts.
 - Running with no subcommand defaults to extraction of the newest ZIP and index update.
 
 Examples:
 
 ```bash
 cgpt extract
-python3 cgpt.py extract
-python3 cgpt.py
+cgpt
 ```
 
 ## 5-Minute First Setup
@@ -90,8 +88,8 @@ cd /path/to/cgpt
 1. Check runtime health and create required folders if missing.
 
 ```bash
-python3 cgpt.py doctor --fix
-python3 cgpt.py --help
+cgpt doctor --fix
+cgpt --help
 ```
 
 1. Optional install as a command (no shell alias needed):
