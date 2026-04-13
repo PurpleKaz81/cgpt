@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=82.0.1", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -26,8 +26,8 @@ classifiers = [
 dependencies = []
 
 [project.optional-dependencies]
-docx = ["python-docx>=0.8.11"]
-dev = ["ruff==0.9.10", "tox>=4.24.1"]
+docx = ["python-docx>=1.2.0"]
+dev = ["ruff==0.15.10", "tox>=4.30.3"]
 
 [project.scripts]
 cgpt = "cgpt.cli:main"
